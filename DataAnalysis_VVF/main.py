@@ -36,13 +36,9 @@ def dict_loc(df):
 
 def extract_feature(df):
     df['date'] = pd.to_datetime(df['date'])
+    df['day_year'] = df["date"].dt.dayofyear
     df['month'] = df["date"].dt.month
     df['day'] = df["date"].dt.day
-
-    cols = df.columns.tolist()
-    cols = cols[:2] + cols[-2:-1] + [cols[-1]] + cols[2:-2]
-    df = df[cols]
-    return df
 
 
 def convert_time(df):
@@ -56,10 +52,24 @@ def convert_time(df):
 
 
 def convert_gps(df):
-    df.ffill(axis=1, inplace=True)
-    df['X'] = df["x"].astype(float)
-    df['Y'] = df["y"].astype(float)
-    print(df)
+    df['x'] = df["x"].astype(float)
+    df['y'] = df["y"].astype(float)
+
+
+def correlation_map(df):
+    df_corr = df[['day_year', 'month', 'day', 'start', 'finish', 'duration', 'x', 'y', 'locat', 'typo']]
+    corr = df_corr.corr()
+
+    plt.figure(figsize=(10, 10))
+    sns.heatmap(corr, cmap="YlOrRd", annot=True, linewidths=0.2, vmin=-1, square=False)
+
+    plt.title('Correlation Map')
+    plt.ylabel('Features')
+    plt.xlabel('Features')
+    plt.minorticks_on()
+    plt.tight_layout()
+    plt.savefig('correlation_map.png', dpi=300)
+    plt.show()
 
 
 def main():
@@ -69,17 +79,10 @@ def main():
     dict_typology(df)
     dict_loc(df)
     convert_time(df)
-    # convert_gps(df)
+    convert_gps(df)
+    extract_feature(df)
 
-    df = extract_feature(df)
-
-    print(df.dtypes)
-    print(df)
-    corr = df.corr()
-
-    plt.figure(figsize=(12, 12))
-    sns.heatmap(corr, cmap="YlOrRd", annot=True, linewidths=0.3, vmin=-1, square=False)
-    plt.show()
+    correlation_map(df)
 
 
 if __name__ == "__main__":
