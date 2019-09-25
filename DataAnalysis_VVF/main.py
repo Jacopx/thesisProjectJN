@@ -42,7 +42,7 @@ def extract_feature(df):
     df['week'] = df["date"].dt.week
     df['year'] = df["date"].dt.year
 
-# @TODO: Need to fix the duration with the new available date
+
 def convert_time(df):
     v = df['start'].str.split(':', expand=True).astype(int)
     s = pd.to_timedelta(v[0], unit='h') + pd.to_timedelta(v[1], unit='s')
@@ -53,9 +53,11 @@ def convert_time(df):
     df['finish'] = s.astype(int)
 
     df['dur'] = (df['finish'] - df['start']) / 1000000000
-    df['dur'] = df['dur'].astype(int)
 
-    print(df[['duration', 'dur']])
+    # Managing problem of operations end in a different date respect start
+    df.loc[df['dur'] < 0, 'dur'] += 86400
+
+    df['dur'] = df['dur'].astype(int)
 
 
 def convert_gps(df):
@@ -63,10 +65,7 @@ def convert_gps(df):
     df['y'] = df["y"].astype(float)
 
 
-def correlation_map(df_input):
-    # Computing number of operations per week
-    # week_count = df_input[['week', 'n']].groupby(['week']).count()
-
+def correlation_map1(df_input):
     # Computing number of operations per year per week
     week_count = df_input[['week', 'n', 'year']].groupby(['year', 'week']).count()
 
@@ -74,7 +73,6 @@ def correlation_map(df_input):
     complete = df_input[['year', 'week', 'day_year', 'month', 'day', 'start', 'finish', 'dur', 'duration', 'x', 'y', 'locat', 'typo']]
 
     # Make merge
-    # df = pd.merge(complete, week_count, on=['week'])
     df = pd.merge(complete, week_count, on=['year', 'week'])
 
     corr = df.corr()
@@ -82,13 +80,37 @@ def correlation_map(df_input):
     plt.figure(figsize=(12, 12))
     sns.heatmap(corr, cmap='seismic', annot=True, linewidths=0.2, vmin=-1, vmax=1, square=False)
 
-    plt.title('Correlation Map')
+    plt.title('Correlation Map [Year, Week]')
     plt.ylabel('Features')
     plt.xlabel('Features')
     plt.minorticks_on()
     plt.tight_layout()
-    plt.savefig('plot/correlation_map.png', dpi=300)
-    plt.show()
+    plt.savefig('plot/correlation_map_yw.png', dpi=300)
+    # plt.show()
+
+
+def correlation_map2(df_input):
+    # Computing number of operations per week
+    week_count = df_input[['week', 'n']].groupby(['week']).count()
+
+    # Restrict dataframe
+    complete = df_input[['year', 'week', 'day_year', 'month', 'day', 'start', 'finish', 'dur', 'duration', 'x', 'y', 'locat', 'typo']]
+
+    # Make merge
+    df = pd.merge(complete, week_count, on=['week'])
+
+    corr = df.corr()
+
+    plt.figure(figsize=(12, 12))
+    sns.heatmap(corr, cmap='seismic', annot=True, linewidths=0.2, vmin=-1, vmax=1, square=False)
+
+    plt.title('Correlation Map [Week]')
+    plt.ylabel('Features')
+    plt.xlabel('Features')
+    plt.minorticks_on()
+    plt.tight_layout()
+    plt.savefig('plot/correlation_map_w.png', dpi=300)
+    # plt.show()
 
 
 def distribution(df_input):
@@ -126,10 +148,12 @@ def main():
     print("Pre analysis complete [{} s]".format(round(time.time() - t0, 2)))
     print("\nCreating plots:")
 
-    correlation_map(df)
-    print("\t * Correlation Matrix [{} s]".format(round(time.time() - t0, 2)))
-    # distribution(df)
-    # print("\t * Distribution [{} s]".format(round(time.time() - t0, 2)))
+    correlation_map1(df)
+    print("\t * Correlation Matrix1 [{} s]".format(round(time.time() - t0, 2)))
+    correlation_map2(df)
+    print("\t * Correlation Matrix2 [{} s]".format(round(time.time() - t0, 2)))
+    distribution(df)
+    print("\t * Distribution [{} s]".format(round(time.time() - t0, 2)))
 
 
 if __name__ == "__main__":
