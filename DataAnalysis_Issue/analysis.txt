@@ -1,0 +1,26 @@
+Hadoop Data Analysis
+------------------
+
+The data structure is composed of:
+  # hadoop_issue.csv:
+    * issue_id: Reference to sourcing platform ID
+    * type: Type of the issue [Bug, Improvement, SubTask, New F, Test, Task, Wish]
+    * Priority: The importance of the issue opened [Blocker, Critical, Major, Minor, Trivial]
+    * create_date: datetime of issue open
+    * resolved_date: datetime of issue closing
+
+  # hadoop_issue-modification.csv:
+    * issue_id: Reference to sourcing platform ID
+    * added_lines: Aggregation, respect multiple commit, of the number of line added
+    * removed_lines: Aggregation, respect multiple commit, of the number of line removed
+
+
+To forecast
+------------
+Issue over time, there is of course a correlation respect the day of the week, saturday and sunday report really few issue. Is also interesting to notice that, after a commit for a solved issue, other problem arise. Many issue means many code lines to solve them.
+
+
+Important Feature
+-----------------
+  * Number of issue
+  * Create date
