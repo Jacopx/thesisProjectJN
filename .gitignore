@@ -8,7 +8,7 @@ venv/
 .idea
 DataAnalysis_SF/EiS_Thesis.json
 DataAnalysis_SF/venv
-DataAnalysis_SF/SF_BikeShare.csv
+DataAnalysis_SF/data/*.csv
 DataAnalysis_VVF/data/*.csv
 
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and WebStorm

@@ -1,45 +1,143 @@
-import os
 import time
-from google.cloud import bigquery
-from google.cloud.bigquery.client import Client
+import numpy as np
+import pandas as pd
+import math
+import scipy
+import matplotlib.pyplot as plt
+import seaborn as sns
+import re
+from datetime import datetime
+
+# Defining a color pattern based on Tableau's color code
+colrcode = [(31, 119, 180), (255, 127, 14),
+             (44, 160, 44), (214, 39, 40),
+             (148, 103, 189),  (140, 86, 75),
+             (227, 119, 194), (127, 127, 127),
+             (188, 189, 34), (23, 190, 207)]
+
+
+def replace_camelcase_with_underscore(name):
+    '''
+    Taken from Stack Overflow:
+    http://stackoverflow.com/questions/1175208/elegant-python-function-to-convert-camelcase-to-camel-case
+    '''
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1)
+
+
+def clean_col_names(df):
+    df.columns = [name.lstrip() for name in df.columns.tolist()]
+    df.columns = [name.rstrip() for name in df.columns.tolist()]
+    df.columns = [name.replace(' ','') for name in df.columns.tolist()]
+    df.columns = [name.replace('_','') for name in df.columns.tolist()]
+    df.columns = [replace_camelcase_with_underscore(name) for name in df.columns.tolist()]
+    return df
 
 
 def main():
-    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'EiS_Thesis.json'
-    bq_client = Client()
-
-    # Perform a query.
-    QUERY = ('SELECT * FROM `bigquery-public-data.san_francisco.bikeshare_status`;')
-
-    print("Estimated Size: ", estimate_query_size(bq_client, QUERY), " GB")
-    query_job = bq_client.query(QUERY)  # API request
-    rows = query_job.result()  # Waits for query to finish
-
-    start_time = time.time()
-
-    with open('SF_BikeShare.csv', "w") as f:
-        print("time, station_id, bikes_available, docks_available", sep=',', file=f)
-        i = 0
-        for row in rows:
-            if i % 100000 == 0:
-                print(i, time.time() - start_time)
-            print(row.time, row.station_id, row.bikes_available, row.docks_available, sep=',', file=f)
-            i = i + 1
-
-    end_time = time.time() - start_time
-    print("Time required: ", end_time)
+    print('Starting analysis...')
+    t0 = time.time()
+    print('Data read...', end='')
+    # Read data from csv files
+    # weath_df = pd.read_csv("data/weather.csv", nrows=None)
+    trip_df = pd.read_csv("data/trip.csv", nrows=None)
+    stn_df = pd.read_csv("data/station.csv", nrows=None)
+    # stat_df = pd.read_csv("data/status.csv", nrows=None)
+    print(' OK')
 
 
-def estimate_query_size(client, query):
-    """
-    Estimate gigabytes scanned by query.
-    Does not consider if there is a cached query table.
-    See https://cloud.google.com/bigquery/docs/reference/rest/v2/jobs#configuration.dryRun
-    """
-    my_job_config = bigquery.job.QueryJobConfig()
-    my_job_config.dry_run = True
-    my_job = client.query(query, job_config=my_job_config)
-    return my_job.total_bytes_processed / (1024 * 10**6)
+    # Remove outliers. Outliers defined as values greater than 99.5th percentile
+    maxVal = np.percentile(trip_df['duration'], 99.5)
+    trip_df = trip_df[trip_df['duration'] <= maxVal]
+
+    print('Feature extraction', end='')
+    # Extract date, month, hour of start
+    trip_df['start_day'] = trip_df['start_date'].map(lambda x: (datetime.strptime(x, "%m/%d/%Y %H:%M")).day)
+    print('.', end='')
+    trip_df['start_month'] = trip_df['start_date'].map(lambda x: (datetime.strptime(x, "%m/%d/%Y %H:%M")).month)
+    print('.', end='')
+    trip_df['start_hour'] = trip_df['start_date'].map(lambda x: (datetime.strptime(x, "%m/%d/%Y %H:%M")).hour)
+    print('.', end='')
+    trip_df['day_of_week'] = trip_df['start_date'].map(lambda x: (datetime.strptime(x, "%m/%d/%Y %H:%M")).weekday())
+    print(' OK')
+
+    # Get only a subset of the data
+    trip_df = trip_df[['id', 'start_day', 'start_month', 'start_hour', 'day_of_week', 'duration', 'start_station_id', 'end_station_id', 'subscription_type', 'zip_code']]
+    stn_df = stn_df[['station_id', 'lat', 'long', 'dock_count']]
+
+    fig, axes = plt.subplots(figsize=(12, 4), nrows=1, ncols=2)
+
+    print('Group by Subscriber... ', end='')
+    a = trip_df[trip_df['subscription_type'] == 'Subscriber'].groupby(['day_of_week', 'start_hour'])['id'].count()
+    print(' OK')
+    days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+    plt.sca(axes[0])
+
+    print('Plot Subscriber... ', end='')
+    for i in range(7):
+        sns.lineplot(data=a[i], label=days[i])
+
+    plt.title('Number of trips by hour : Subscriber')
+    plt.legend()
+    print(' OK')
+
+    plt.minorticks_on()
+    plt.tight_layout()
+    plt.grid()
+
+    print('Group by Customer... ', end='')
+    a = trip_df[trip_df['subscription_type'] == 'Customer'].groupby(['day_of_week', 'start_hour'])['id'].count()
+    print(' OK')
+
+    print('Plot Customer... ', end='')
+    plt.sca(axes[1])
+
+    for i in range(7):
+        sns.lineplot(data=a[i], label=days[i])
+
+    plt.title('Number of trips by hour : Customer')
+    plt.legend()
+    print(' OK')
+
+    plt.minorticks_on()
+    plt.grid()
+
+    plt.savefig('plot/num_trips.png', dpi=300)
+    plt.show()
+
+    plt.figure(figsize=[8, 6])
+    plt.axvline(x=1800, color='r', linestyle='--')
+
+    print('Plot Subscriber duration... ', end='')
+    sub = trip_df[(trip_df['subscription_type'] == 'Subscriber') & (trip_df['duration'] < 2800)]
+    sns.distplot(sub['duration'], label='Subscriber', kde=False)
+    print(' OK')
+
+    print('Plot Customer duration... ', end='')
+    cos = trip_df[(trip_df['subscription_type'] == 'Customer') & (trip_df['duration'] < 2800)]
+    sns.distplot(cos['duration'], label='Casual', kde=False)
+    print(' OK')
+
+    plt.title('Histogram: Duration in sec')
+    plt.xlabel('Duration of ride (s)')
+    plt.legend()
+    plt.minorticks_on()
+    plt.grid()
+
+    plt.savefig('plot/dur_trips.png', dpi=300)
+    plt.show()
+
+    cos = trip_df[(trip_df['subscription_type'] == 'Customer') & (trip_df['duration'] > 1800)]
+    val_cas_over = cos['duration'].count() / float(cos['duration'].count())
+
+    sub = trip_df[(trip_df['subscription_type'] == 'Subscriber') & (trip_df['duration'] > 1800)]
+    val_sub_over = sub['duration'].count() / float(sub['duration'].count())
+
+    print('Analysis terminated: ' + str(time.time() - t0) + '\n')
+
+    print("{0}% of causal customers pay overtime fee! ".format(np.round(val_cas_over * 100, 0)))
+    print("{0}% of subscribers pay overtime fee! ".format(np.round(val_sub_over * 100, 0)))
 
 
 if __name__ == "__main__":
