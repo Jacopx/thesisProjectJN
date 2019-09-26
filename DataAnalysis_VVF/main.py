@@ -150,10 +150,18 @@ def main():
 
     correlation_map1(df)
     print("\t * Correlation Matrix1 [{} s]".format(round(time.time() - t0, 2)))
+
     correlation_map2(df)
     print("\t * Correlation Matrix2 [{} s]".format(round(time.time() - t0, 2)))
+
     distribution(df)
     print("\t * Distribution [{} s]".format(round(time.time() - t0, 2)))
+
+    uni = np.unique(df[['duration', 'x', 'y', 'typo', 'locat', 'day', 'start', 'finish']])
+    count = df[['duration', 'x', 'y', 'typo', 'locat', 'day', 'start', 'finish']]
+
+    print("\nUnique data: {}".format(round(uni.size/count.size, 5), 4))
+    print("Total Time [{} s]".format(round(time.time() - t0, 2)))
 
 
 if __name__ == "__main__":
