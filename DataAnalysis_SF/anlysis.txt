@@ -1,0 +1,37 @@
+BikeSharing SF Data Analysis
+------------------
+The data getted from: https://www.kaggle.com/benhamner/sf-bay-area-bike-share
+The data structure is composed of:
+  * station.csv - Contains data that represents a station where users can pickup or return bikes.
+  * status.csv - data about the number of bikes and docks available for given station and minute.
+  * trips.csv - Data about individual bike trips
+  * weather.csv - Data about the weather on a specific day for certain zip codes
+
+
+To forecast
+------------
+Prediction of bike availability respect different time and different station of the day.
+
+
+Analysis
+---------
+There is a strong different behaviour respect the occasional customer (customer) and recurrent customer (subscriber), this difference are related both on the day and hour of utilisation of the service, but also respect the duration of the utilisation of it.
+
+
+
+External Research
+------------------
+* [SimpleDeterministic, Random Forest, RF+Weather] https://towardsdatascience.com/sf-bike-share-predictions-e15316ce300f
+    ** [Code] https://github.com/gussie/Springboard_data_science
+    ** [Data] https://www.kaggle.com/benhamner/sf-bay-area-bike-share
+
+* https://www.simplydatascience.it/bike-sharing-analysis/
+
+* [RandomForest] https://www.manishkurse.com/PythonProjects/SFO_BikeShare.html
+* [RandomForest] https://www.manishkurse.com/PythonProjects/BikeSharingDemand.html
+
+* [Max Likelihood Estimate (MLE), Max A Posteriori (MAP)] https://towardsdatascience.com/predicting-no-of-bike-share-users-machine-learning-data-visualization-project-using-r-71bc1b9a7495
+
+* [Public Tableu] https://public.tableau.com/views/SFBikeShareAnalysis/FinalPresentation?:embed=y&:showVizHome=no&:display_count=y&:display_static_image=y&:bootstrapWhenNotified=true
+
+* [Only Analysis] https://datascienceplus.com/exploring-san-francisco-bay-areas-bike-share-system/
