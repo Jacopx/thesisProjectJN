@@ -37,3 +37,10 @@ External Research
 * [Only Analysis] https://datascienceplus.com/exploring-san-francisco-bay-areas-bike-share-system/
 
 * https://towardsdatascience.com/traditional-vs-deep-learning-algorithms-in-retail-industry-i-b7b7f86793d4
+
+
+Paper
+--------
+* ReplenimentshipInventory.pdf
+* Inventory Management in the Era of Big Data.pdf
+* V4I3-1997.pdf

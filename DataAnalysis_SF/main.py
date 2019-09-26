@@ -128,11 +128,41 @@ def main():
     plt.savefig('plot/dur_trips.png', dpi=300)
     plt.show()
 
+    print('Making calculation... ', end='')
     cos = trip_df[(trip_df['subscription_type'] == 'Customer') & (trip_df['duration'] > 1800)]
-    val_cas_over = cos['duration'].count() / float(cos['duration'].count())
+    val_cas_over = cos['duration'].count() / float(trip_df['duration'].count())
 
     sub = trip_df[(trip_df['subscription_type'] == 'Subscriber') & (trip_df['duration'] > 1800)]
-    val_sub_over = sub['duration'].count() / float(sub['duration'].count())
+    val_sub_over = sub['duration'].count() / float(trip_df['duration'].count())
+    print(' OK')
+
+    sub = trip_df[(trip_df['subscription_type'] == 'Subscriber')]
+
+    print('Plot Subscriber matrix usage... ', end='')
+    counts_per_endStation = sub.groupby(['start_station_id', 'end_station_id'])['id'].count()
+    counts_per_endStation = counts_per_endStation.unstack()
+    plt.figure(figsize=(12, 10))
+    h = sns.heatmap(counts_per_endStation, cmap='YlOrRd', linewidths=0, square=True, vmax=450)
+    h = plt.xticks(rotation='vertical')
+    h = plt.yticks(rotation='horizontal')
+    plt.title('Traffic between pairs of bike stations: Subscribers')
+    plt.savefig('plot/HeatMap_StationUsage_sub.png', dpi=300)
+    plt.show()
+    print(' OK')
+
+    cos = trip_df[(trip_df['subscription_type'] == 'Customer')]
+
+    print('Plot Customer matrix usage... ', end='')
+    counts_per_endStation = cos.groupby(['start_station_id', 'end_station_id'])['id'].count()
+    counts_per_endStation = counts_per_endStation.unstack()
+    plt.figure(figsize=(12, 10))
+    h = sns.heatmap(counts_per_endStation, cmap='YlGnBu', linewidths=0, square=True, vmax=450)
+    h = plt.xticks(rotation='vertical')
+    h = plt.yticks(rotation='horizontal')
+    plt.title('Traffic between pairs of bike stations: Customers')
+    plt.savefig('plot/HeatMap_StationUsage_cos.png', dpi=300)
+    plt.show()
+    print(' OK')
 
     print('Analysis terminated: ' + str(time.time() - t0) + '\n')
 
