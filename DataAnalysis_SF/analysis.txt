@@ -15,8 +15,8 @@ Prediction of bike availability respect different time and different station of 
 
 Analysis
 ---------
-There is a strong different behaviour respect the occasional customer (customer) and recurrent customer (subscriber), this difference are related both on the day and hour of utilisation of the service, but also respect the duration of the utilisation of it.
-
+All the previuos research about this, or similar, dataset show a lot of different correlation. One of the most important is the type of client (customer or subscriber) and the time, or the day of the week, of the utilization. There are also, in case of SF, lot of correlation with the weather.
+Searching through previous experience seems that Random Forest should be a good algorithm for this analysis. Other research have used also MLE and MAP models. 
 
 
 External Research

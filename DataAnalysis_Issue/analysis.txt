@@ -24,3 +24,16 @@ Important Feature
 -----------------
   * Number of issue
   * Create date
+
+
+Analysis
+---------
+The case seems to not be study yet, in any case, it can be categorized as a generical forecasting problem. After some research, the LSTM, Long Short-term Memory Neural Network, seems to be a good model to be implemented to study this case.
+
+
+External Research
+------------------
+* [General TS forecasting] https://machinelearningmastery.com/how-to-develop-deep-learning-models-for-univariate-time-series-forecasting/
+* [General TS forecasting] https://www.kdnuggets.com/2019/05/machine-learning-time-series-forecasting.html
+* [Long Short Term Memory] https://www.kdnuggets.com/2017/10/guide-time-series-prediction-recurrent-neural-networks-lstms.html
+* [General TS forecasting] https://www.hindawi.com/journals/complexity/2019/9067367/
