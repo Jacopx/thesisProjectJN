@@ -16,7 +16,7 @@ Prediction of bike availability respect different time and different station of 
 Analysis
 ---------
 All the previuos research about this, or similar, dataset show a lot of different correlation. One of the most important is the type of client (customer or subscriber) and the time, or the day of the week, of the utilization. There are also, in case of SF, lot of correlation with the weather.
-Searching through previous experience seems that Random Forest should be a good algorithm for this analysis. Other research have used also MLE and MAP models.
+Searching through previous experience seems that RNN, like LSTM, could achieve the goal of this research.
 
 
 External Research
@@ -38,9 +38,12 @@ External Research
 
 * https://towardsdatascience.com/traditional-vs-deep-learning-algorithms-in-retail-industry-i-b7b7f86793d4
 
+* [Forecasting with LSTM] https://towardsdatascience.com/time-series-analysis-visualization-forecasting-with-lstm-77a905180eba
+
 
 Paper
 --------
 * ReplenInventory.pdf
 * InvMan_BigData.pdf
 * AI_StockDecision.pdf
+* StatAndML_MethodsForecasting.pdf
