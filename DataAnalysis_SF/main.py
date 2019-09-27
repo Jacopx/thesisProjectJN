@@ -129,42 +129,42 @@ def main():
     plt.show()
 
     print('Making calculation... ', end='')
-    cos = trip_df[(trip_df['subscription_type'] == 'Customer') & (trip_df['duration'] > 1800)]
-    val_cas_over = cos['duration'].count() / float(trip_df['duration'].count())
+    cosC = trip_df[(trip_df['subscription_type'] == 'Customer') & (trip_df['duration'] > 1800)]
+    val_cas_over = cosC['duration'].count() / float(trip_df[(trip_df['subscription_type'] == 'Customer')]['duration'].count())
 
-    sub = trip_df[(trip_df['subscription_type'] == 'Subscriber') & (trip_df['duration'] > 1800)]
-    val_sub_over = sub['duration'].count() / float(trip_df['duration'].count())
+    subC = trip_df[(trip_df['subscription_type'] == 'Subscriber') & (trip_df['duration'] > 1800)]
+    val_sub_over = subC['duration'].count() / float(trip_df[(trip_df['subscription_type'] == 'Subscriber')]['duration'].count())
     print(' OK')
 
     sub = trip_df[(trip_df['subscription_type'] == 'Subscriber')]
 
     print('Plot Subscriber matrix usage... ', end='')
-    counts_per_endStation = sub.groupby(['start_station_id', 'end_station_id'])['id'].count()
-    counts_per_endStation = counts_per_endStation.unstack()
+    counts_end_station = sub.groupby(['start_station_id', 'end_station_id'])['id'].count()
+    counts_end_station = counts_end_station.unstack()
     plt.figure(figsize=(12, 10))
-    h = sns.heatmap(counts_per_endStation, cmap='YlOrRd', linewidths=0, square=True, vmax=450)
-    h = plt.xticks(rotation='vertical')
-    h = plt.yticks(rotation='horizontal')
+    sns.heatmap(counts_end_station, cmap='YlOrRd', linewidths=0, square=False, vmax=450)
+    plt.xticks(rotation='vertical')
+    plt.yticks(rotation='horizontal')
     plt.title('Traffic between pairs of bike stations: Subscribers')
-    plt.savefig('plot/HeatMap_StationUsage_sub.png', dpi=300)
+    plt.savefig('plot/stat_usage_sub.png', dpi=300)
     plt.show()
     print(' OK')
 
     cos = trip_df[(trip_df['subscription_type'] == 'Customer')]
 
     print('Plot Customer matrix usage... ', end='')
-    counts_per_endStation = cos.groupby(['start_station_id', 'end_station_id'])['id'].count()
-    counts_per_endStation = counts_per_endStation.unstack()
+    counts_end_station = cos.groupby(['start_station_id', 'end_station_id'])['id'].count()
+    counts_end_station = counts_end_station.unstack()
     plt.figure(figsize=(12, 10))
-    h = sns.heatmap(counts_per_endStation, cmap='YlGnBu', linewidths=0, square=True, vmax=450)
-    h = plt.xticks(rotation='vertical')
-    h = plt.yticks(rotation='horizontal')
+    sns.heatmap(counts_end_station, cmap='YlGnBu', linewidths=0, square=True, vmax=450)
+    plt.xticks(rotation='vertical')
+    plt.yticks(rotation='horizontal')
     plt.title('Traffic between pairs of bike stations: Customers')
-    plt.savefig('plot/HeatMap_StationUsage_cos.png', dpi=300)
+    plt.savefig('plot/stat_usage_cos.png', dpi=300)
     plt.show()
     print(' OK')
 
-    print('Analysis terminated: ' + str(time.time() - t0) + '\n')
+    print('Analysis terminated: ' + str(time.time() - t0) + 's\n')
 
     print("{0}% of causal customers pay overtime fee! ".format(np.round(val_cas_over * 100, 0)))
     print("{0}% of subscribers pay overtime fee! ".format(np.round(val_sub_over * 100, 0)))

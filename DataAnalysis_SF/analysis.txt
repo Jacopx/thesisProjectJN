@@ -41,6 +41,6 @@ External Research
 
 Paper
 --------
-* ReplenimentshipInventory.pdf
-* Inventory Management in the Era of Big Data.pdf
-* V4I3-1997.pdf
+* ReplenInventory.pdf
+* InvMan_BigData.pdf
+* AI_StockDecision.pdf
