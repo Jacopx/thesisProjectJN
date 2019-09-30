@@ -108,6 +108,7 @@ def feature_extraction(df):
     df['rec_hour'] = df['rec_dt'].dt.hour
     print('.', end='')
     df['rec_day_of_week'] = df['rec_dt'].dt.weekday
+    df['week'] = df['rec_dt'].dt.week
     print(' OK')
 
     print('Feature extraction END', end='')
@@ -186,7 +187,69 @@ def corr_map(df):
 
 def distplot(df, col):
     plt.figure(figsize=(12, 12))
-    sns.distplot(df[col])
+    sub = df[(df[col] < 18000) & (df[col] > 0)]
+    sns.distplot(sub[col], kde=True)
+    plt.title('Distribution of ' + col)
+    plt.ylabel('Density')
+    plt.xlabel(col)
+    plt.minorticks_on()
+    plt.show()
+
+
+def weekday_hour(df_op):
+    df = df_op[['rec_day_of_week', 'rec_hour', 'duration']]
+
+    df_operations_day = pd.pivot_table(df[['rec_day_of_week', 'rec_hour', 'duration']],
+                                       index=['rec_day_of_week', 'rec_hour'], aggfunc='count')
+    df_operations_day = df_operations_day.sort_values(by=['rec_day_of_week'])
+
+    heatmap_data = pd.pivot_table(df_operations_day, values='duration', index='rec_day_of_week', columns='rec_hour')
+
+    plt.figure(figsize=(12, 5))
+    sns.heatmap(heatmap_data, cmap="YlOrRd", linewidths=0.1, vmin=0, square=True,
+                cbar_kws={"orientation": "horizontal"})
+
+    plt.title('Operations over Day/Hours')
+    plt.ylabel('Weekday')
+    plt.xlabel('Hours')
+    plt.minorticks_on()
+    plt.tight_layout()
+    plt.savefig('plot/hours.png', dpi=300)
+    plt.show()
+
+
+def year_calendar(df_op):
+    df = df_op[['rec_day_of_week', 'week', 'priority']]
+
+    df_operations_vehicle = pd.pivot_table(df, index=['rec_day_of_week', 'week'], aggfunc='count')
+    df_operations_vehicle2 = df_operations_vehicle.sort_values('rec_day_of_week', ascending=True)
+
+    heatmap_data = pd.pivot_table(df_operations_vehicle2, values='priority', columns='week', index='rec_day_of_week')
+
+    plt.figure(figsize=(16, 4))
+    sns.heatmap(heatmap_data, cmap="YlGnBu", linewidths=0.01, vmin=0, square=True, cbar_kws={"orientation": "horizontal"})
+    plt.title('Operations over Years')
+    plt.ylabel('Weekdays')
+    plt.xlabel('Week')
+    plt.tight_layout()
+    plt.savefig('plot/calendar.png', dpi=300)
+    plt.show()
+
+
+def op_over_month_station(df_op):
+    df = df_op[['station_area', 'rec_month', 'priority']]
+
+    df_operations_day = pd.pivot_table(df, index=['station_area', 'rec_month'], aggfunc='count')
+    heatmap_data = pd.pivot_table(df_operations_day, values='priority', columns='station_area', index='rec_month')
+
+    plt.figure(figsize=(17, 6))
+    sns.heatmap(heatmap_data, cmap="PuRd", linewidths=0.01, vmin=0, square=True, cbar_kws={"orientation": "horizontal"})
+    plt.title('Operations of different station over months')
+    plt.xlabel('Station Area')
+    plt.ylabel('Month')
+    plt.minorticks_on()
+    plt.tight_layout()
+    plt.savefig('plot/month_station.png', dpi=300)
     plt.show()
 
 
@@ -213,6 +276,9 @@ def main():
     corr_map(df)
     distplot(df, 'duration')
     distplot(df, 'res_time')
+    weekday_hour(df)
+    year_calendar(df)
+    op_over_month_station(df)
 
     print("Total Time [{} s]".format(round(time.time() - t0, 2)))
     # print("Number of Rows [{}]".format(tot_row))
