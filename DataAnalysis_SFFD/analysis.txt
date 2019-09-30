@@ -41,3 +41,10 @@ Data source: https://data.sfgov.org/api/views/nuek-vuh3
 
 Analysis
 ----------
+
+
+External Analysis
+------------------
+* https://www.arcgis.com/apps/MapSeries/index.html?appid=f98568a6ac70458dbccc60f407a23ac8
+* https://www.arcgis.com/apps/MapJournal/index.html?appid=5df17d3178474b4f9d78b0f82f0d9789
+* https://nbviewer.jupyter.org/github/yqzgh09/STA-141B/blob/master/final_project.html
