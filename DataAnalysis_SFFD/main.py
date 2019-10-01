@@ -56,7 +56,7 @@ def clean_col_names(df):
 
 
 def read_data(dest):
-    print('Data read...', end='')
+    print('Reading data...', end='')
     path = 'data'  # use your path
     all_files = glob.glob(path + "/" + dest + ".csv")
 
@@ -77,6 +77,24 @@ def data_reduction(df):
              'zipcodeof_incident', 'numberof_alarms', 'battalion', 'station_area', 'box', 'priority', 'location']]
     print(' OK')
     return df
+
+
+def location(df):
+    print('Parsing location...', end='')
+    part = df['location'].str.split(",", expand=True)
+    new = part[0].str.split(' ', expand=True)
+    dot()
+
+    df['lat'] = new[1].str.replace('(', '')
+    df['lat'].astype(float)
+    dot()
+
+    df['long'] = new[2].str.replace(')', '')
+    df['long'].astype(float)
+    dot()
+
+    df.drop(columns=['location'], inplace=True)
+    print(' OK')
 
 
 def remove_outliers(df, col):
@@ -117,7 +135,7 @@ def parser(df):
     dot()
 
     df['end_dt'] = pd.to_datetime(df['available_dt_tm'], format="%m/%d/%Y %I:%M:%S %p")
-    print('. OK')
+    print('. OK\n')
 
 
 def feature_extraction(df):
@@ -134,6 +152,7 @@ def feature_extraction(df):
 
     df['rec_day_of_week'] = df['rec_dt'].dt.weekday
     df['week'] = df['rec_dt'].dt.week
+    df['year'] = df['rec_dt'].dt.year
     print(' OK')
 
     print('Feature extraction END', end='')
@@ -174,9 +193,6 @@ def feature_extraction(df):
 
 
 def remove_nan(df):
-    df = df[['unit_id', 'call_type', 'call_type_group', 'rec_dt', 'onscene_dt', 'end_dt', 'zipcodeof_incident',
-             'numberof_alarms', 'battalion', 'station_area', 'box', 'priority', 'location']]
-
     print('Removing NaN rows [' + str((df['end_dt'].isnull().sum() / df.size) * 100) + ']...', end='')
     df = df[np.isfinite(df['end_dt'])]
     print(' OK')
@@ -205,7 +221,7 @@ def corr_map(df):
     corr = df.corr()
     dot()
 
-    plt.figure(figsize=(12, 12))
+    plt.figure(figsize=(18, 18))
     sns.heatmap(corr, cmap='seismic', annot=True, linewidths=0.2, vmin=-1, vmax=1, square=False)
     dot()
 
@@ -349,15 +365,32 @@ def replace_dict(df, dict, col):
     print(' OK')
 
 
+def operations_map(df):
+    print('Map of operations...', end='')
+    plt.figure(figsize=(20, 20))
+    red = df[df['year'] == 2018]
+    sns.scatterplot(x=red['lat'], y=red['long'], hue=red['rec_day_of_week'])
+    plt.title('Operation coordinates')
+    plt.xlabel('Latitude')
+    plt.ylabel('Longitude')
+    plt.minorticks_on()
+    plt.tight_layout()
+    plt.grid()
+    plt.savefig('plot/coordinates.png', dpi=300)
+    plt.show()
+    print(' OK')
+
+
 def main(path):
     t0 = time.time()
-    print("Starting Analysis...\n")
+    print("Starting Analysis...")
 
     df = read_data(path)
     if 'RAW' in path:
         print("=== REDUCING DATASET ===\n")
         clean_col_names(df)
         df = data_reduction(df)
+        location(df)
         export_csv(df, 'operationsSFFD_REDUCED')
 
     elif 'REDUCED' in path:
@@ -382,6 +415,9 @@ def main(path):
         year_calendar(df)
         op_over_month_station(df)
         hier_clust(df)
+
+        # REQUIRE SEABORN 0.9.0
+        # operations_map(df)
 
     print("\nTotal Time [{} s]".format(round(time.time() - t0, 2)))
 
