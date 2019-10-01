@@ -1,12 +1,14 @@
+import re
+import sys
 import time
+import glob
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
-import glob
-import re
+import matplotlib.pyplot as plt
 from datetime import datetime
-import sys
+import warnings
+warnings.simplefilter('ignore')
 
 unit = {}
 loc = {}
@@ -317,7 +319,6 @@ def op_over_month_station(df_op):
 def hier_clust(df):
     print('Hierarchical clustering', end='')
     dfc = df[['priority', 'call_type_group']].copy()
-    replace_dict(dfc, subtypoR, 'call_type_group')
     dot()
 
     dfc = dfc.groupby('call_type_group')
