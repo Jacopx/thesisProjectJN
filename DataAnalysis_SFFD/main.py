@@ -10,8 +10,10 @@ import sys
 
 unit = {}
 loc = {}
+
 subtypo = {'Potentially Life-Threatening': 1, 'Non Life-threatening': 2, 'Alarm': 3, 'Fire': 4}
-subtypoR = {1: 'Potentially Life-Threatening', 2: 'Non Life-threatening', 3: 'Alarm', 4:'Fire'}
+subtypoR = {1: 'Potentially Life-Threatening', 2: 'Non Life-threatening', 3: 'Alarm', 4: 'Fire'}
+
 typo = {'Medical Incident': 0, 'Outside Fire': 1, 'Alarms': 2, 'Citizen Assist / Service Call': 3,
         'Traffic Collision': 4, 'Other': 5, 'Structure Fire': 6, 'Smoke Investigation (Outside)': 7,
         'Electrical Hazard': 8, 'Elevator / Escalator Rescue': 9, 'Vehicle Fire': 10,
@@ -78,9 +80,9 @@ def data_reduction(df):
 def remove_outliers(df, col):
     print('Remove OUTLIERS', end='')
     # Remove outliers. Outliers defined as values greater than 99.5th percentile
-    maxVal = np.percentile(df[col], 99.5)
+    max_val = np.percentile(df[col], 99.5)
     dot()
-    df = df[df[col] <= maxVal]
+    df = df[df[col] <= max_val]
     print('.. OK')
     return df
 
@@ -88,16 +90,14 @@ def remove_outliers(df, col):
 def fix_priority(df_in):
     print('Fixing priority ', end='')
     df = df_in.copy()
-    df.priority.replace(['A', 'B', 'C', 'D', 'E'],  # Change 'original_priority'
-                                  ['2', '2', '2', '3', '3'], inplace=True)
+    df.priority.replace(['A', 'B', 'C', 'D', 'E'], ['2', '2', '2', '3', '3'], inplace=True)
     dot()
 
     df = df[(df.priority != 'I') & (df.priority != '1')]
     df.priority.dropna(axis=0, inplace=True)
     dot()
 
-    df.priority.replace(['A', 'B', 'C', 'E'],  # Change 'priority'
-                         ['2', '2', '2', '3'], inplace=True)
+    df.priority.replace(['A', 'B', 'C', 'E'], ['2', '2', '2', '3'], inplace=True)
 
     df.priority.astype(int)
     print('. OK')
