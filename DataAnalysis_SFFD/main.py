@@ -12,20 +12,24 @@ unit = {}
 loc = {}
 subtypo = {'Potentially Life-Threatening': 1, 'Non Life-threatening': 2, 'Alarm': 3, 'Fire': 4}
 subtypoR = {1: 'Potentially Life-Threatening', 2: 'Non Life-threatening', 3: 'Alarm', 4:'Fire'}
-typo = {'Medical Incident': 0, 'Outside Fire': 1, 'Alarms': 2, 'Citizen Assist / Service Call': 3, 'Traffic Collision': 4,
-        'Other': 5, 'Structure Fire': 6, 'Smoke Investigation (Outside)': 7, 'Electrical Hazard': 8, 'Elevator / Escalator Rescue': 9,
-        'Vehicle Fire': 10, 'Gas Leak (Natural and LP Gases)': 11, 'Water Rescue': 12, 'Odor (Strange / Unknown)': 13, 'Fuel Spill': 14,
-        'Train / Rail Incident': 15, 'Administrative': 16, 'Marine Fire': 17, 'Industrial Accidents': 18, 'High Angle Rescue': 19,
-        'HazMat': 20, 'Explosion': 21, 'Confined Space / Structure Collapse': 22, 'Assist Police': 23, 'Extrication / Entrapped (Machinery, Vehicle)': 24,
-        'Watercraft in Distress': 25, 'Suspicious Package': 26, 'Train / Rail Fire': 27, 'Mutual Aid / Assist Outside Agency': 28,
+typo = {'Medical Incident': 0, 'Outside Fire': 1, 'Alarms': 2, 'Citizen Assist / Service Call': 3,
+        'Traffic Collision': 4, 'Other': 5, 'Structure Fire': 6, 'Smoke Investigation (Outside)': 7,
+        'Electrical Hazard': 8, 'Elevator / Escalator Rescue': 9, 'Vehicle Fire': 10,
+        'Gas Leak (Natural and LP Gases)': 11, 'Water Rescue': 12, 'Odor (Strange / Unknown)': 13, 'Fuel Spill': 14,
+        'Train / Rail Incident': 15, 'Administrative': 16, 'Marine Fire': 17, 'Industrial Accidents': 18,
+        'High Angle Rescue': 19, 'HazMat': 20, 'Explosion': 21, 'Confined Space / Structure Collapse': 22,
+        'Assist Police': 23, 'Extrication / Entrapped (Machinery, Vehicle)': 24, 'Watercraft in Distress': 25,
+        'Suspicious Package': 26, 'Train / Rail Fire': 27, 'Mutual Aid / Assist Outside Agency': 28,
         'Lightning Strike (Investigation)': 29, 'Aircraft Emergency': 30, 'Oil Spill': 31}
-typoR = {0: 'Medical Incident', 1: 'Outside Fire', 2: 'Alarms', 3: 'Citizen Assist / Service Call', 4: 'Traffic Collision',
-        5: 'Other', 6: 'Structure Fire', 7: 'Smoke Investigation (Outside)', 8: 'Electrical Hazard', 9: 'Elevator / Escalator Rescue',
-        10: 'Vehicle Fire', 11: 'Gas Leak (Natural and LP Gases)', 12: 'Water Rescue', 13: 'Odor (Strange / Unknown)',
-        14: 'Fuel Spill', 15: 'Train / Rail Incident', 16: 'Administrative', 17: 'Marine Fire', 18: 'Industrial Accidents',
-        19: 'High Angle Rescue', 20: 'HazMat', 21: 'Explosion', 22: 'Confined Space / Structure Collapse', 23: 'Assist Police',
-        24: 'Extrication / Entrapped (Machinery, Vehicle)', 25: 'Watercraft in Distress', 26: 'Suspicious Package', 27: 'Train / Rail Fire',
-        28: 'Mutual Aid / Assist Outside Agency', 29: 'Lightning Strike (Investigation)', 30: 'Aircraft Emergency', 31: 'Oil Spill'}
+typoR = {0: 'Medical Incident', 1: 'Outside Fire', 2: 'Alarms', 3: 'Citizen Assist / Service Call',
+         4: 'Traffic Collision', 5: 'Other', 6: 'Structure Fire', 7: 'Smoke Investigation (Outside)',
+         8: 'Electrical Hazard', 9: 'Elevator / Escalator Rescue', 10: 'Vehicle Fire',
+         11: 'Gas Leak (Natural and LP Gases)', 12: 'Water Rescue', 13: 'Odor (Strange / Unknown)', 14: 'Fuel Spill',
+         15: 'Train / Rail Incident', 16: 'Administrative', 17: 'Marine Fire', 18: 'Industrial Accidents',
+         19: 'High Angle Rescue', 20: 'HazMat', 21: 'Explosion', 22: 'Confined Space / Structure Collapse',
+         23: 'Assist Police', 24: 'Extrication / Entrapped (Machinery, Vehicle)', 25: 'Watercraft in Distress',
+         26: 'Suspicious Package', 27: 'Train / Rail Fire', 28: 'Mutual Aid / Assist Outside Agency',
+         29: 'Lightning Strike (Investigation)', 30: 'Aircraft Emergency', 31: 'Oil Spill'}
 
 
 def dot():
@@ -65,7 +69,8 @@ def read_data(dest):
 
 def data_reduction(df):
     print('Remove columns...', end='')
-    df = df[['unit_id', 'call_type', 'call_type_group', 'received_dt_tm', 'on_scene_dt_tm', 'available_dt_tm', 'zipcodeof_incident', 'numberof_alarms', 'battalion', 'station_area', 'box', 'priority', 'location']]
+    df = df[['unit_id', 'call_type', 'call_type_group', 'received_dt_tm', 'on_scene_dt_tm', 'available_dt_tm',
+             'zipcodeof_incident', 'numberof_alarms', 'battalion', 'station_area', 'box', 'priority', 'location']]
     print(' OK')
     return df
 
@@ -77,6 +82,7 @@ def remove_outliers(df, col):
     dot()
     df = df[df[col] <= maxVal]
     print('.. OK')
+    return df
 
 
 def fix_priority(df_in):
@@ -166,7 +172,8 @@ def feature_extraction(df):
 
 
 def remove_nan(df):
-    df = df[['unit_id', 'call_type', 'call_type_group', 'rec_dt', 'onscene_dt', 'end_dt', 'zipcodeof_incident', 'numberof_alarms', 'battalion', 'station_area', 'box', 'priority', 'location']]
+    df = df[['unit_id', 'call_type', 'call_type_group', 'rec_dt', 'onscene_dt', 'end_dt', 'zipcodeof_incident',
+             'numberof_alarms', 'battalion', 'station_area', 'box', 'priority', 'location']]
 
     print('Removing NaN rows [' + str((df['end_dt'].isnull().sum() / df.size) * 100) + ']...', end='')
     df = df[np.isfinite(df['end_dt'])]
@@ -270,7 +277,8 @@ def year_calendar(df_op):
 
     heatmap_data = pd.pivot_table(df_operations_vehicle2, values='priority', columns='week', index='rec_day_of_week')
     plt.figure(figsize=(16, 4))
-    sns.heatmap(heatmap_data, cmap="YlGnBu", linewidths=0.01, vmin=0, square=True, cbar_kws={"orientation": "horizontal"})
+    sns.heatmap(heatmap_data, cmap="YlGnBu", linewidths=0.01, vmin=0, square=True,
+                cbar_kws={"orientation": "horizontal"})
     dot()
 
     plt.title('Operations over Years')
@@ -357,8 +365,8 @@ def main(path):
         df = remove_nan(df)
         df = fix_priority(df)
         feature_extraction(df)
-        remove_outliers(df, 'duration')
-        remove_outliers(df, 'res_time')
+        df = remove_outliers(df, 'duration')
+        df = remove_outliers(df, 'res_time')
         replace_dict(df, typo, 'call_type')
         replace_dict(df, subtypo, 'call_type_group')
         export_csv(df, 'operationsSFFD_CLEANED')
