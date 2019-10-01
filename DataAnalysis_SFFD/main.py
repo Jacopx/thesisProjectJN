@@ -135,7 +135,7 @@ def parser(df):
     dot()
 
     df['end_dt'] = pd.to_datetime(df['available_dt_tm'], format="%m/%d/%Y %I:%M:%S %p")
-    print('. OK\n')
+    print('. OK')
 
 
 def feature_extraction(df):
@@ -190,6 +190,8 @@ def feature_extraction(df):
 
     df['res_time'] = d.astype(int)
     print('. OK')
+
+    return df
 
 
 def remove_nan(df):
@@ -398,7 +400,7 @@ def main(path):
         parser(df)
         df = remove_nan(df)
         df = fix_priority(df)
-        feature_extraction(df)
+        df = feature_extraction(df)
         df = remove_outliers(df, 'duration')
         df = remove_outliers(df, 'res_time')
         replace_dict(df, typo, 'call_type')
