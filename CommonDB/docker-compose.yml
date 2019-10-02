@@ -21,6 +21,8 @@ services:
       # Where our data will be persisted
     volumes:
       - my-db:/var/lib/mysql
+    security_opt:
+      - seccomp:unconfined
 # Names our volume
 volumes:
   my-db:

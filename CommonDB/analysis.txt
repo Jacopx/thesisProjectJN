@@ -51,8 +51,10 @@ The process is based on the files contained in the folder 'data_to_load':
     * dict.txt: [system_db:csv_field] Is a file of used to match the field of the DB with the field of the CSV,
                 this match will be saved also in the dataset table info. Each unused row MUST have the NULL value
 
-The code require a change on the global variable called NAME that must e set to the proper one in order to correctly
-associate the data with the dataset.
+The code require a 3 parameters:
+    1) name of the dataset (exp. SFFD, SFBS)
+    2) data.csv of the data to be loaded
+    3) dict.txt of the match db_col:csv_col
 
 Know problems
 --------------
