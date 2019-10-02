@@ -1,3 +1,59 @@
 Common DB
 -----------
+The goal of this structure is to create a common place to store the data independently of the kind/source of it.
+Having a common structure is useful to make the procedure of forecasting standard and get it always in the same way.
 
+Structure
+----------
+The system is based on two tables, one with some informations about the dataset and the other one for the data itself.
+None of the field, of the table DATA, that must be set, they are all optional. Instead the only compulsory field of the
+DATASET table is the name that is also associated with the field name of the DATA table.
+The first one is structured like this:
+    * DATASET:
+        # name: Primary key, used to identify the dataset
+        # descr: Some generical infos
+        # first_dt: Datetime of the first data insert (not yet implemented)
+        # last_dt: Datetime of the last data insert (not yet implemented)
+        # feat1: Corresponding name between the .CSV source and standard table of DB
+        # feat2: Corresponding name between the .CSV source and standard table of DB
+        # feat3: Corresponding name between the .CSV source and standard table of DB
+        # feat4: Corresponding name between the .CSV source and standard table of DB
+        # feat5: Corresponding name between the .CSV source and standard table of DB
+        # feat6: Corresponding name between the .CSV source and standard table of DB
+        # feat7: Corresponding name between the .CSV source and standard table of DB
+        # feat8: Corresponding name between the .CSV source and standard table of DB
+        # feat9: Corresponding name between the .CSV source and standard table of DB
+        # feat10: Corresponding name between the .CSV source and standard table of DB
+
+The second table is structured in the following way:
+    * DATA:
+        # id: Auto incremental key for DB
+        # name: Dataset name
+        # start_dt: [datetime] Generical column for the event start
+        # end_dt: [datetime] Generical column for the event end
+        # duration: [s] Duration of the event
+        # type: Main feature
+        # feat1: Other feature (optional)
+        # feat2: Other feature (optional)
+        # feat3: Other feature (optional)
+        # feat4: Other feature (optional)
+        # feat5: Other feature (optional)
+        # feat6: Other feature (optional)
+        # feat7: Other feature (optional)
+        # feat8: Other feature (optional)
+        # feat9: Other feature (optional)
+        # feat10: Other feature (optional)
+
+Utilization
+------------
+The process is based on the files contained in the folder 'data_to_load':
+    * data.csv: Is the file with the data to be loaded in the system
+    * dict.txt: [system_db:csv_field] Is a file of used to match the field of the DB with the field of the CSV,
+                this match will be saved also in the dataset table info. Each unused row MUST have the NULL value
+
+The code require a change on the global variable called NAME that must e set to the proper one in order to correctly
+associate the data with the dataset.
+
+Know problems
+--------------
+* The INSERT process must be speedup [200.000 ~ 260s / 2.000.000 ~ 2580s]
