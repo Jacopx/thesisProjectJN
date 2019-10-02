@@ -129,12 +129,15 @@ def parser(df):
     # received_dt_tm,on_scene_dt_tm,available_dt_tm
     print('Parser', end='')
     df['rec_dt'] = pd.to_datetime(df['received_dt_tm'], format="%m/%d/%Y %I:%M:%S %p")
+    # df['rec_dt_eu'] = df['rec_dt'].dt.strftime('%Y-%m-%d %H:%M:%S')
     dot()
 
     df['onscene_dt'] = pd.to_datetime(df['on_scene_dt_tm'], format="%m/%d/%Y %I:%M:%S %p")
+    # df['onscene_dt_eu'] = df['onscene_dt'].dt.strftime('%Y-%m-%d %H:%M:%S')
     dot()
 
     df['end_dt'] = pd.to_datetime(df['available_dt_tm'], format="%m/%d/%Y %I:%M:%S %p")
+    # df['end_dt_eu'] = df['end_dt'].dt.strftime('%Y-%m-%d %H:%M:%S')
     print('. OK')
 
 
