@@ -15,13 +15,16 @@ def remove_outliers(df):
 def feature_extraction(df):
     print('Feature extraction', end='')
     # Extract date, month, hour of start
-    df['start_day'] = df['start_date'].map(lambda x: (datetime.strptime(x, "%m/%d/%Y %H:%M")).day)
+    df['start_dt'] = pd.to_datetime(df['start_date'], format="%m/%d/%Y %H:%M")
+    df['end_dt'] = pd.to_datetime(df['end_date'], format="%m/%d/%Y %H:%M")
+
+    df['start_day'] = df['start_dt'].dt.day
     print('.', end='')
-    df['start_month'] = df['start_date'].map(lambda x: (datetime.strptime(x, "%m/%d/%Y %H:%M")).month)
+    df['start_month'] = df['start_dt'].dt.month
     print('.', end='')
-    df['start_hour'] = df['start_date'].map(lambda x: (datetime.strptime(x, "%m/%d/%Y %H:%M")).hour)
+    df['start_hour'] = df['start_dt'].dt.hour
     print('.', end='')
-    df['day_of_week'] = df['start_date'].map(lambda x: (datetime.strptime(x, "%m/%d/%Y %H:%M")).weekday())
+    df['day_of_week'] = df['start_dt'].dt.weekday
     print(' OK')
 
 
@@ -158,6 +161,7 @@ def main():
     remove_outliers(trip_df)
     feature_extraction(trip_df)
     reduce_set(trip_df, stn_df)
+    # trip_df.to_csv('data/trip_data.csv')
     line_plot(trip_df)
     duration_plot(trip_df)
     calculation(trip_df)
