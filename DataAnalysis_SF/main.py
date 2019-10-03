@@ -25,6 +25,8 @@ def feature_extraction(df):
     df['start_hour'] = df['start_dt'].dt.hour
     print('.', end='')
     df['day_of_week'] = df['start_dt'].dt.weekday
+    df['week'] = df['start_dt'].dt.week
+    df['year'] = df['start_dt'].dt.year
     print(' OK')
 
 
@@ -148,6 +150,11 @@ def correlation_map(df):
     print(' OK')
 
 
+def year_month(df):
+    group = df.groupby(['year', 'start_month', 'start_hour'])['id'].count()
+    group.to_csv('play.csv', index=True)
+
+
 def main():
     print('Starting analysis...')
     t0 = time.time()
@@ -168,6 +175,8 @@ def main():
     matrix_start_end(trip_df, 'Subscriber')
     matrix_start_end(trip_df, 'Customer')
     correlation_map(trip_df)
+
+    year_month(trip_df)
 
     print('Analysis terminated: ' + str(time.time() - t0) + 's\n')
 

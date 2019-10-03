@@ -1,0 +1,9 @@
+Common DB
+-----------
+The goal of this structure is to create a common place to store the data independently of the kind/source of it.
+Having a common structure is useful to make the procedure of forecasting standard and get it always in the same way.
+The previous version v1 had the problem to be too much generic, the 'Capacity Management Problem' (CMP) require a
+more precise and fitted data model in order to correctly achieve the goal.
+
+Structure
+----------

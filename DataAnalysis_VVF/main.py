@@ -134,6 +134,11 @@ def distribution(df_input):
         # plt.show()
 
 
+def year_month(df):
+    group = df.groupby(['year', 'month'])['n'].count()
+    group.to_csv('vvf.csv', index=True)
+
+
 def main():
     t0 = time.time()
     print("Starting Analysis...\n")
@@ -145,23 +150,26 @@ def main():
     convert_time(df)
     convert_gps(df)
     extract_feature(df)
-    print("Pre analysis complete [{} s]".format(round(time.time() - t0, 2)))
-    print("\nCreating plots:")
 
-    correlation_map1(df)
-    print("\t * Correlation Matrix1 [{} s]".format(round(time.time() - t0, 2)))
+    year_month(df)
 
-    correlation_map2(df)
-    print("\t * Correlation Matrix2 [{} s]".format(round(time.time() - t0, 2)))
-
-    distribution(df)
-    print("\t * Distribution [{} s]".format(round(time.time() - t0, 2)))
-
-    uni = np.unique(df[['duration', 'x', 'y', 'typo', 'locat', 'day', 'start', 'finish']])
-    count = df[['duration', 'x', 'y', 'typo', 'locat', 'day', 'start', 'finish']]
-
-    print("\nUnique data: {}".format(round(uni.size/count.size, 5), 4))
-    print("Total Time [{} s]".format(round(time.time() - t0, 2)))
+    # print("Pre analysis complete [{} s]".format(round(time.time() - t0, 2)))
+    # print("\nCreating plots:")
+    #
+    # correlation_map1(df)
+    # print("\t * Correlation Matrix1 [{} s]".format(round(time.time() - t0, 2)))
+    #
+    # correlation_map2(df)
+    # print("\t * Correlation Matrix2 [{} s]".format(round(time.time() - t0, 2)))
+    #
+    # distribution(df)
+    # print("\t * Distribution [{} s]".format(round(time.time() - t0, 2)))
+    #
+    # uni = np.unique(df[['duration', 'x', 'y', 'typo', 'locat', 'day', 'start', 'finish']])
+    # count = df[['duration', 'x', 'y', 'typo', 'locat', 'day', 'start', 'finish']]
+    #
+    # print("\nUnique data: {}".format(round(uni.size/count.size, 5), 4))
+    # print("Total Time [{} s]".format(round(time.time() - t0, 2)))
 
 
 if __name__ == "__main__":

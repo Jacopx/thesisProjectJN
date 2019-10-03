@@ -59,3 +59,4 @@ The code require a 3 parameters:
 Know problems
 --------------
 * The INSERT process must be speedup [200.000 ~ 260s / 2.000.000 ~ 2580s]
+* These data model is too generic respect the problem, the v2 try to achieve a better fit for 'capacity management' problems
