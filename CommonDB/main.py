@@ -35,51 +35,46 @@ def check_table_exist(dbc, tablename):
 def create_table(dbc):
     c = dbc.cursor()
 
-    if check_table_exist(dbc, 'data'):
-        print('Table DATA already present...')
-        c.execute('DROP TABLE data')
-        print('Drop DATA table...')
+    tables = ['event', 'object', 'involved', 'info', 'locations']
 
-    print('Creating DATA table...')
-    c.execute("CREATE TABLE data ("
-              "id INT AUTO_INCREMENT PRIMARY KEY,"
-              "name VARCHAR(255),"
+    for t in tables:
+        if check_table_exist(dbc, t):
+            try:
+                c.execute('DROP TABLE event, object, involved, info, location;')  # Syntax error in query
+            except mysql.connector.Error as err:
+                sys.stderr.write("Something went wrong: {}".format(err))
+
+            print('Tables already present...')
+            print('Drop tables...')
+            break
+
+    print('Creating EVENT table...')
+    c.execute("CREATE TABLE event ("
+              "eid VARCHAR(100) PRIMARY KEY,"
               "start_dt DATETIME,"
-              "end_dt DATETIME,"
-              "duration INT,"
-              "type VARCHAR(100),"
-              "feat1 VARCHAR(100),"
-              "feat2 VARCHAR(100),"
-              "feat3 VARCHAR(100),"
-              "feat4 VARCHAR(100),"
-              "feat5 VARCHAR(100),"
-              "feat6 VARCHAR(100),"
-              "feat7 VARCHAR(100),"
-              "feat8 VARCHAR(100),"
-              "feat9 VARCHAR(100),"
-              "feat10 VARCHAR(100))")
+              "end_dt DATETIME);")
 
-    if check_table_exist(dbc, 'dataset'):
-        print('Table DATASET already present...')
-        c.execute('DROP TABLE dataset')
-        print('Drop DATASET table...')
+    print('Creating OBJECT table...')
+    c.execute("CREATE TABLE object (id VARCHAR(100) PRIMARY KEY);")
 
-    print('Creating DATASET table...')
-    c.execute("CREATE TABLE dataset ("
-              "name VARCHAR(255) PRIMARY KEY,"
-              "descr VARCHAR(100),"
-              "first_dt DATETIME,"
-              "last_dt DATETIME,"
-              "feat1 VARCHAR(100),"
-              "feat2 VARCHAR(100),"
-              "feat3 VARCHAR(100),"
-              "feat4 VARCHAR(100),"
-              "feat5 VARCHAR(100),"
-              "feat6 VARCHAR(100),"
-              "feat7 VARCHAR(100),"
-              "feat8 VARCHAR(100),"
-              "feat9 VARCHAR(100),"
-              "feat10 VARCHAR(100))")
+    print('Creating INVOLVED table...')
+    c.execute("CREATE TABLE involved (eid VARCHAR(100), "
+              "id VARCHAR(100), "
+              "PRIMARY KEY(eid, id), "
+              "FOREIGN KEY (eid) REFERENCES event(eid), "
+              "FOREIGN KEY (id) REFERENCES object(id));")
+
+    print('Creating LOCATION table...')
+    c.execute("CREATE TABLE location (id VARCHAR(100) PRIMARY KEY, "
+              "latitude FLOAT, "
+              "longitude FLOAT, "
+              "FOREIGN KEY (id) REFERENCES object(id));")
+
+    print('Creating INFO table...')
+    c.execute("CREATE TABLE info (id VARCHAR(100) PRIMARY KEY, "
+              "type VARCHAR(255), "
+              "descr VARCHAR(1000), "
+              "FOREIGN KEY (id) REFERENCES object(id));")
 
 
 def read_dict(dict):
@@ -106,51 +101,42 @@ def rename_col(df):
 def load_to_db(name, df, dbc):
     c = dbc.cursor()
 
-    sql = "INSERT INTO dataset(name, descr, feat1, feat2, feat3, feat4, feat5, feat6," \
-          "feat7, feat8, feat9, feat10) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-    val = (name, 'prova',
-           link_column['feat1'], link_column['feat2'], link_column['feat3'], link_column['feat4'], link_column['feat5'],
-           link_column['feat6'], link_column['feat7'], link_column['feat8'], link_column['feat9'], link_column['feat10'])
-
-    c.execute(sql, val)
-    dbc.commit()
-
-    clean_dict = {}
-    for (key, val) in link_column.items():
-        if val in 'NULL':
-            df[key] = 0
-        else:
-            clean_dict[key] = val
-
-    # creating column list for insertion
-    cols = "`,`".join([str(i) for i in list(clean_dict.keys())])
-
-    # Removing NaN
-    df = df[list(clean_dict.keys())]
-
     print('Inserting data...')
     t0 = time.time()
-    # Insert DataFrame records one by one.
-    sql = "INSERT INTO data (`name`,`" + cols + "`) VALUES (" + "%s," * (len(clean_dict)) + "%s)"
+
     error = 0
+    sql_event = 'INSERT INTO event(eid, start_dt, end_dt) VALUES (%s,%s,%s);'
+    sql_obj = 'INSERT INTO object(id) VALUES (%s);'
+    sql_invol = 'INSERT INTO involved(eid, id) VALUES (%s, %s);'
 
     for i, row in df.iterrows():
         t = list(row)
-        t.insert(0, name)
 
         try:
-            c.execute(sql, tuple(t))  # Syntax error in query
+            c.execute(sql_event, [row[link_column['eid']], row[link_column['start_dt']], row[link_column['end_dt']]])  # Syntax error in query
+        except mysql.connector.Error as err:
+            error += 1
+            sys.stderr.write("Something went wrong: {}\n{} = {}\n".format(err, i, t))
+
+        try:
+            c.execute(sql_obj, [row[link_column['id']]])  # Syntax error in query
+        except mysql.connector.Error as err:
+            error += 1
+            sys.stderr.write("Something went wrong: {}\n{} = {}\n".format(err, i, t))
+
+        try:
+            c.execute(sql_invol, [row[link_column['eid']], row[link_column['id']]])  # Syntax error in query
         except mysql.connector.Error as err:
             error += 1
             sys.stderr.write("Something went wrong: {}\n{} = {}\n".format(err, i, t))
 
         # Commit every 10000 tuples
-        if i % 10000 == 0:
-            print(i)
-            dbc.commit()
+        # if i % 10000 == 0:
+        #     print(i)
+        #     dbc.commit()
 
         # Early stopper for debug
-        if i == 2000000:
+        if i == 0:
             break
 
     dbc.commit()
@@ -163,14 +149,14 @@ def main(name, data, dict):
     dbc = connect()
 
     # Creating Tables
-    # create_table(dbc)
+    create_table(dbc)
 
     # Reading the dictionary used for matching
     read_dict(dict)
 
     # Loading data on DB
     df = loading_csv(data)
-    rename_col(df)
+    # rename_col(df)
     load_to_db(name, df, dbc)
 
 

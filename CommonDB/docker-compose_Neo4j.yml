@@ -1,0 +1,17 @@
+version: '3.3'
+
+services:
+  db:
+    image: neo4j:latest
+    restart: always
+    environment:
+      NEO4J_AUTH: none
+    ports:
+      - '7474:7474'
+      - '7687:7687'
+      # Where our data will be persisted
+    volumes:
+      - $HOME/neo4j/data:/data
+      - $HOME/neo4j/logs:/logs
+      - $HOME/neo4j/import:/var/lib/neo4j/import
+      - $HOME/neo4j/plugins:/plugins

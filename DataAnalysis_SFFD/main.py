@@ -75,8 +75,17 @@ def read_data(dest):
 
 def data_reduction(df):
     print('Remove columns...', end='')
-    df = df[['unit_id', 'call_type', 'call_type_group', 'received_dt_tm', 'on_scene_dt_tm', 'available_dt_tm',
+    df = df[['call_number', 'unit_id', 'call_type', 'call_type_group', 'received_dt_tm', 'on_scene_dt_tm', 'available_dt_tm',
              'zipcodeof_incident', 'numberof_alarms', 'battalion', 'station_area', 'box', 'priority', 'location']]
+    print(' OK')
+    return df
+
+
+def data_reduction2(df):
+    print('Remove columns...', end='')
+    df = df[['call_number', 'unit_id', 'call_type', 'call_type_group', 'priority', 'numberof_alarms', 'rec_dt', 'onscene_dt', 'end_dt',
+             'duration', 'res_time', 'rec_day','rec_month','rec_hour','rec_day_of_week','week','year','end_day','end_month','end_hour','end_day_of_week',
+            'battalion', 'station_area', 'zipcodeof_incident', 'box', 'lat', 'long']]
     print(' OK')
     return df
 
@@ -393,6 +402,21 @@ def year_month(df):
     group.to_csv('sffd.csv', index=True)
 
 
+def station_unit(df):
+    group = pd.pivot_table(df[['station_area', 'unit_id', 'priority']], index=['station_area', 'unit_id'], aggfunc='count')
+    heatmap_data = pd.pivot_table(group, values='priority', columns='unit_id', index='station_area')
+
+    plt.figure(figsize=(30, 6))
+    sns.heatmap(heatmap_data, cmap="PuRd", linewidths=0.01, vmin=0, square=True, cbar_kws={"orientation": "horizontal"})
+
+    plt.title('Station-Unit')
+    plt.xlabel('Unit ID')
+    plt.ylabel('Station Area')
+    plt.minorticks_on()
+    plt.tight_layout()
+    plt.savefig('plot/stationArea_units.png', dpi=300)
+
+
 def op_unit(df_op):
     print('Heatmap unit', end='')
     df = df_op[['unit_id', 'rec_month', 'priority']]
@@ -403,7 +427,7 @@ def op_unit(df_op):
     heatmap_data = pd.pivot_table(df_operations_day, values='priority', columns='unit_id', index='rec_month')
     dot()
 
-    plt.figure(figsize=(30,3))
+    plt.figure(figsize=(50,8))
     sns.heatmap(heatmap_data, cmap="PuRd", linewidths=0.01, vmin=0, square=True, cbar_kws={"orientation": "horizontal"})
     dot()
 
@@ -435,12 +459,14 @@ def main(path):
         df = remove_nan(df)
         df = fix_priority(df)
         df = feature_extraction(df)
+        df = data_reduction2(df)
         df = remove_outliers(df, 'duration')
         df = remove_outliers(df, 'res_time')
         replace_dict(df, typo, 'call_type')
         replace_dict(df, subtypo, 'call_type_group')
-        convert(df, unit, 'unit_id')
-        convert(df, stations, 'station_area')
+        station_unit(df)
+        # convert(df, unit, 'unit_id')
+        # convert(df, stations, 'station_area')
         export_csv(df, 'operationsSFFD_CLEANED')
 
     else:
@@ -453,8 +479,9 @@ def main(path):
         year_calendar(df)
         op_over_month_station(df)
         hier_clust(df)
-        # year_month(df)
+        year_month(df)
         op_unit(df)
+        station_unit(df)
 
         # REQUIRE SEABORN 0.9.0
         # operations_map(df)

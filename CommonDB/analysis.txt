@@ -1,4 +1,4 @@
-Common DB
+CommonDB
 -----------
 The goal of this structure is to create a common place to store the data independently of the kind/source of it.
 Having a common structure is useful to make the procedure of forecasting standard and get it always in the same way.
