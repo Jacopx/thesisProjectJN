@@ -155,6 +155,19 @@ def year_month(df):
     group.to_csv('play.csv', index=True)
 
 
+def merge(trip_df, stn_df):
+    m1 = trip_df.merge(stn_df, left_on='start_station_id', right_on='station_id')
+    m1r = m1.rename(columns={"dock_count": 'start_dock_count', "lat": "start_lat", 'long': 'start_long'})
+    m2 = m1r.merge(stn_df, left_on='end_station_id', right_on='station_id')
+    m2r = m2.rename(columns={"dock_count": 'end_dock_count', "lat": "end_lat", 'long': 'end_long'})
+    m = m2r[['id', 'duration',
+             'start_dt', 'start_station_name', 'start_station_id', 'start_dock_count', 'start_lat', 'start_long',
+             'end_dt', 'end_station_name', 'end_station_id', 'end_dock_count', 'end_lat', 'end_long',
+             'bike_id', 'subscription_type', 'start_day', 'start_month', 'start_hour', 'day_of_week', 'week']]
+
+    m.to_csv('data/merged_data.csv', index=False)
+
+
 def main():
     print('Starting analysis...')
     t0 = time.time()
@@ -168,7 +181,9 @@ def main():
     remove_outliers(trip_df)
     feature_extraction(trip_df)
     reduce_set(trip_df, stn_df)
-    # trip_df.to_csv('data/trip_data.csv')
+
+    # merge(trip_df, stn_df)
+
     line_plot(trip_df)
     duration_plot(trip_df)
     calculation(trip_df)

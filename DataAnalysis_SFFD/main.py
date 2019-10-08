@@ -75,7 +75,7 @@ def read_data(dest):
 
 def data_reduction(df):
     print('Remove columns...', end='')
-    df = df[['call_number', 'unit_id', 'call_type', 'call_type_group', 'received_dt_tm', 'on_scene_dt_tm', 'available_dt_tm',
+    df = df[['call_number', 'unit_id', 'unit_type', 'call_type', 'call_type_group', 'received_dt_tm', 'on_scene_dt_tm', 'available_dt_tm',
              'zipcodeof_incident', 'numberof_alarms', 'battalion', 'station_area', 'box', 'priority', 'location']]
     print(' OK')
     return df
@@ -83,8 +83,8 @@ def data_reduction(df):
 
 def data_reduction2(df):
     print('Remove columns...', end='')
-    df = df[['call_number', 'unit_id', 'call_type', 'call_type_group', 'priority', 'numberof_alarms', 'rec_dt', 'onscene_dt', 'end_dt',
-             'duration', 'res_time', 'rec_day','rec_month','rec_hour','rec_day_of_week','week','year','end_day','end_month','end_hour','end_day_of_week',
+    df = df[['call_number', 'unit_id', 'unit_type', 'call_type', 'call_type_group', 'priority', 'numberof_alarms', 'rec_dt', 'onscene_dt', 'end_dt',
+             'duration', 'res_time', 'rec_day', 'rec_month', 'rec_hour', 'rec_day_of_week', 'week', 'year', 'end_day', 'end_month', 'end_hour', 'end_day_of_week',
             'battalion', 'station_area', 'zipcodeof_incident', 'box', 'lat', 'long']]
     print(' OK')
     return df
