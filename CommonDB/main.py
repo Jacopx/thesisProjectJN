@@ -98,6 +98,47 @@ def rename_col(df):
     df.rename(columns=column_link, inplace=True)
 
 
+def check_event_exist(dbc, eid):
+    c = dbc.cursor()
+    sql = 'SELECT COUNT(*) FROM event WHERE eid=(%s);'
+    c.execute(sql, [str(eid)])
+    if c.fetchone()[0] == 1:
+        c.close()
+        return True
+
+
+def check_obj_exist(dbc, id):
+    c = dbc.cursor()
+    sql = 'SELECT COUNT(*) FROM object WHERE id=(%s);'
+    c.execute(sql, [str(id)])
+    if c.fetchone()[0] == 1:
+        c.close()
+        return True
+
+
+def check_info_exist(dbc, id):
+    c = dbc.cursor()
+    sql = 'SELECT COUNT(*) FROM info WHERE id=(%s);'
+    c.execute(sql, [str(id)])
+    if c.fetchone()[0] == 1:
+        c.close()
+        return True
+
+
+def check_locat_exist(dbc, id):
+    c = dbc.cursor()
+    sql = 'SELECT COUNT(*) FROM location WHERE id=(%s);'
+    c.execute(sql, [str(id)])
+    if c.fetchone()[0] == 1:
+        c.close()
+        return True
+
+
+def get_match(n):
+    return link_column['id{}'.format(n)], link_column['type{}'.format(n)], link_column['descr{}'.format(n)], \
+           link_column['latitude{}'.format(n)], link_column['longitude{}'.format(n)]
+
+
 def load_to_db(name, df, dbc):
     c = dbc.cursor()
 
@@ -108,38 +149,66 @@ def load_to_db(name, df, dbc):
     sql_event = 'INSERT INTO event(eid, start_dt, end_dt) VALUES (%s,%s,%s);'
     sql_obj = 'INSERT INTO object(id) VALUES (%s);'
     sql_invol = 'INSERT INTO involved(eid, id) VALUES (%s, %s);'
+    sql_info = 'INSERT INTO info(id, type, descr) VALUES (%s, %s, %s);'
+    sql_locat = 'INSERT INTO location(id, latitude, longitude) VALUES (%s, %s, %s);'
 
     for i, row in df.iterrows():
         t = list(row)
 
-        try:
-            c.execute(sql_event, [row[link_column['eid']], row[link_column['start_dt']], row[link_column['end_dt']]])  # Syntax error in query
-        except mysql.connector.Error as err:
-            error += 1
-            sys.stderr.write("Something went wrong: {}\n{} = {}\n".format(err, i, t))
+        if not check_event_exist(dbc, row[link_column['eid']]):
+            try:
+                c.execute(sql_event, [row[link_column['eid']], row[link_column['start_dt']], row[link_column['end_dt']]])  # Syntax error in query
+            except mysql.connector.Error as err:
+                error += 1
+                sys.stderr.write("Something went wrong EVENT: {}\n{} = {}\n".format(err, i, t))
 
-        try:
-            c.execute(sql_obj, [row[link_column['id']]])  # Syntax error in query
-        except mysql.connector.Error as err:
-            error += 1
-            sys.stderr.write("Something went wrong: {}\n{} = {}\n".format(err, i, t))
+        for n in range(int(link_column['n'])):
+            id, type, descr, lat, long = get_match(n)
 
-        try:
-            c.execute(sql_invol, [row[link_column['eid']], row[link_column['id']]])  # Syntax error in query
-        except mysql.connector.Error as err:
-            error += 1
-            sys.stderr.write("Something went wrong: {}\n{} = {}\n".format(err, i, t))
+            if id in 'ONE':
+                if type in 'NONE':
+                    obj_id = 'GPS#{}'.format(row[link_column['eid']])
+                else:
+                    obj_id = 'TYPE#{}'.format(row[link_column['eid']])
+            elif id in 'UNIQUE':
+                if type in 'NONE':
+                    obj_id = 'GPS#{}-{}'.format(row[link_column['eid']], n)
+                else:
+                    obj_id = 'TYPE#{}-{}'.format(row[link_column['eid']], n)
+            else:
+                obj_id = row[id]
 
-        # Commit every 10000 tuples
-        # if i % 10000 == 0:
-        #     print(i)
-        #     dbc.commit()
+            if not check_obj_exist(dbc, obj_id):
+                try:
+                    c.execute(sql_obj, [obj_id])  # Syntax error in query
+                except mysql.connector.Error as err:
+                    error += 1
+                    sys.stderr.write("Something went wrong OBJECT: {}\n{} = {}\n".format(err, i, t))
 
-        # Early stopper for debug
-        if i == 0:
-            break
+                try:
+                    c.execute(sql_invol, [row[link_column['eid']], obj_id])  # Syntax error in query
+                except mysql.connector.Error as err:
+                    error += 1
+                    sys.stderr.write("Something went wrong INVOLVED: {}\n{} = {}\n".format(err, i, t))
 
-    dbc.commit()
+            if type not in 'NONE':
+                if not check_info_exist(dbc, obj_id):
+                    try:
+                        c.execute(sql_info, [obj_id, row[type], row[descr]])  # Syntax error in query
+                    except mysql.connector.Error as err:
+                        error += 1
+                        sys.stderr.write("Something went wrong INFO: {}\n{} = {}\n".format(err, i, t))
+
+            if lat not in 'NONE':
+                if not check_locat_exist(dbc, obj_id):
+                    try:
+                        c.execute(sql_locat, [obj_id, row[lat], row[long]])  # Syntax error in query
+                    except mysql.connector.Error as err:
+                        error += 1
+                        sys.stderr.write("Something went wrong LOCAT: {}\n{} = {}\n".format(err, i, t))
+
+        dbc.commit()
+
     print('\nError line #{}'.format(error))
     print("Execution time [{} s]".format(round(time.time()-t0, 2)))
 
