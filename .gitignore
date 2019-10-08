@@ -6,9 +6,9 @@ venv/
 *.png
 *.html
 .idea
-DataAnalysis_SF/EiS_Thesis.json
-DataAnalysis_SF/venv
-DataAnalysis_SF/data/*.csv
+DataAnalysis_SFBS/EiS_Thesis.json
+DataAnalysis_SFBS/venv
+DataAnalysis_SFBS/data/*.csv
 DataAnalysis_VVF/data/*.csv
 DataAnalysis_SFFD/data/*.csv
 DataAnalysis_SFFD/data/*.bz2
