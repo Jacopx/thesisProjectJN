@@ -4,10 +4,10 @@ import time
 import sys
 
 # Docker
-USER = 'user'
+USER = 'jacopx'
 DB = 'forecast'
-PWD = 'userpwd'
-HOST = 'localhost'
+PWD = 'popolo99!'
+HOST = '172.16.0.13'
 PORT = '3306'
 
 column_link = {}
@@ -217,16 +217,16 @@ def load_to_db(dataset, df, dbc):
                     except mysql.connector.Error as err:
                         error += 1
                         sys.stderr.write("Something went wrong LOCAT: {}\n{} = {}\n".format(err, i, t))
-        dbc.commit()
 
         # Commit every 10000 tuples
         if i % 1000 == 0:
+            dbc.commit()
             print('#{} - {} s'.format(i, round(time.time()-t1, 2)))
             t1 = time.time()
 
         # Early stopper for debug
-        if i == 10000:
-            break
+        # if i == 10000:
+        #     break
 
     print('\nError line #{}'.format(error))
     print("Execution time [{} s]".format(round(time.time()-t0, 2)))
@@ -237,7 +237,7 @@ def main(name, data, dict):
     dbc = connect()
 
     # Creating Tables
-    # create_table(dbc)
+    create_table(dbc)
 
     # Reading the dictionary used for matching
     read_dict(dict)
