@@ -1,4 +1,3 @@
-from sqlalchemy import create_engine
 import mysql.connector
 import pandas as pd
 import time
@@ -50,31 +49,42 @@ def create_table(dbc):
 
     print('Creating EVENT table...')
     c.execute("CREATE TABLE event ("
-              "eid VARCHAR(100) PRIMARY KEY,"
+              "eid VARCHAR(100),"
+              "dataset VARCHAR(100),"
+              "etype VARCHAR(100),"
               "start_dt DATETIME,"
-              "end_dt DATETIME);")
+              "end_dt DATETIME,"
+              "PRIMARY KEY(eid, dataset));")
 
     print('Creating OBJECT table...')
-    c.execute("CREATE TABLE object (id VARCHAR(100) PRIMARY KEY);")
+    c.execute("CREATE TABLE object (id VARCHAR(100), "
+              "dataset VARCHAR(100), "
+              "type VARCHAR(255),"
+              "PRIMARY KEY(id, dataset));")
 
     print('Creating INVOLVED table...')
     c.execute("CREATE TABLE involved (eid VARCHAR(100), "
+              "dataset VARCHAR(100),"
               "id VARCHAR(100), "
-              "PRIMARY KEY(eid, id), "
-              "FOREIGN KEY (eid) REFERENCES event(eid), "
-              "FOREIGN KEY (id) REFERENCES object(id));")
+              "PRIMARY KEY(eid, dataset, id), "
+              "FOREIGN KEY (eid, dataset) REFERENCES event(eid, dataset), "
+              "FOREIGN KEY (id, dataset) REFERENCES object(id, dataset));")
 
     print('Creating LOCATION table...')
-    c.execute("CREATE TABLE location (id VARCHAR(100) PRIMARY KEY, "
+    c.execute("CREATE TABLE location (id VARCHAR(100), "
+              "dataset VARCHAR(100),"
               "latitude FLOAT, "
               "longitude FLOAT, "
-              "FOREIGN KEY (id) REFERENCES object(id));")
+              "PRIMARY KEY (id, dataset),"
+              "FOREIGN KEY (id, dataset) REFERENCES object(id, dataset));")
 
     print('Creating INFO table...')
-    c.execute("CREATE TABLE info (id VARCHAR(100) PRIMARY KEY, "
+    c.execute("CREATE TABLE info (id VARCHAR(100), "
+              "dataset VARCHAR(100),"
               "type VARCHAR(255), "
               "descr VARCHAR(1000), "
-              "FOREIGN KEY (id) REFERENCES object(id));")
+              "PRIMARY KEY (id, dataset),"
+              "FOREIGN KEY (id, dataset) REFERENCES object(id, dataset));")
 
 
 def read_dict(dict):
@@ -98,72 +108,73 @@ def rename_col(df):
     df.rename(columns=column_link, inplace=True)
 
 
-def check_event_exist(dbc, eid):
+def check_event_exist(dbc, eid, dataset):
     c = dbc.cursor()
-    sql = 'SELECT COUNT(*) FROM event WHERE eid=(%s);'
-    c.execute(sql, [str(eid)])
+    sql = 'SELECT COUNT(*) FROM event WHERE eid=(%s) AND dataset=(%s);'
+    c.execute(sql, [str(eid), dataset])
     if c.fetchone()[0] == 1:
         c.close()
         return True
 
 
-def check_obj_exist(dbc, id):
+def check_obj_exist(dbc, id, dataset):
     c = dbc.cursor()
-    sql = 'SELECT COUNT(*) FROM object WHERE id=(%s);'
-    c.execute(sql, [str(id)])
+    sql = 'SELECT COUNT(*) FROM object WHERE id=(%s) AND dataset=(%s);'
+    c.execute(sql, [str(id), dataset])
     if c.fetchone()[0] == 1:
         c.close()
         return True
 
 
-def check_info_exist(dbc, id):
+def check_info_exist(dbc, id, dataset):
     c = dbc.cursor()
-    sql = 'SELECT COUNT(*) FROM info WHERE id=(%s);'
-    c.execute(sql, [str(id)])
+    sql = 'SELECT COUNT(*) FROM info WHERE id=(%s) AND dataset=(%s);'
+    c.execute(sql, [str(id), dataset])
     if c.fetchone()[0] == 1:
         c.close()
         return True
 
 
-def check_locat_exist(dbc, id):
+def check_locat_exist(dbc, id, dataset):
     c = dbc.cursor()
-    sql = 'SELECT COUNT(*) FROM location WHERE id=(%s);'
-    c.execute(sql, [str(id)])
+    sql = 'SELECT COUNT(*) FROM location WHERE id=(%s) AND dataset=(%s);'
+    c.execute(sql, [str(id), dataset])
     if c.fetchone()[0] == 1:
         c.close()
         return True
 
 
 def get_match(n):
-    return link_column['id{}'.format(n)], link_column['type{}'.format(n)], link_column['descr{}'.format(n)], \
+    return link_column['id{}'.format(n)], link_column['o_type{}'.format(n)], link_column['type{}'.format(n)], link_column['descr{}'.format(n)], \
            link_column['latitude{}'.format(n)], link_column['longitude{}'.format(n)]
 
 
-def load_to_db(name, df, dbc):
+def load_to_db(dataset, df, dbc):
     c = dbc.cursor()
 
     print('Inserting data...')
     t0 = time.time()
 
     error = 0
-    sql_event = 'INSERT INTO event(eid, start_dt, end_dt) VALUES (%s,%s,%s);'
-    sql_obj = 'INSERT INTO object(id) VALUES (%s);'
-    sql_invol = 'INSERT INTO involved(eid, id) VALUES (%s, %s);'
-    sql_info = 'INSERT INTO info(id, type, descr) VALUES (%s, %s, %s);'
-    sql_locat = 'INSERT INTO location(id, latitude, longitude) VALUES (%s, %s, %s);'
+    sql_event = 'INSERT INTO event(eid, dataset, etype, start_dt, end_dt) VALUES (%s,%s,%s,%s,%s);'
+    sql_obj = 'INSERT INTO object(id, dataset, type) VALUES (%s, %s, %s);'
+    sql_invol = 'INSERT INTO involved(eid, dataset, id) VALUES (%s, %s, %s);'
+    sql_info = 'INSERT INTO info(id, dataset, type, descr) VALUES (%s, %s, %s, %s);'
+    sql_locat = 'INSERT INTO location(id, dataset, latitude, longitude) VALUES (%s, %s, %s, %s);'
 
+    t1 = t0
     for i, row in df.iterrows():
         t = list(row)
 
-        if not check_event_exist(dbc, row[link_column['eid']]):
+        if not check_event_exist(dbc, row[link_column['eid']], dataset):
             try:
-                c.execute(sql_event, [row[link_column['eid']], row[link_column['start_dt']], row[link_column['end_dt']]])  # Syntax error in query
+                c.execute(sql_event, [row[link_column['eid']], dataset, row[link_column['etype']], row[link_column['start_dt']], row[link_column['end_dt']]])  # Syntax error in query
             except mysql.connector.Error as err:
                 error += 1
                 sys.stderr.write("Something went wrong EVENT: {}\n{} = {}\n".format(err, i, t))
 
         for n in range(int(link_column['n'])):
-            id, type, descr, lat, long = get_match(n)
+            id, o_type, type, descr, lat, long = get_match(n)
 
             if id in 'ONE':
                 if type in 'NONE':
@@ -178,36 +189,44 @@ def load_to_db(name, df, dbc):
             else:
                 obj_id = row[id]
 
-            if not check_obj_exist(dbc, obj_id):
+            if not check_obj_exist(dbc, obj_id, dataset):
                 try:
-                    c.execute(sql_obj, [obj_id])  # Syntax error in query
+                    c.execute(sql_obj, [obj_id, dataset, o_type])  # Syntax error in query
                 except mysql.connector.Error as err:
                     error += 1
                     sys.stderr.write("Something went wrong OBJECT: {}\n{} = {}\n".format(err, i, t))
 
                 try:
-                    c.execute(sql_invol, [row[link_column['eid']], obj_id])  # Syntax error in query
+                    c.execute(sql_invol, [row[link_column['eid']], dataset, obj_id])  # Syntax error in query
                 except mysql.connector.Error as err:
                     error += 1
                     sys.stderr.write("Something went wrong INVOLVED: {}\n{} = {}\n".format(err, i, t))
 
             if type not in 'NONE':
-                if not check_info_exist(dbc, obj_id):
+                if not check_info_exist(dbc, obj_id, dataset):
                     try:
-                        c.execute(sql_info, [obj_id, row[type], row[descr]])  # Syntax error in query
+                        c.execute(sql_info, [obj_id, dataset, row[type], row[descr]])  # Syntax error in query
                     except mysql.connector.Error as err:
                         error += 1
                         sys.stderr.write("Something went wrong INFO: {}\n{} = {}\n".format(err, i, t))
 
             if lat not in 'NONE':
-                if not check_locat_exist(dbc, obj_id):
+                if not check_locat_exist(dbc, obj_id, dataset):
                     try:
-                        c.execute(sql_locat, [obj_id, row[lat], row[long]])  # Syntax error in query
+                        c.execute(sql_locat, [obj_id, dataset, row[lat], row[long]])  # Syntax error in query
                     except mysql.connector.Error as err:
                         error += 1
                         sys.stderr.write("Something went wrong LOCAT: {}\n{} = {}\n".format(err, i, t))
-
         dbc.commit()
+
+        # Commit every 10000 tuples
+        if i % 1000 == 0:
+            print('#{} - {} s'.format(i, round(time.time()-t1, 2)))
+            t1 = time.time()
+
+        # Early stopper for debug
+        if i == 10000:
+            break
 
     print('\nError line #{}'.format(error))
     print("Execution time [{} s]".format(round(time.time()-t0, 2)))
@@ -218,7 +237,7 @@ def main(name, data, dict):
     dbc = connect()
 
     # Creating Tables
-    create_table(dbc)
+    # create_table(dbc)
 
     # Reading the dictionary used for matching
     read_dict(dict)

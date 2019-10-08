@@ -16,3 +16,9 @@ Is composed of five tables:
 
 The main table is EVENT, for each event there are one or more object involved and the table involved is used to link this relationship.
 Info and Location are used to store more information about each object. Everything is enforced by some key=foreign_key pair.
+
+Utilization
+------------
+The process is based on the files contained in the folder 'data_to_load':
+* ***data.csv***: Is the file with the data to be loaded in the system
+* ***dict.txt***: [system_db:csv_field] Is a file of used to match the field of the DB with the field of the CSV, this match will be saved also in the dataset table info. Each unused row MUST have the NULL value.
