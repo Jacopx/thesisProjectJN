@@ -96,11 +96,11 @@ def location(df):
     new = part[0].str.split(' ', expand=True)
     dot()
 
-    df['lat'] = new[1].str.replace('(', '')
+    df['lat'] = new[2].str.replace(')', '')
     df['lat'].astype(float)
     dot()
 
-    df['long'] = new[2].str.replace(')', '')
+    df['long'] = new[1].str.replace('(', '')
     df['long'].astype(float)
     dot()
 
