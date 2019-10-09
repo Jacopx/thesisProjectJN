@@ -5,7 +5,7 @@ import sys
 
 # Docker
 USER = 'eis'
-DB = 'forecast'
+DB = 'forecastDEV'
 PWD = 'eisworld2019'
 HOST = 'db.jacopx.me'
 PORT = '3306'
