@@ -1,3 +1,6 @@
+from bs4 import BeautifulSoup
+from geopy.geocoders import Nominatim
+from geopy import distance
 import re
 import sys
 import time
@@ -8,6 +11,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from datetime import datetime
 import warnings
+import requests
 warnings.simplefilter('ignore')
 
 
@@ -85,7 +89,7 @@ def data_reduction2(df):
     print('Remove columns...', end='')
     df = df[['call_number', 'unit_id', 'unit_type', 'call_type', 'call_type_group', 'priority', 'numberof_alarms', 'rec_dt', 'onscene_dt', 'end_dt',
              'duration', 'res_time', 'rec_day', 'rec_month', 'rec_hour', 'rec_day_of_week', 'week', 'year', 'end_day', 'end_month', 'end_hour', 'end_day_of_week',
-            'battalion', 'station_area', 'zipcodeof_incident', 'box', 'lat', 'long']]
+            'battalion', 'station_area', 'station_lat', 'station_long', 'zipcodeof_incident', 'box', 'lat', 'long']]
     print(' OK')
     return df
 
@@ -230,6 +234,60 @@ def convert(df, dict_dest, col):
             i = i + 1
 
     df[col].replace(dict_dest, inplace=True)
+
+
+def station_area_location(df):
+    print('Locating stations', end='')
+    # Below the fire station addresses are scraped from the website.
+    req = requests.get('https://sf-fire.org/fire-station-locations')
+    soup = BeautifulSoup(req.content)
+    addresses = soup.findAll('table')[0].findAll('tr')
+    list_addresses = [[i.a for i in addresses][j].contents for j in range(len(addresses) - 1)]
+    geolocator = Nominatim(timeout=60)
+
+    list_addresses2 = [list_addresses[i][0].replace('\xa0', ' ').split(' at')[0] for i in range(len(list_addresses))]
+    list_addresses3 = [(list_addresses2[i] + ', San Francisco') for i in range(len(list_addresses2))]
+    dot()
+
+    # Determine the coordinates of each address, and also
+    # impute certain coordinates using Google
+    geo_list = []
+    [geo_list.append(geolocator.geocode(y)) for y in list_addresses3]
+    geo_list = list(filter(None, geo_list))
+    geo_list2 = [geo_list[i][1] for i in range(len(geo_list))]
+    geo_list2.insert(3, (37.772780, -122.389050))  # 4
+    geo_list2.insert(32, (37.794610, -122.393260))  # 35
+    geo_list2.insert(42, (37.827160, -122.368300))  # 48
+    del geo_list2[43]  # Delete incorrect rows
+    del geo_list2[43]
+    dot()
+
+    # Utilize the previously merged dataframe, and remove the outliers
+    # which have no known addresses. Take the coordinates of the fire
+    # stations and calculate the distance between them and the incident.
+    # Add this new column to the dataframe as 'distance.'
+    df2_2 = df.copy()
+    df2_2 = df2_2.loc[(df2_2.station_area != '94') &
+                      (df2_2.station_area != 'F3') &
+                      (df2_2.station_area != 'E2') &
+                      (df2_2.station_area != 'A1') &
+                      (df2_2.station_area != 'A2') &
+                      (df2_2.station_area != 'A3') &
+                      (df2_2.station_area != '47')]
+    df2_2.dropna(subset=['station_area'], inplace=True)
+
+    stations_list = df2_2['station_area'].unique()
+
+    stations_list = pd.DataFrame(np.sort(stations_list.astype(int)))
+    starting_loc = pd.concat([stations_list, pd.DataFrame(geo_list2)], axis=1)
+    starting_loc.columns = ['station', 'lats', 'longs']
+    starting_loc.station = [format(i, '02d') for i in starting_loc.station]
+
+    df2_2['station_lat'] = df2_2['station_area'].map(starting_loc.set_index('station')['lats'])
+    df2_2['station_long'] = df2_2['station_area'].map(starting_loc.set_index('station')['longs'])
+
+    df2_2.reset_index(drop=True, inplace=True)
+    return df2_2
 
 
 def corr_map(df):
@@ -451,6 +509,7 @@ def main(path):
         clean_col_names(df)
         df = data_reduction(df)
         location(df)
+        df = station_area_location(df)
         export_csv(df, 'operationsSFFD_REDUCED')
 
     elif 'REDUCED' in path:

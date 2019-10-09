@@ -4,10 +4,10 @@ import time
 import sys
 
 # Docker
-USER = 'jacopx'
+USER = 'eis'
 DB = 'forecast'
-PWD = 'popolo99!'
-HOST = '172.16.0.13'
+PWD = 'eisworld2019'
+HOST = 'db.jacopx.me'
 PORT = '3306'
 
 column_link = {}
@@ -24,8 +24,8 @@ def check_table_exist(dbc, tablename):
     c.execute("""
             SELECT COUNT(*)
             FROM information_schema.tables
-            WHERE table_name = '{0}'
-            """.format(tablename.replace('\'', '\'\'')))
+            WHERE TABLE_SCHEMA = '{} and table_name = '{}'
+            """.format(DB, tablename.replace('\'', '\'\'')))
     if c.fetchone()[0] == 1:
         c.close()
         return True
@@ -36,55 +36,60 @@ def create_table(dbc):
 
     tables = ['event', 'object', 'involved', 'info', 'locations']
 
-    for t in tables:
-        if check_table_exist(dbc, t):
-            try:
-                c.execute('DROP TABLE event, object, involved, info, location;')  # Syntax error in query
-            except mysql.connector.Error as err:
-                sys.stderr.write("Something went wrong: {}".format(err))
+    # for t in tables:
+    #     if check_table_exist(dbc, t):
+    #         try:
+    #             c.execute('DROP TABLE event, object, involved, info, location;')  # Syntax error in query
+    #             break
+    #         except mysql.connector.Error as err:
+    #             sys.stderr.write("Something went wrong: {}".format(err))
+    #
+    #         print('Tables already present...')
+    #         print('Drop tables...')
+    #         break
 
-            print('Tables already present...')
-            print('Drop tables...')
-            break
+    try:
+        print('Creating EVENT table...')
+        c.execute("CREATE TABLE event ("
+                  "eid VARCHAR(100),"
+                  "dataset VARCHAR(100),"
+                  "etype VARCHAR(100),"
+                  "start_dt DATETIME,"
+                  "end_dt DATETIME,"
+                  "PRIMARY KEY(eid, dataset));")
 
-    print('Creating EVENT table...')
-    c.execute("CREATE TABLE event ("
-              "eid VARCHAR(100),"
-              "dataset VARCHAR(100),"
-              "etype VARCHAR(100),"
-              "start_dt DATETIME,"
-              "end_dt DATETIME,"
-              "PRIMARY KEY(eid, dataset));")
+        print('Creating OBJECT table...')
+        c.execute("CREATE TABLE object (id VARCHAR(100), "
+                  "dataset VARCHAR(100),"
+                  "type VARCHAR(255),"
+                  "PRIMARY KEY(id, dataset));")
 
-    print('Creating OBJECT table...')
-    c.execute("CREATE TABLE object (id VARCHAR(100), "
-              "dataset VARCHAR(100), "
-              "type VARCHAR(255),"
-              "PRIMARY KEY(id, dataset));")
+        print('Creating INVOLVED table...')
+        c.execute("CREATE TABLE involved (eid VARCHAR(100), "
+                  "dataset VARCHAR(100),"
+                  "id VARCHAR(100),"
+                  "PRIMARY KEY(eid, dataset, id),"
+                  "FOREIGN KEY (eid, dataset) REFERENCES event(eid, dataset), "
+                  "FOREIGN KEY (id, dataset) REFERENCES object(id, dataset));")
 
-    print('Creating INVOLVED table...')
-    c.execute("CREATE TABLE involved (eid VARCHAR(100), "
-              "dataset VARCHAR(100),"
-              "id VARCHAR(100), "
-              "PRIMARY KEY(eid, dataset, id), "
-              "FOREIGN KEY (eid, dataset) REFERENCES event(eid, dataset), "
-              "FOREIGN KEY (id, dataset) REFERENCES object(id, dataset));")
+        print('Creating LOCATION table...')
+        c.execute("CREATE TABLE location (id VARCHAR(100), "
+                  "dataset VARCHAR(100),"
+                  "latitude FLOAT,"
+                  "longitude FLOAT,"
+                  "PRIMARY KEY (id, dataset),"
+                  "FOREIGN KEY (id, dataset) REFERENCES object(id, dataset));")
 
-    print('Creating LOCATION table...')
-    c.execute("CREATE TABLE location (id VARCHAR(100), "
-              "dataset VARCHAR(100),"
-              "latitude FLOAT, "
-              "longitude FLOAT, "
-              "PRIMARY KEY (id, dataset),"
-              "FOREIGN KEY (id, dataset) REFERENCES object(id, dataset));")
-
-    print('Creating INFO table...')
-    c.execute("CREATE TABLE info (id VARCHAR(100), "
-              "dataset VARCHAR(100),"
-              "type VARCHAR(255), "
-              "descr VARCHAR(1000), "
-              "PRIMARY KEY (id, dataset),"
-              "FOREIGN KEY (id, dataset) REFERENCES object(id, dataset));")
+        print('Creating INFO table...')
+        c.execute("CREATE TABLE info (id VARCHAR(100), "
+                  "dataset VARCHAR(100),"
+                  "type VARCHAR(255),"
+                  "descr VARCHAR(1000),"
+                  "PRIMARY KEY (id, dataset),"
+                  "FOREIGN KEY (id, dataset) REFERENCES object(id, dataset));")
+    except mysql.connector.Error as err:
+        sys.stderr.write("Something went wrong: {}".format(err))
+        exit(9)
 
 
 def read_dict(dict):
@@ -227,6 +232,9 @@ def load_to_db(dataset, df, dbc):
         # Early stopper for debug
         # if i == 10000:
         #     break
+
+    # Commit last entry if not passed from the 10.000 commiter
+    dbc.commit()
 
     print('\nError line #{}'.format(error))
     print("Execution time [{} s]".format(round(time.time()-t0, 2)))
