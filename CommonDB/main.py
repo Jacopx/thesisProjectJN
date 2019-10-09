@@ -211,8 +211,6 @@ def load_to_db(dataset, df, dbc):
                     error += 1
                     sys.stderr.write("Something went wrong OBJECT: {}\n{} = {}\n".format(err, i, t))
 
-            # Add the link between object and event, also if the object exist before
-            if not check_invol_exist(dbc, row[link_column['eid']], obj_id, dataset):
                 try:
                     c.execute(sql_invol, [row[link_column['eid']], dataset, obj_id])  # Syntax error in query
                 except mysql.connector.Error as err:
