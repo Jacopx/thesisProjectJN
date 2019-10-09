@@ -194,6 +194,7 @@ def load_to_db(dataset, df, dbc):
             else:
                 obj_id = row[id]
 
+            # Check if object exist, if not ADD, otherwise SKIP
             if not check_obj_exist(dbc, obj_id, dataset):
                 try:
                     c.execute(sql_obj, [obj_id, dataset, o_type])  # Syntax error in query
@@ -201,11 +202,12 @@ def load_to_db(dataset, df, dbc):
                     error += 1
                     sys.stderr.write("Something went wrong OBJECT: {}\n{} = {}\n".format(err, i, t))
 
-                try:
-                    c.execute(sql_invol, [row[link_column['eid']], dataset, obj_id])  # Syntax error in query
-                except mysql.connector.Error as err:
-                    error += 1
-                    sys.stderr.write("Something went wrong INVOLVED: {}\n{} = {}\n".format(err, i, t))
+            # Add the link between object and event, also if the object exist before
+            try:
+                c.execute(sql_invol, [row[link_column['eid']], dataset, obj_id])  # Syntax error in query
+            except mysql.connector.Error as err:
+                error += 1
+                sys.stderr.write("Something went wrong INVOLVED: {}\n{} = {}\n".format(err, i, t))
 
             if type not in 'NONE':
                 if not check_info_exist(dbc, obj_id, dataset):
