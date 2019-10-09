@@ -224,7 +224,7 @@ def load_to_db(dataset, df, dbc):
                         sys.stderr.write("Something went wrong LOCAT: {}\n{} = {}\n".format(err, i, t))
 
         # Commit every 10000 tuples
-        if i % 1000 == 0:
+        if i % 10000 == 0:
             dbc.commit()
             print('#{} - {} s'.format(i, round(time.time()-t1, 2)))
             t1 = time.time()
