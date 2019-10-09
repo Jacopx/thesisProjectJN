@@ -131,6 +131,15 @@ def check_obj_exist(dbc, id, dataset):
         return True
 
 
+def check_invol_exist(dbc, eid, id, dataset):
+    c = dbc.cursor()
+    sql = 'SELECT COUNT(*) FROM involved WHERE id=(%s) AND eid=(%s) AND dataset=(%s);'
+    c.execute(sql, [str(id), eid, dataset])
+    if c.fetchone()[0] == 1:
+        c.close()
+        return True
+
+
 def check_info_exist(dbc, id, dataset):
     c = dbc.cursor()
     sql = 'SELECT COUNT(*) FROM info WHERE id=(%s) AND dataset=(%s);'
@@ -203,11 +212,12 @@ def load_to_db(dataset, df, dbc):
                     sys.stderr.write("Something went wrong OBJECT: {}\n{} = {}\n".format(err, i, t))
 
             # Add the link between object and event, also if the object exist before
-            try:
-                c.execute(sql_invol, [row[link_column['eid']], dataset, obj_id])  # Syntax error in query
-            except mysql.connector.Error as err:
-                error += 1
-                sys.stderr.write("Something went wrong INVOLVED: {}\n{} = {}\n".format(err, i, t))
+            if not check_invol_exist(dbc, row[link_column['eid']], obj_id, dataset):
+                try:
+                    c.execute(sql_invol, [row[link_column['eid']], dataset, obj_id])  # Syntax error in query
+                except mysql.connector.Error as err:
+                    error += 1
+                    sys.stderr.write("Something went wrong INVOLVED: {}\n{} = {}\n".format(err, i, t))
 
             if type not in 'NONE':
                 if not check_info_exist(dbc, obj_id, dataset):
