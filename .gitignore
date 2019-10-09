@@ -9,6 +9,7 @@ venv/
 DataAnalysis_SFBS/EiS_Thesis.json
 DataAnalysis_SFBS/venv
 DataAnalysis_SFBS/data/*.csv
+DataAnalysis_SFBS/play.csv
 DataAnalysis_VVF/data/*.csv
 DataAnalysis_SFFD/data/*.csv
 DataAnalysis_SFFD/data/*.bz2

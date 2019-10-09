@@ -237,7 +237,7 @@ def main(name, data, dict):
     dbc = connect()
 
     # Creating Tables
-    create_table(dbc)
+    # create_table(dbc)
 
     # Reading the dictionary used for matching
     read_dict(dict)
