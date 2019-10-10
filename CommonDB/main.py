@@ -5,7 +5,7 @@ import sys
 
 # Docker
 USER = 'eis'
-DB = 'forecastDEV'
+DB = 'forecastDev'
 PWD = 'eisworld2019'
 HOST = 'db.jacopx.me'
 PORT = '3306'
@@ -24,7 +24,7 @@ def check_table_exist(dbc, tablename):
     c.execute("""
             SELECT COUNT(*)
             FROM information_schema.tables
-            WHERE TABLE_SCHEMA = '{} and table_name = '{}'
+            WHERE TABLE_SCHEMA = '{}' and table_name = '{}'
             """.format(DB, tablename.replace('\'', '\'\'')))
     if c.fetchone()[0] == 1:
         c.close()
@@ -36,17 +36,17 @@ def create_table(dbc):
 
     tables = ['event', 'object', 'involved', 'info', 'locations']
 
-    # for t in tables:
-    #     if check_table_exist(dbc, t):
-    #         try:
-    #             c.execute('DROP TABLE event, object, involved, info, location;')  # Syntax error in query
-    #             break
-    #         except mysql.connector.Error as err:
-    #             sys.stderr.write("Something went wrong: {}".format(err))
-    #
-    #         print('Tables already present...')
-    #         print('Drop tables...')
-    #         break
+    for t in tables:
+        if check_table_exist(dbc, t):
+            try:
+                c.execute('DROP TABLE event, object, involved, info, location;')  # Syntax error in query
+                break
+            except mysql.connector.Error as err:
+                sys.stderr.write("Something went wrong: {}".format(err))
+
+            print('Tables already present...')
+            print('Drop tables...')
+            break
 
     try:
         print('Creating EVENT table...')
@@ -67,8 +67,9 @@ def create_table(dbc):
         print('Creating INVOLVED table...')
         c.execute("CREATE TABLE involved (eid VARCHAR(100), "
                   "dataset VARCHAR(100),"
+                  "type VARCHAR(100),"
                   "id VARCHAR(100),"
-                  "PRIMARY KEY(eid, dataset, id),"
+                  "PRIMARY KEY(eid, dataset, type, id),"
                   "FOREIGN KEY (eid, dataset) REFERENCES event(eid, dataset), "
                   "FOREIGN KEY (id, dataset) REFERENCES object(id, dataset));")
 
@@ -159,7 +160,7 @@ def check_locat_exist(dbc, id, dataset):
 
 
 def get_match(n):
-    return link_column['id{}'.format(n)], link_column['o_type{}'.format(n)], link_column['type{}'.format(n)], link_column['descr{}'.format(n)], \
+    return link_column['id{}'.format(n)], link_column['r_type{}'.format(n)], link_column['o_type{}'.format(n)], link_column['type{}'.format(n)], link_column['descr{}'.format(n)], \
            link_column['latitude{}'.format(n)], link_column['longitude{}'.format(n)]
 
 
@@ -172,7 +173,7 @@ def load_to_db(dataset, df, dbc):
     error = 0
     sql_event = 'INSERT INTO event(eid, dataset, etype, start_dt, end_dt) VALUES (%s,%s,%s,%s,%s);'
     sql_obj = 'INSERT INTO object(id, dataset, type) VALUES (%s, %s, %s);'
-    sql_invol = 'INSERT INTO involved(eid, dataset, id) VALUES (%s, %s, %s);'
+    sql_invol = 'INSERT INTO involved(eid, dataset, type, id) VALUES (%s, %s, %s, %s);'
     sql_info = 'INSERT INTO info(id, dataset, type, descr) VALUES (%s, %s, %s, %s);'
     sql_locat = 'INSERT INTO location(id, dataset, latitude, longitude) VALUES (%s, %s, %s, %s);'
 
@@ -188,7 +189,7 @@ def load_to_db(dataset, df, dbc):
                 sys.stderr.write("Something went wrong EVENT: {}\n{} = {}\n".format(err, i, t))
 
         for n in range(int(link_column['n'])):
-            id, o_type, type, descr, lat, long = get_match(n)
+            id, r_type, o_type, type, descr, lat, long = get_match(n)
 
             if id in 'ONE':
                 if type in 'NONE':
@@ -211,11 +212,12 @@ def load_to_db(dataset, df, dbc):
                     error += 1
                     sys.stderr.write("Something went wrong OBJECT: {}\n{} = {}\n".format(err, i, t))
 
-                try:
-                    c.execute(sql_invol, [row[link_column['eid']], dataset, obj_id])  # Syntax error in query
-                except mysql.connector.Error as err:
-                    error += 1
-                    sys.stderr.write("Something went wrong INVOLVED: {}\n{} = {}\n".format(err, i, t))
+            # Adding involved relation with specific type in order to manage duplicates
+            try:
+                c.execute(sql_invol, [row[link_column['eid']], dataset, r_type, obj_id])  # Syntax error in query
+            except mysql.connector.Error as err:
+                error += 1
+                sys.stderr.write("Something went wrong INVOLVED: {}\n{} = {}\n".format(err, i, t))
 
             if type not in 'NONE':
                 if not check_info_exist(dbc, obj_id, dataset):
@@ -234,14 +236,10 @@ def load_to_db(dataset, df, dbc):
                         sys.stderr.write("Something went wrong LOCAT: {}\n{} = {}\n".format(err, i, t))
 
         # Commit every 10000 tuples
-        if i % 10000 == 0:
+        if i % 20000 == 0:
             dbc.commit()
             print('#{} - {} s'.format(i, round(time.time()-t1, 2)))
             t1 = time.time()
-
-        # Early stopper for debug
-        # if i == 10000:
-        #     break
 
     # Commit last entry if not passed from the 10.000 commiter
     dbc.commit()
