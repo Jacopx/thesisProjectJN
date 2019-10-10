@@ -260,6 +260,7 @@ def station_area_location(df):
     geo_list2.insert(42, (37.827160, -122.368300))  # 48
     del geo_list2[43]  # Delete incorrect rows
     del geo_list2[43]
+    geo_list2.insert(44, (37.801640, -122.455553))  # 51
     dot()
 
     # Utilize the previously merged dataframe, and remove the outliers
@@ -275,6 +276,7 @@ def station_area_location(df):
                       (df2_2.station_area != 'A3') &
                       (df2_2.station_area != '47')]
     df2_2.dropna(subset=['station_area'], inplace=True)
+    dot()
 
     stations_list = df2_2['station_area'].unique()
 
@@ -287,6 +289,7 @@ def station_area_location(df):
     df2_2['station_long'] = df2_2['station_area'].map(starting_loc.set_index('station')['longs'])
 
     df2_2.reset_index(drop=True, inplace=True)
+    print(' OK')
     return df2_2
 
 
