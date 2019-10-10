@@ -36,17 +36,17 @@ def create_table(dbc):
 
     tables = ['event', 'object', 'involved', 'info', 'locations']
 
-    for t in tables:
-        if check_table_exist(dbc, t):
-            try:
-                c.execute('DROP TABLE event, object, involved, info, location;')  # Syntax error in query
-                break
-            except mysql.connector.Error as err:
-                sys.stderr.write("Something went wrong: {}".format(err))
-
-            print('Tables already present...')
-            print('Drop tables...')
-            break
+    # for t in tables:
+    #     if check_table_exist(dbc, t):
+    #         try:
+    #             c.execute('DROP TABLE event, object, involved, info, location;')  # Syntax error in query
+    #             break
+    #         except mysql.connector.Error as err:
+    #             sys.stderr.write("Something went wrong: {}".format(err))
+    #
+    #         print('Tables already present...')
+    #         print('Drop tables...')
+    #         break
 
     try:
         print('Creating EVENT table...')
@@ -204,6 +204,8 @@ def load_to_db(dataset, df, dbc):
                     obj_id = 'GPS#{}-{}'.format(row[link_column['eid']], n)
                 else:
                     obj_id = 'TYPE#{}-{}'.format(row[link_column['eid']], n)
+            elif id in 'bike_id':
+                obj_id = 'BIKE#{}'.format(row[id], n)
             else:
                 obj_id = row[id]
 
@@ -238,8 +240,6 @@ def load_to_db(dataset, df, dbc):
                         except mysql.connector.Error as err:
                             error += 1
                             sys.stderr.write("Something went wrong LOCAT: {}\n{} = {}\n".format(err, i, t))
-
-        dbc.commit()
 
         # Commit every 10000 tuples
         if i % 20000 == 0:
