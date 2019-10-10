@@ -181,12 +181,15 @@ def load_to_db(dataset, df, dbc):
     for i, row in df.iterrows():
         t = list(row)
 
+        new = True
         if not check_event_exist(dbc, row[link_column['eid']], dataset):
             try:
                 c.execute(sql_event, [row[link_column['eid']], dataset, row[link_column['etype']], row[link_column['start_dt']], row[link_column['end_dt']]])  # Syntax error in query
             except mysql.connector.Error as err:
                 error += 1
                 sys.stderr.write("Something went wrong EVENT: {}\n{} = {}\n".format(err, i, t))
+        else:
+            new = False
 
         for n in range(int(link_column['n'])):
             id, r_type, o_type, type, descr, lat, long = get_match(n)
@@ -213,27 +216,30 @@ def load_to_db(dataset, df, dbc):
                     sys.stderr.write("Something went wrong OBJECT: {}\n{} = {}\n".format(err, i, t))
 
             # Adding involved relation with specific type in order to manage duplicates
-            try:
-                c.execute(sql_invol, [row[link_column['eid']], dataset, r_type, obj_id])  # Syntax error in query
-            except mysql.connector.Error as err:
-                error += 1
-                sys.stderr.write("Something went wrong INVOLVED: {}\n{} = {}\n".format(err, i, t))
+            if new is True or all(t not in r_type for t in ['location', 'start']):
+                try:
+                    c.execute(sql_invol, [row[link_column['eid']], dataset, r_type, obj_id])  # Syntax error in query
+                except mysql.connector.Error as err:
+                    error += 1
+                    sys.stderr.write("Something went wrong INVOLVED: {}\n{} = {}\n".format(err, i, t))
 
-            if type not in 'NONE':
-                if not check_info_exist(dbc, obj_id, dataset):
-                    try:
-                        c.execute(sql_info, [obj_id, dataset, row[type], row[descr]])  # Syntax error in query
-                    except mysql.connector.Error as err:
-                        error += 1
-                        sys.stderr.write("Something went wrong INFO: {}\n{} = {}\n".format(err, i, t))
+                if type not in 'NONE':
+                    if not check_info_exist(dbc, obj_id, dataset):
+                        try:
+                            c.execute(sql_info, [obj_id, dataset, row[type], row[descr]])  # Syntax error in query
+                        except mysql.connector.Error as err:
+                            error += 1
+                            sys.stderr.write("Something went wrong INFO: {}\n{} = {}\n".format(err, i, t))
 
-            if lat not in 'NONE':
-                if not check_locat_exist(dbc, obj_id, dataset):
-                    try:
-                        c.execute(sql_locat, [obj_id, dataset, row[lat], row[long]])  # Syntax error in query
-                    except mysql.connector.Error as err:
-                        error += 1
-                        sys.stderr.write("Something went wrong LOCAT: {}\n{} = {}\n".format(err, i, t))
+                if lat not in 'NONE':
+                    if not check_locat_exist(dbc, obj_id, dataset):
+                        try:
+                            c.execute(sql_locat, [obj_id, dataset, row[lat], row[long]])  # Syntax error in query
+                        except mysql.connector.Error as err:
+                            error += 1
+                            sys.stderr.write("Something went wrong LOCAT: {}\n{} = {}\n".format(err, i, t))
+
+        dbc.commit()
 
         # Commit every 10000 tuples
         if i % 20000 == 0:
