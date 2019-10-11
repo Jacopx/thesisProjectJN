@@ -5,6 +5,7 @@ Having a common structure is useful to make the procedure of forecasting standar
 The previous version v1 had the problem to be too much generic, the 'Capacity Management Problem' (CMP) require a
 more precise and fitted data model in order to correctly achieve the goal.
 
+
 Structure
 ----------
 Is composed of five tables:
@@ -16,6 +17,7 @@ Is composed of five tables:
 
 The main table is EVENT, for each event there are one or more object involved and the table involved is used to link this relationship.
 Info and Location are used to store more information about each object. Everything is enforced by some key=foreign_key pair.
+
 
 Utilization
 ------------
@@ -36,9 +38,16 @@ the system will add more time this feature and make an unique key for them, this
 to defined automatically an unique name.
 In case, for the same dataset, some collision can occur, like bike_id and station_id, a specific suffix adder must be created inside the `main.py`
 
+
+Logical constraints
+--------------------
+Not all kind of datasets can be uploaded into the system.
+
+
 Changelog
----
-- v2.3: **[UP-TO-DATE]** Suffix implementation
+----------
+Only major release, minor are part of the same major.
+- v2.3: **[LATEST]** Suffix implementation
 - v2.1: Working solution with some collision due to duplicated object_id
 - v2.0: First complex implementation, to simple, missing dataset reference and some type
 - v1.0: Super simple match solution, similar to CSV on web
