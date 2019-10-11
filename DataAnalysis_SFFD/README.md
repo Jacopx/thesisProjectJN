@@ -1,4 +1,4 @@
-BikeSharing SF Data Analysis
+SF Fire Department Data Analysis
 ------------------
 Data source: https://data.sfgov.org/api/views/nuek-vuh3
 * operations.csv:
@@ -39,6 +39,18 @@ Data source: https://data.sfgov.org/api/views/nuek-vuh3
     - latitude: Latitude of the address
     - longitude: Longitude of the address
 
+
+To forecast
+------------
+* Already studied:
+  - Response time
+
+* Not yet studied:
+  - Operations
+  - Unit availability
+  - Operation durations
+
+
 Analysis
 ----------
 
@@ -48,3 +60,6 @@ External Analysis
 * https://www.arcgis.com/apps/MapSeries/index.html?appid=f98568a6ac70458dbccc60f407a23ac8
 * https://www.arcgis.com/apps/MapJournal/index.html?appid=5df17d3178474b4f9d78b0f82f0d9789
 * https://nbviewer.jupyter.org/github/yqzgh09/STA-141B/blob/master/final_project.html
+* https://sfbos.org/management-audit-san-francisco-fire-department-summary
+* https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/8599738367597028/4332292154849829/3601578643761083/latest.html
+* https://medium.com/wonks-this-way/san-francisco-emergencies-7d3facb64e1b

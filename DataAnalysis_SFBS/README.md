@@ -1,4 +1,4 @@
-BikeSharing SF Data Analysis
+SF BikeSharing Data Analysis
 ------------------
 The data getted from: https://www.kaggle.com/benhamner/sf-bay-area-bike-share
 The data structure is composed of:
@@ -10,7 +10,16 @@ The data structure is composed of:
 
 To forecast
 ------------
-Prediction of bike availability respect different time and different station of the day.
+* Already studied:
+  - Bike availability respect actual time and specific stations
+
+* Not yet studied:
+  - Free dock slots availability respect actual time
+  - Forecast number of active rides
+  - Duration of a ride
+  - Destination prediction
+  - Resizing of docks
+  - Bike necessary to accomodate ride request
 
 
 Analysis
@@ -32,7 +41,7 @@ External Research
 
 * [Max Likelihood Estimate (MLE), Max A Posteriori (MAP)] https://towardsdatascience.com/predicting-no-of-bike-share-users-machine-learning-data-visualization-project-using-r-71bc1b9a7495
 
-* [Public Tableu] https://public.tableau.com/views/SFBikeShareAnalysis/FinalPresentation?:embed=y&:showVizHome=no&:display_count=y&:display_static_image=y&:bootstrapWhenNotified=true
+* [Public Tableau] https://public.tableau.com/views/SFBikeShareAnalysis/FinalPresentation?:embed=y&:showVizHome=no&:display_count=y&:display_static_image=y&:bootstrapWhenNotified=true
 
 * [Only Analysis] https://datascienceplus.com/exploring-san-francisco-bay-areas-bike-share-system/
 
@@ -49,3 +58,4 @@ Paper
 * InvMan_BigData.pdf
 * AI_StockDecision.pdf
 * StatAndML_MethodsForecasting.pdf
+* BikesAvailabilityinaBike-SharingML.pdf
