@@ -42,6 +42,14 @@ In case, for the same dataset, some collision can occur, like bike_id and statio
 Logical constraints
 --------------------
 Not all kind of datasets can be uploaded into the system.
+The system is developed to store dataset based on events, an event is a portion of time that can be categorized in someway,
+the event can be also instantaneous. If a dataset is event based it can be loaded in the system, otherwise is impossible.
+Event like log report can be also loaded, the duration can be computed and the 'start_datetime' become the time of the event execution.
+Each event can involve multiple object, of different type, the must be linked to the event with a relationship,
+save in the 'type' field of the involved table. An event could not have object involved, this could drive to loose the focus of the
+structure, but is feasible. Also loading a NON TIME BASED events dataset is possible, but it loose the goal of the structure.
+In general every dataset can be fit to this structure but not all of them could gain advantages by this solution, in some case
+could become only an interactive big CSV.
 
 
 Changelog

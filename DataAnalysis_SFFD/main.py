@@ -89,7 +89,7 @@ def data_reduction2(df):
     print('Remove columns...', end='')
     df = df[['call_number', 'unit_id', 'unit_type', 'call_type', 'call_type_group', 'priority', 'numberof_alarms', 'rec_dt', 'onscene_dt', 'end_dt',
              'duration', 'res_time', 'rec_day', 'rec_month', 'rec_hour', 'rec_day_of_week', 'week', 'year', 'end_day', 'end_month', 'end_hour', 'end_day_of_week',
-            'battalion', 'station_area', 'station_lat', 'station_long', 'zipcodeof_incident', 'box', 'lat', 'long']]
+            'battalion', 'station_area', 'station_size', 'station_lat', 'station_long', 'zipcodeof_incident', 'box', 'lat', 'long']]
     print(' OK')
     return df
 
@@ -261,30 +261,28 @@ def station_area_location(df):
     del geo_list2[43]  # Delete incorrect rows
     del geo_list2[43]
     geo_list2.insert(44, (37.801640, -122.455553))  # 51
+    geo_list2.insert(45, (37.622202, -122.3811767))  # A1
+    geo_list2.insert(46, (37.622202, -122.3811767))  # A2
+    geo_list2.insert(47, (37.622202, -122.3811767))  # A3
+    geo_list2.insert(48, (37.622202, -122.3811767))
     dot()
 
-    # Utilize the previously merged dataframe, and remove the outliers
-    # which have no known addresses. Take the coordinates of the fire
-    # stations and calculate the distance between them and the incident.
-    # Add this new column to the dataframe as 'distance.'
     df2_2 = df.copy()
     df2_2 = df2_2.loc[(df2_2.station_area != '94') &
                       (df2_2.station_area != 'F3') &
                       (df2_2.station_area != 'E2') &
-                      (df2_2.station_area != 'A1') &
-                      (df2_2.station_area != 'A2') &
-                      (df2_2.station_area != 'A3') &
                       (df2_2.station_area != '47')]
     df2_2.dropna(subset=['station_area'], inplace=True)
     dot()
 
     stations_list = df2_2['station_area'].unique()
 
-    stations_list = pd.DataFrame(np.sort(stations_list.astype(int)))
-    starting_loc = pd.concat([stations_list, pd.DataFrame(geo_list2)], axis=1)
-    starting_loc.columns = ['station', 'lats', 'longs']
-    starting_loc.station = [format(i, '02d') for i in starting_loc.station]
+    stations_list = pd.DataFrame(np.sort(stations_list))
+    station_capacity = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    starting_loc = pd.concat([stations_list, pd.DataFrame(geo_list2), pd.DataFrame(station_capacity)], axis=1)
+    starting_loc.columns = ['station', 'lats', 'longs', 'stat_size']
 
+    df2_2['station_size'] = df2_2['station_area'].map(starting_loc.set_index('station')['stat_size'])
     df2_2['station_lat'] = df2_2['station_area'].map(starting_loc.set_index('station')['lats'])
     df2_2['station_long'] = df2_2['station_area'].map(starting_loc.set_index('station')['longs'])
 
@@ -524,12 +522,13 @@ def main(path):
         df = data_reduction2(df)
         df = remove_outliers(df, 'duration')
         df = remove_outliers(df, 'res_time')
+        export_csv(df, 'fd_data')
         replace_dict(df, typo, 'call_type')
         replace_dict(df, subtypo, 'call_type_group')
+        export_csv(df, 'operationsSFFD_CLEANED')
         station_unit(df)
         # convert(df, unit, 'unit_id')
         # convert(df, stations, 'station_area')
-        export_csv(df, 'operationsSFFD_CLEANED')
 
     else:
         print("=== COMPUTING DATASET ===\n")

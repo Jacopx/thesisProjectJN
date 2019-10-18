@@ -22,6 +22,13 @@ To forecast
   - Bike necessary to accomodate ride request
 
 
+Saturation Events
+------------------
+Both case of empty and full docks are eligible for saturation. Both problem depends on situations.
+The kind of unit, NORMAL or SPECIAL change the computation of the available units, specials are not
+take in account.
+
+
 Analysis
 ---------
 All the previuos research about this, or similar, dataset show a lot of different correlation. One of the most important is the type of client (customer or subscriber) and the time, or the day of the week, of the utilization. There are also, in case of SF, lot of correlation with the weather.
