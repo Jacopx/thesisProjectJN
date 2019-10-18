@@ -17,13 +17,9 @@ The data structure is composed of:
 
 To forecast
 ------------
-Issue over time, there is of course a correlation respect the day of the week, saturday and sunday report really few issue. Is also interesting to notice that, after a commit for a solved issue, other problem arise. Many issue means many code lines to solve them.
-
-
-Important Feature
------------------
-  * Number of issue
-  * Create date
+Every analysis performed over this dataset has not yet been published. Here some ideas:
+  - Issue over time
+  - Issue prediction after commit
 
 
 Analysis

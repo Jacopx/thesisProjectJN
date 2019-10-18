@@ -8,7 +8,7 @@ USER = 'eis'
 DB = 'forecastDev'
 PWD = 'eisworld2019'
 HOST = 'db.jacopx.me'
-PORT = '33306'
+PORT = '3306'
 
 column_link = {}
 link_column = {}
@@ -31,66 +31,61 @@ def check_table_exist(dbc, tablename):
         return True
 
 
-def create_table(dbc):
+def create_table(dbc, dataset):
     c = dbc.cursor()
 
-    tables = ['event', 'object', 'involved', 'info', 'locations']
+    if check_table_exist(dbc, 'event'):
+        try:
+            c.execute('DELETE FROM event WHERE dataset=(%s);', [dataset])  # Syntax error in query
+        except mysql.connector.Error as err:
+            sys.stderr.write("Something went wrong: {}".format(err))
 
-    # for t in tables:
-    #     if check_table_exist(dbc, t):
-    #         try:
-    #             c.execute('DROP TABLE event, object, involved, info, location;')  # Syntax error in query
-    #             break
-    #         except mysql.connector.Error as err:
-    #             sys.stderr.write("Something went wrong: {}".format(err))
-    #
-    #         print('Tables already present...')
-    #         print('Drop tables...')
-    #         break
+        print('Tables EVENT already exist...')
+        print('Delete tuples...')
+    else:
+        try:
+            print('Creating EVENT table...')
+            c.execute("CREATE TABLE event ("
+                      "eid VARCHAR(100),"
+                      "dataset VARCHAR(100),"
+                      "etype VARCHAR(100),"
+                      "start_dt DATETIME,"
+                      "end_dt DATETIME,"
+                      "PRIMARY KEY(eid, dataset));")
 
-    try:
-        print('Creating EVENT table...')
-        c.execute("CREATE TABLE event ("
-                  "eid VARCHAR(100),"
-                  "dataset VARCHAR(100),"
-                  "etype VARCHAR(100),"
-                  "start_dt DATETIME,"
-                  "end_dt DATETIME,"
-                  "PRIMARY KEY(eid, dataset));")
+            print('Creating OBJECT table...')
+            c.execute("CREATE TABLE object (id VARCHAR(100), "
+                      "dataset VARCHAR(100),"
+                      "type VARCHAR(255),"
+                      "PRIMARY KEY(id, dataset));")
 
-        print('Creating OBJECT table...')
-        c.execute("CREATE TABLE object (id VARCHAR(100), "
-                  "dataset VARCHAR(100),"
-                  "type VARCHAR(255),"
-                  "PRIMARY KEY(id, dataset));")
+            print('Creating INVOLVED table...')
+            c.execute("CREATE TABLE involved (eid VARCHAR(100), "
+                      "dataset VARCHAR(100),"
+                      "type VARCHAR(100),"
+                      "id VARCHAR(100),"
+                      "PRIMARY KEY(eid, dataset, type, id),"
+                      "FOREIGN KEY (eid, dataset) REFERENCES event(eid, dataset) ON DELETE CASCADE, "
+                      "FOREIGN KEY (id, dataset) REFERENCES object(id, dataset));")
 
-        print('Creating INVOLVED table...')
-        c.execute("CREATE TABLE involved (eid VARCHAR(100), "
-                  "dataset VARCHAR(100),"
-                  "type VARCHAR(100),"
-                  "id VARCHAR(100),"
-                  "PRIMARY KEY(eid, dataset, type, id),"
-                  "FOREIGN KEY (eid, dataset) REFERENCES event(eid, dataset), "
-                  "FOREIGN KEY (id, dataset) REFERENCES object(id, dataset));")
+            print('Creating LOCATION table...')
+            c.execute("CREATE TABLE location (id VARCHAR(100), "
+                      "dataset VARCHAR(100),"
+                      "latitude FLOAT,"
+                      "longitude FLOAT,"
+                      "PRIMARY KEY (id, dataset),"
+                      "FOREIGN KEY (id, dataset) REFERENCES object(id, dataset) ON DELETE CASCADE);")
 
-        print('Creating LOCATION table...')
-        c.execute("CREATE TABLE location (id VARCHAR(100), "
-                  "dataset VARCHAR(100),"
-                  "latitude FLOAT,"
-                  "longitude FLOAT,"
-                  "PRIMARY KEY (id, dataset),"
-                  "FOREIGN KEY (id, dataset) REFERENCES object(id, dataset));")
-
-        print('Creating INFO table...')
-        c.execute("CREATE TABLE info (id VARCHAR(100), "
-                  "dataset VARCHAR(100),"
-                  "type VARCHAR(255),"
-                  "descr VARCHAR(1000),"
-                  "PRIMARY KEY (id, dataset),"
-                  "FOREIGN KEY (id, dataset) REFERENCES object(id, dataset));")
-    except mysql.connector.Error as err:
-        sys.stderr.write("Something went wrong: {}".format(err))
-        exit(9)
+            print('Creating INFO table...')
+            c.execute("CREATE TABLE info (id VARCHAR(100), "
+                      "dataset VARCHAR(100),"
+                      "type VARCHAR(255),"
+                      "descr VARCHAR(1000),"
+                      "PRIMARY KEY (id, dataset),"
+                      "FOREIGN KEY (id, dataset) REFERENCES object(id, dataset) ON DELETE CASCADE);")
+        except mysql.connector.Error as err:
+            sys.stderr.write("Something went wrong: {}".format(err))
+            exit(9)
 
 
 def read_dict(dict):
@@ -208,7 +203,7 @@ def load_to_db(dataset, df, dbc):
                     else:
                         obj_id = 'TYPE#{}-{}'.format(row[link_column['eid']], n)
                 elif id in 'bike_id':
-                    obj_id = 'BIKE#{}'.format(row[id], n)
+                    obj_id = 'B{}'.format(row[id], n)
                 else:
                     obj_id = row[id]
 
@@ -230,8 +225,27 @@ def load_to_db(dataset, df, dbc):
 
                     if type not in 'NONE':
                         if not check_info_exist(dbc, obj_id, dataset):
+                            if descr in 'SPECIAL':
+                                if dataset in 'SFFD':
+                                    if any(t in row[type] for t in ['ENGINE', 'TRUCK']):
+                                        db_descr = 'N'
+                                    else:
+                                        db_descr = 'S'
+                                elif dataset in 'SFBS':
+                                    db_descr = 'N'
+                            else:
+                                db_descr = row[descr]
+
+                            if type in 'SPECIAL':
+                                if dataset in 'SFFD':
+                                    db_type = 'STATION'
+                                elif dataset in 'SFBS':
+                                    db_type = 'STATION'
+                            else:
+                                db_type = row[type]
+
                             try:
-                                c.execute(sql_info, [obj_id, dataset, row[type], row[descr]])  # Syntax error in query
+                                c.execute(sql_info, [obj_id, dataset, db_type, db_descr])  # Syntax error in query
                             except mysql.connector.Error as err:
                                 error += 1
                                 sys.stderr.write("Something went wrong INFO: {}\n{} = {}\n".format(err, i, t))
@@ -250,6 +264,10 @@ def load_to_db(dataset, df, dbc):
             print('#{} - {} s'.format(i, round(time.time()-t1, 2)))
             t1 = time.time()
 
+        # Degub stopper
+        #if i == 20000:
+            #break
+
     # Commit last entry if not passed from the 10.000 commiter
     dbc.commit()
 
@@ -257,12 +275,13 @@ def load_to_db(dataset, df, dbc):
     print("Execution time [{} s]".format(round(time.time()-t0, 2)))
 
 
-def main(name, data, dict):
+def main(name, data, dict, mode):
     # Database Connector
     dbc = connect()
 
     # Creating Tables
-    # create_table(dbc)
+    if mode is 'w':
+        create_table(dbc, name)
 
     # Reading the dictionary used for matching
     read_dict(dict)
@@ -274,4 +293,4 @@ def main(name, data, dict):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2], sys.argv[3])
+    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])

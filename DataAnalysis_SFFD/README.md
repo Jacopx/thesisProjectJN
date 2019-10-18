@@ -48,11 +48,33 @@ To forecast
 * Not yet studied:
   - Operations
   - Unit availability
+  - Operation typology
   - Operation durations
+  - Destination of the operations
 
 
-Analysis
-----------
+Saturation Events
+------------------
+When a station has no more units available to dispatch, having the station full is not a problem.
+The kind of unit, NORMAL or SPECIAL change the computation of the available units, specials are not
+take in account.
+
+
+Important Notes
+----------------
+Each station have an ENGINE assigned E1, E2, etc... From station No.1 to No.19 also a TRUCK with name T01, T02, etc...
+Normally each unit is assigned to a specific station, ENGINE1 (E1) and TRUCK1 (T01) are assigned to STATION 1, in case
+of necessity the units can be offered to other stations, for example TRUCK1 can help T02 and E2 of STATION 2.
+This must be take in account during calculations of saturations problems. Look at EID: 100310192 to understand.
+
+Some of the stations have also special units, these unit can lead to calculation errors because not all units can
+partecipate to general operations; for example, a car incident can be solved by a fire boat. The first development
+will not take care of specific units.
+
+
+Internal studies
+-----------------
+https://sfbos.org/21-operations-division-reorganization
 
 
 External Analysis

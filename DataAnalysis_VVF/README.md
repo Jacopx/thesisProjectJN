@@ -15,16 +15,12 @@ The data structure is composed of:
 
 To forecast
 ------------
-It could be interesting search the period with low or high number of operations, some example are:
-  - Bonifica insetti = during summer
-  - Bonifica = n
-  - Mesi = n
-  - Alberi Pericolanti = summer
-  - Dissesto Statico = November
-  - Incidente Stradale = Saturday
-  - Incidente Stradale = 8/17
-
-Forecasting also the number of generic operations is important, accordingly to the day hour.
+Every analysis on this data set has not yet been published. Here some ideas:
+  - Unit availability
+  - Operations
+  - Operation typology
+  - Operation durations
+  - Destination of the operations
 
 
 Important Feature
