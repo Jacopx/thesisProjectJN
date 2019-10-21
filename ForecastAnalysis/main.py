@@ -106,10 +106,10 @@ def saturation(dbc, dataset, unit, start, dest, type, gap):
         SELECT id as ss FROM info
         WHERE dataset='{}' AND type='{}';    
     """.format(dataset, 'STATION')
-    df_src = generate_df(dbc, sql)
+    df_get_stations = generate_df(dbc, sql)
 
     station_size = pd.Series(df_station.descr.values, index=df_station.id).to_dict()
-    ds = {list(df_src.ss.unique())[i]: i for i in range(0, len(list(df_src.ss.unique())))}
+    ds = {list(df_get_stations.ss.unique())[i]: i for i in range(0, len(list(df_get_stations.ss.unique())))}
     m = [np.ndarray(shape=(1, SECONDS)) for i in range(0, len(ds))]
 
     for s in ds:
@@ -120,25 +120,49 @@ def saturation(dbc, dataset, unit, start, dest, type, gap):
     df = pd.DataFrame(columns=['date', 'station', 'saturation'])
 
     for year in df_year.year.unique():
-        for month in range(1, 13):
-            cursor = dbc.cursor()
 
+        cursor = dbc.cursor()
+
+        sql = """
+                SELECT count(eid) as c
+                FROM event
+                WHERE dataset='{}' and year(start_dt)='{}';
+            """.format(dataset, year)
+
+        cursor.execute(sql)
+        c = int(cursor.fetchone()[0])
+
+        if c == 0:
+            print('SKIP YEAR: {}'.format(year))
+            continue
+
+        sql = """
+                SELECT involved.id as ss, event.eid, MONTH(start_dt) as month, DAY(start_dt) as day, start_dt, end_dt, n.id as id
+                FROM event, involved, (select involved.dataset, eid, info.id
+                                            from involved, info
+                                            where info.dataset=involved.dataset and info.id=involved.id
+                                                and info.descr='N' and involved.type='{}'
+                                        ) as n,
+                                        (select involved.dataset, eid, info.id as start
+                                            from involved, info
+                                            where info.dataset=involved.dataset and info.id=involved.id
+                                                and involved.type='{}'
+                                            ) as s
+                WHERE event.dataset=involved.dataset and event.eid=involved.eid
+                  and event.dataset='{}' and event.dataset=n.dataset and event.eid=n.eid and event.eid=s.eid
+                  and event.dataset=s.dataset and involved.id=s.start and n.dataset=s.dataset and n.eid=s.eid
+                  and year(start_dt)='{}'
+                ORDER BY day;
+            """.format(unit, start, dataset, year)
+
+        df_src = generate_df(dbc, sql)
+
+        t1 = time.time()
+        print('Query1: {} s'.format(round(time.time() - t0, 2)))
+
+        if dest is not None:
             sql = """
-                    SELECT count(eid) as c
-                    FROM event
-                    WHERE dataset='{}' and year(start_dt)='{}' and month(start_dt)='{}';
-                """.format(dataset, year, month)
-
-            cursor.execute(sql)
-            c = int(cursor.fetchone()[0])
-
-            if c == 0:
-                print('SKIP MONTH: {}-{}'.format(month, year))
-                continue
-
-            sql = """
-                    SELECT involved.id as ss, event.eid, YEAR(start_dt) as year, MONTH(start_dt) as month, DAY(start_dt) as day, 
-                    start_dt, end_dt, n.id as id
+                    SELECT involved.id as ss, event.eid, MONTH(start_dt) as month, DAY(start_dt) as day, start_dt, end_dt, n.id as id
                     FROM event, involved, (select involved.dataset, eid, info.id
                                                 from involved, info
                                                 where info.dataset=involved.dataset and info.id=involved.id
@@ -152,47 +176,18 @@ def saturation(dbc, dataset, unit, start, dest, type, gap):
                     WHERE event.dataset=involved.dataset and event.eid=involved.eid
                       and event.dataset='{}' and event.dataset=n.dataset and event.eid=n.eid and event.eid=s.eid
                       and event.dataset=s.dataset and involved.id=s.start and n.dataset=s.dataset and n.eid=s.eid
-                      and year(start_dt)='{}' and month(start_dt)='{}'
+                      and year(start_dt)='{}'
                     ORDER BY day;
-                """.format(unit, start, dataset, year, month)
+                """.format(unit, dest, dataset, year)
 
-            df_src = generate_df(dbc, sql)
+            df_dest = generate_df(dbc, sql)
+        print('Query2: {} s'.format(round(time.time() - t1, 2)))
 
-            if df_src.ss.count() == 0:
-                print('SKIP MONTH: {}-{}'.format(month, year))
-                continue
-
-            t1 = time.time()
-            print('Query1: {} s'.format(round(time.time() - t0, 2)))
-
-            if dest is not None:
-                sql = """
-                        SELECT involved.id as ss, event.eid, YEAR(start_dt) as year, MONTH(start_dt) as month, DAY(start_dt) as day,
-                         start_dt, end_dt, n.id as id
-                        FROM event, involved, (select involved.dataset, eid, info.id
-                                                    from involved, info
-                                                    where info.dataset=involved.dataset and info.id=involved.id
-                                                        and info.descr='N' and involved.type='{}'
-                                                ) as n,
-                                                (select involved.dataset, eid, info.id as start
-                                                    from involved, info
-                                                    where info.dataset=involved.dataset and info.id=involved.id
-                                                        and involved.type='{}'
-                                                    ) as s
-                        WHERE event.dataset=involved.dataset and event.eid=involved.eid
-                          and event.dataset='{}' and event.dataset=n.dataset and event.eid=n.eid and event.eid=s.eid
-                          and event.dataset=s.dataset and involved.id=s.start and n.dataset=s.dataset and n.eid=s.eid
-                          and year(start_dt)='{}' and month(start_dt)='{}'
-                        ORDER BY day;
-                    """.format(unit, dest, dataset, year, month)
-
-                df_dest = generate_df(dbc, sql)
-            print('Query2: {} s'.format(round(time.time() - t1, 2)))
-
+        for month in range(1, 13):
             for day in range(1, 32):
                 t1 = time.time()
 
-                df_day = df_src[(df_src.year == year) & (df_src.month == month) & (df_src.day == day)]
+                df_day = df_src[(df_src.month == month) & (df_src.day == day)]
                 if df_day.ss.count() == 0:
                     print('SKIP DAY {}-{}-{}'.format(day, month, year))
                     continue
@@ -203,10 +198,8 @@ def saturation(dbc, dataset, unit, start, dest, type, gap):
                 offset = unix_time(first)
                 df_day.apply(lambda r: sub(dataset, ds, m, r['ss'], r['start_dt'], r['end_dt'], r['id'], offset), axis=1)
 
-                # print(' # ', end='')
-
                 if dest is not None:
-                    df_day_dest = df_dest[(df_dest.year == year) & (df_dest.month == month) & (df_src.day == day)]
+                    df_day_dest = df_dest[(df_dest.month == month) & (df_src.day == day)]
                     df_day_dest.apply(lambda r: add(dataset, ds, m, r['ss'], r['start_dt'], r['end_dt'], r['id'], offset), axis=1)
 
                 for s in ds:
