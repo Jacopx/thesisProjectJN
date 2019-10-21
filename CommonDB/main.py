@@ -178,9 +178,22 @@ def load_to_db(dataset, df, dbc):
 
         new = True
         skip_line = False
-        if not check_event_exist(dbc, row[link_column['eid']], dataset):
+
+        if link_column['eid'] in 'UNIQUE':
+            eid = i
+        else:
+            eid = row[link_column['eid']]
+
+        if dataset in 'SFFBs':
+            etype = 'Saturation'
+        elif dataset in 'SFFDs':
+            etype = 'Saturation'
+        else:
+            etype = row[link_column['etype']]
+
+        if not check_event_exist(dbc, eid, dataset):
             try:
-                c.execute(sql_event, [row[link_column['eid']], dataset, row[link_column['etype']], row[link_column['start_dt']], row[link_column['end_dt']]])  # Syntax error in query
+                c.execute(sql_event, [eid, dataset, etype, row[link_column['start_dt']], row[link_column['end_dt']]])  # Syntax error in query
             except mysql.connector.Error as err:
                 error += 1
                 sys.stderr.write("Something went wrong EVENT: {}\n{} = {}\n".format(err, i, t))
@@ -218,7 +231,7 @@ def load_to_db(dataset, df, dbc):
                 # Adding involved relation with specific type in order to manage duplicates
                 if new is True or all(t not in r_type for t in ['location', 'start']):
                     try:
-                        c.execute(sql_invol, [row[link_column['eid']], dataset, r_type, obj_id])  # Syntax error in query
+                        c.execute(sql_invol, [eid, dataset, r_type, obj_id])  # Syntax error in query
                     except mysql.connector.Error as err:
                         error += 1
                         sys.stderr.write("Something went wrong INVOLVED: {}\n{} = {}\n".format(err, i, t))
@@ -280,8 +293,8 @@ def main(name, data, dict, mode):
     dbc = connect()
 
     # Creating Tables
-    if mode is 'w':
-        create_table(dbc, name)
+    # if mode is 'w':
+    #     create_table(dbc, name)
 
     # Reading the dictionary used for matching
     read_dict(dict)
