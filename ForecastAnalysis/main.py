@@ -231,7 +231,7 @@ def sub(dataset, ds, matrix, ss, start, end, unit, offset):
         i = ds[ss]
         last = offset + SECONDS - start
     elif dataset == 'SFFD':
-        if unit[1].isAlpha():
+        if unit[0].isalpha():
             i = ds[unit[1:]]
         else:
             i = ds[unit]
@@ -253,7 +253,7 @@ def add(dataset, ds, matrix, ss, start, end, unit, offset):
         i = ds[ss]
         last = offset + SECONDS - start
     elif dataset == 'SFFD':
-        if unit[1].isAlpha():
+        if unit[0].isalpha():
             i = ds[unit[1:]]
         else:
             i = ds[unit]
