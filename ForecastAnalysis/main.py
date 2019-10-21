@@ -91,7 +91,7 @@ def duration(dbc, dataset):
 # TODO: Bike sharing require to check also bike that GO to a stations
 def saturation(dbc, dataset, unit, start, dest, type, gap):
     t0 = time.time()
-    print('Get data', end='')
+    print('Get data...', end='')
     sql = """
             SELECT involved.id as ss, event.eid, YEAR(start_dt) as year, MONTH(start_dt) as month, DAY(start_dt) as day, 
             start_dt, end_dt, n.id as id
@@ -112,7 +112,8 @@ def saturation(dbc, dataset, unit, start, dest, type, gap):
         """.format(unit, start, dataset)
 
     df_src = generate_df(dbc, sql)
-    dot()
+    t1 = time.time()
+    print('Query1: {} s'.format(round(time.time() - t0, 2)))
 
     if dest is not None:
         sql = """
@@ -135,7 +136,7 @@ def saturation(dbc, dataset, unit, start, dest, type, gap):
             """.format(unit, dest, dataset)
 
         df_dest = generate_df(dbc, sql)
-    dot()
+    print('Query2: {} s'.format(round(time.time() - t1, 2)))
 
     sql = "SELECT id, descr FROM info WHERE dataset='{}' AND type='{}';".format(dataset, 'STATION')
     df_station = generate_df(dbc, sql)
@@ -147,7 +148,6 @@ def saturation(dbc, dataset, unit, start, dest, type, gap):
     for s in ds:
         i = ds[s]
         m[i][0].fill(int(station_size[s])-gap)
-    print('. OK')
 
     print('Compute saturation events...')
     df = pd.DataFrame(columns=['date', 'station', 'saturation'])
@@ -159,11 +159,14 @@ def saturation(dbc, dataset, unit, start, dest, type, gap):
                 t1 = time.time()
                 print('{}-{}-{}'.format(year, month, day), end='')
                 df_day = df_src[(df_src.year == year) & (df_src.month == month) & (df_src.day == day)]
+                if df_day.ss.count() == 0:
+                    print('SKIP')
+                    continue
                 first = datetime.strptime('{}-{}-{} 00:00:00'.format(year, month, day), '%Y-%m-%d %H:%M:%S')
                 offset = unix_time(first)
                 df_day.apply(lambda r: sub(dataset, ds, m, r['ss'], r['start_dt'], r['end_dt'], r['id'], offset), axis=1)
 
-                print(' # ', end='')
+                # print(' # ', end='')
 
                 if dest is not None:
                     df_day_dest = df_dest[(df_dest.year == year) & (df_dest.month == month) & (df_src.day == day)]
@@ -175,7 +178,7 @@ def saturation(dbc, dataset, unit, start, dest, type, gap):
                     for sec in range(0, SECONDS):
                         if evaluate(m[i][0][sec], type, int(station_size[s])):
                             total += 1
-                    # print('\t{} ==> {} s \t# Refill with: {}'.format(s, total, int(station_size[s])-gap))
+                    print('\t{} ==> {} s # M:{} m:{} \t# Refill with: {}'.format(s, total, max(m[i][0]), min(m[i][0]), int(station_size[s])-gap))
 
                     df = df.append({'date': '{}-{}-{}'.format(year, month, day), 'station': s, 'saturation': total}, ignore_index=True)
 
@@ -201,7 +204,6 @@ def sub(dataset, ds, matrix, ss, start, end, unit, offset):
     elif dataset == 'SFFD':
         i = ds[unit[1:]]
         last = end-start
-
 
     for sec in range(0, last):
         p = start - offset + sec
