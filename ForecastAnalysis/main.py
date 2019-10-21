@@ -10,7 +10,7 @@ epoch = datetime.utcfromtimestamp(0)
 
 # FreeNAS
 USER = 'eis'
-DB = 'forecastDev'
+DB = 'forecast'
 PWD = 'eisworld2019'
 HOST = 'db.jacopx.me'
 PORT = '3306'
@@ -88,7 +88,7 @@ def duration(dbc, dataset):
     return df
 
 
-def saturation(dbc, dataset, unit, start, dest, type, gap):
+def saturation(dbc, dataset, unit, start, dest, type, gap, csv_name):
     t0 = time.time()
     print('Get data...')
 
@@ -131,6 +131,7 @@ def saturation(dbc, dataset, unit, start, dest, type, gap):
 
         cursor.execute(sql)
         c = int(cursor.fetchone()[0])
+        cursor.close()
 
         if c == 0:
             print('SKIP YEAR: {}'.format(year))
@@ -215,7 +216,7 @@ def saturation(dbc, dataset, unit, start, dest, type, gap):
                     m[i][0].fill(int(station_size[s])-gap)
 
                 print('{} s'.format(round(time.time() - t1, 2)))
-        break
+            export_csv(df, csv_name)
 
     print('Total: {} s'.format(round(time.time() - t0, 2)))
     return df
@@ -283,12 +284,12 @@ def main(dataset):
     # print(df)
 
     if dataset in 'SFBS':
-        df = saturation(dbc, dataset, 'with', 'src', 'dest', 1, 3)
+        df = saturation(dbc, dataset, 'with', 'src', 'dest', 1, 3, 'SFBS1')
         export_csv(df, 'SFBS1')
-        df = saturation(dbc, dataset, 'with', 'src', 'dest', 2, 3)
+        df = saturation(dbc, dataset, 'with', 'src', 'dest', 2, 3, 'SFBS2')
         export_csv(df, 'SFBS2')
     else:
-        df = saturation(dbc, dataset, 'act', 'start', None, 1, 0)
+        df = saturation(dbc, dataset, 'act', 'start', None, 1, 0, 'SFFD')
         export_csv(df, 'SFFD')
 
 
