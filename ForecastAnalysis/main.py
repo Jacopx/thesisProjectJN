@@ -215,6 +215,7 @@ def saturation(dbc, dataset, unit, start, dest, type, gap):
                     m[i][0].fill(int(station_size[s])-gap)
 
                 print('{} s'.format(round(time.time() - t1, 2)))
+        break
 
     print('Total: {} s'.format(round(time.time() - t0, 2)))
     return df
