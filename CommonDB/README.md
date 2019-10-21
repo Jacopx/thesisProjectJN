@@ -55,7 +55,8 @@ could become only an interactive big CSV.
 Changelog
 ----------
 Only major release, minor are part of the same major.
-- v2.3: **[LATEST]** Suffix implementation
+- v2.4: **[LATEST]** Allow upload of saturation data
+- v2.3: Suffix implementation
 - v2.1: Working solution with some collision due to duplicated object_id
 - v2.0: First complex implementation, to simple, missing dataset reference and some type
 - v1.0: Super simple match solution, similar to CSV on web
