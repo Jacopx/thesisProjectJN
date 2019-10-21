@@ -116,6 +116,9 @@ def saturation(dbc, dataset, unit, start, dest, type, gap):
         i = ds[s]
         m[i][0].fill(int(station_size[s])-gap)
 
+    print('Compute saturation events...')
+    df = pd.DataFrame(columns=['date', 'station', 'saturation'])
+
     for year in df_year.year.unique():
         for month in range(1, 13):
             cursor = dbc.cursor()
@@ -186,9 +189,6 @@ def saturation(dbc, dataset, unit, start, dest, type, gap):
                 df_dest = generate_df(dbc, sql)
             print('Query2: {} s'.format(round(time.time() - t1, 2)))
 
-            print('Compute saturation events...')
-            df = pd.DataFrame(columns=['date', 'station', 'saturation'])
-
             for day in range(1, 32):
                 t1 = time.time()
 
@@ -224,7 +224,6 @@ def saturation(dbc, dataset, unit, start, dest, type, gap):
                 print('{} s'.format(round(time.time() - t1, 2)))
 
     print('Total: {} s'.format(round(time.time() - t0, 2)))
-
     return df
 
 
