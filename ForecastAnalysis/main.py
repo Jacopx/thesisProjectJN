@@ -15,10 +15,10 @@ PWD = 'eisworld2019'
 HOST = 'db.jacopx.me'
 PORT = '3306'
 
-SECONDS = 86400
+SECONDS = 1440
 
 
-def unix_time(dt): return (dt - epoch).total_seconds()
+def unix_time(dt): return (dt - epoch).total_seconds() / 60
 
 
 def connect(): return mysql.connector.connect(host=HOST, port=PORT, user=USER, passwd=PWD, database=DB)
@@ -121,21 +121,21 @@ def saturation(dbc, dataset, unit, start, dest, type, gap, csv_name):
 
     for year in df_year.year.unique():
 
-        cursor = dbc.cursor()
-
-        sql = """
-                SELECT count(eid) as c
-                FROM event
-                WHERE dataset='{}' and year(start_dt)='{}';
-            """.format(dataset, year)
-
-        cursor.execute(sql)
-        c = int(cursor.fetchone()[0])
-        cursor.close()
-
-        if c == 0:
-            print('SKIP YEAR: {}'.format(year))
-            continue
+        # cursor = dbc.cursor()
+        #
+        # sql = """
+        #         SELECT count(eid) as c
+        #         FROM event
+        #         WHERE dataset='{}' and year(start_dt)='{}';
+        #     """.format(dataset, year)
+        #
+        # cursor.execute(sql)
+        # c = int(cursor.fetchone()[0])
+        # cursor.close()
+        #
+        # if c == 0:
+        #     print('SKIP YEAR: {}'.format(year))
+        #     continue
 
         sql = """
                 SELECT involved.id as ss, event.eid, MONTH(start_dt) as month, DAY(start_dt) as day, start_dt, end_dt, n.id as id
