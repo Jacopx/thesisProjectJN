@@ -272,7 +272,8 @@ def station_area_location(df):
                       (df2_2.station_area != 'F3') &
                       (df2_2.station_area != 'E2') &
                       (df2_2.station_area != '47')]
-    df2_2.dropna(subset=['station_area'], inplace=True)
+
+    df2_2.station_area.fillna('999', inplace=True)
     dot()
 
     stations_list = df2_2['station_area'].unique()
@@ -516,7 +517,7 @@ def main(path):
     elif 'REDUCED' in path:
         print("=== CLEANING DATASET ===\n")
         parser(df)
-        df = remove_nan(df)
+        # df = remove_nan(df)
         df = fix_priority(df)
         df = feature_extraction(df)
         df = data_reduction2(df)
