@@ -298,8 +298,8 @@ def main(name, data, dict, mode):
     dbc = connect()
 
     # Creating Tables
-    # if mode is 'w':
-    #     create_table(dbc, name)
+    if mode is 'w':
+        create_table(dbc, name)
 
     # Reading the dictionary used for matching
     read_dict(dict)
