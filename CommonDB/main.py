@@ -1,5 +1,7 @@
 import mysql.connector
 import pandas as pd
+import random
+import string
 import time
 import sys
 
@@ -159,7 +161,7 @@ def get_match(n):
            link_column['latitude{}'.format(n)], link_column['longitude{}'.format(n)]
 
 
-def load_to_db(dataset, df, dbc):
+def load_to_db(dataset, subdataset, df, dbc):
     c = dbc.cursor()
 
     print('Inserting data...')
@@ -173,6 +175,7 @@ def load_to_db(dataset, df, dbc):
     sql_locat = 'INSERT INTO location(id, dataset, latitude, longitude) VALUES (%s, %s, %s, %s);'
 
     t1 = t0
+    hash = ''.join(random.choices(string.ascii_letters + string.digits, k=7))
     for i, row in df.iterrows():
         t = list(row)
 
@@ -180,20 +183,22 @@ def load_to_db(dataset, df, dbc):
         skip_line = False
 
         if link_column['eid'] in 'UNIQUE':
-            eid = i
+            eid = hash + str(i)
         else:
             eid = row[link_column['eid']]
 
-        if dataset in 'SFFBs':
+        if dataset in 'SFBS1s':
+            etype = 'Saturation'
+        elif dataset in 'SFBS2s':
             etype = 'Saturation'
         elif dataset in 'SFFDs':
             etype = 'Saturation'
         else:
             etype = row[link_column['etype']]
 
-        if not check_event_exist(dbc, eid, dataset):
+        if not check_event_exist(dbc, eid, subdataset):
             try:
-                c.execute(sql_event, [eid, dataset, etype, row[link_column['start_dt']], row[link_column['end_dt']]])  # Syntax error in query
+                c.execute(sql_event, [eid, subdataset, etype, row[link_column['start_dt']], row[link_column['end_dt']]])  # Syntax error in query
             except mysql.connector.Error as err:
                 error += 1
                 sys.stderr.write("Something went wrong EVENT: {}\n{} = {}\n".format(err, i, t))
@@ -221,9 +226,9 @@ def load_to_db(dataset, df, dbc):
                     obj_id = row[id]
 
                 # Check if object exist, if not ADD, otherwise SKIP
-                if not check_obj_exist(dbc, obj_id, dataset):
+                if not check_obj_exist(dbc, obj_id, subdataset):
                     try:
-                        c.execute(sql_obj, [obj_id, dataset, o_type])  # Syntax error in query
+                        c.execute(sql_obj, [obj_id, subdataset, o_type])  # Syntax error in query
                     except mysql.connector.Error as err:
                         error += 1
                         sys.stderr.write("Something went wrong OBJECT: {}\n{} = {}\n".format(err, i, t))
@@ -231,13 +236,13 @@ def load_to_db(dataset, df, dbc):
                 # Adding involved relation with specific type in order to manage duplicates
                 if new is True or all(t not in r_type for t in ['location', 'start']):
                     try:
-                        c.execute(sql_invol, [eid, dataset, r_type, obj_id])  # Syntax error in query
+                        c.execute(sql_invol, [eid, subdataset, r_type, obj_id])  # Syntax error in query
                     except mysql.connector.Error as err:
                         error += 1
                         sys.stderr.write("Something went wrong INVOLVED: {}\n{} = {}\n".format(err, i, t))
 
                     if type not in 'NONE':
-                        if not check_info_exist(dbc, obj_id, dataset):
+                        if not check_info_exist(dbc, obj_id, subdataset):
                             if descr in 'SPECIAL':
                                 if dataset in 'SFFD':
                                     if any(t in row[type] for t in ['ENGINE', 'TRUCK']):
@@ -258,23 +263,23 @@ def load_to_db(dataset, df, dbc):
                                 db_type = row[type]
 
                             try:
-                                c.execute(sql_info, [obj_id, dataset, db_type, db_descr])  # Syntax error in query
+                                c.execute(sql_info, [obj_id, subdataset, db_type, db_descr])  # Syntax error in query
                             except mysql.connector.Error as err:
                                 error += 1
                                 sys.stderr.write("Something went wrong INFO: {}\n{} = {}\n".format(err, i, t))
 
                     if lat not in 'NONE':
-                        if not check_locat_exist(dbc, obj_id, dataset):
+                        if not check_locat_exist(dbc, obj_id, subdataset):
                             try:
-                                c.execute(sql_locat, [obj_id, dataset, row[lat], row[long]])  # Syntax error in query
+                                c.execute(sql_locat, [obj_id, subdataset, row[lat], row[long]])  # Syntax error in query
                             except mysql.connector.Error as err:
                                 error += 1
                                 sys.stderr.write("Something went wrong LOCAT: {}\n{} = {}\n".format(err, i, t))
 
         # Commit every 10000 tuples
-        if i % 20000 == 0:
+        # if i % 20000 == 0:
             dbc.commit()
-            print('#{} - {} s'.format(i, round(time.time()-t1, 2)))
+            print('#{} - {} s'.format(i, round(time.time()-t1, 3)))
             t1 = time.time()
 
         # Degub stopper
@@ -302,7 +307,16 @@ def main(name, data, dict, mode):
     # Loading data on DB
     df = loading_csv(data)
     # rename_col(df)
-    load_to_db(name, df, dbc)
+
+    if name[-1:] == 's':
+        if name[-2:-1].isdigit():
+            subdataset = name[:-2]
+        else:
+            subdataset = name[:-1]
+    else:
+        subdataset = name
+
+    load_to_db(name, subdataset, df, dbc)
 
 
 if __name__ == "__main__":
