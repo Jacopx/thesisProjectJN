@@ -188,9 +188,9 @@ def load_to_db(dataset, subdataset, df, dbc):
             eid = row[link_column['eid']]
 
         if dataset in 'SFBS1s':
-            etype = 'Saturation'
+            etype = 'Saturation1'
         elif dataset in 'SFBS2s':
-            etype = 'Saturation'
+            etype = 'Saturation2'
         elif dataset in 'SFFDs':
             etype = 'Saturation'
         else:
