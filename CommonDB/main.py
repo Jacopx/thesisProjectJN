@@ -189,13 +189,13 @@ def load_to_db(dataset, subdataset, df, dbc):
 
         if dataset == 'SFBS1s':
             etype = 'Saturation1'
-            end = row['end']
+            end = str(row['end'])
         elif dataset == 'SFBS2s':
             etype = 'Saturation2'
-            end = row['end']
+            end = str(row['end'])
         elif dataset == 'SFFDs':
             etype = 'Saturation'
-            end = row['end']
+            end = str(row['end'])
         else:
             etype = row[link_column['etype']]
             end = row[link_column['end_dt']]
