@@ -217,9 +217,9 @@ def remove_nan(df):
     df = df[np.isfinite(df['end_dt'])]
     print(' OK')
 
-    print('Removing NaN rows [' + str((df['onscene_dt'].isnull().sum() / df.size) * 100) + ']...', end='')
-    df = df[np.isfinite(df['onscene_dt'])]
-    print(' OK')
+    # print('Removing NaN rows [' + str((df['onscene_dt'].isnull().sum() / df.size) * 100) + ']...', end='')
+    # df = df[np.isfinite(df['onscene_dt'])]
+    # print(' OK')
 
     return df
 
@@ -265,6 +265,7 @@ def station_area_location(df):
     geo_list2.insert(46, (37.622202, -122.3811767))  # A2
     geo_list2.insert(47, (37.622202, -122.3811767))  # A3
     geo_list2.insert(48, (37.622202, -122.3811767))
+    geo_list2.insert(49, (37.622202, -122.3811767))
     dot()
 
     df2_2 = df.copy()
@@ -279,7 +280,7 @@ def station_area_location(df):
     stations_list = df2_2['station_area'].unique()
 
     stations_list = pd.DataFrame(np.sort(stations_list))
-    station_capacity = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    station_capacity = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,999]
     starting_loc = pd.concat([stations_list, pd.DataFrame(geo_list2), pd.DataFrame(station_capacity)], axis=1)
     starting_loc.columns = ['station', 'lats', 'longs', 'stat_size']
 
@@ -517,12 +518,13 @@ def main(path):
     elif 'REDUCED' in path:
         print("=== CLEANING DATASET ===\n")
         parser(df)
-        # df = remove_nan(df)
+        df = remove_nan(df)
         df = fix_priority(df)
         df = feature_extraction(df)
         df = data_reduction2(df)
         df = remove_outliers(df, 'duration')
         df = remove_outliers(df, 'res_time')
+
         export_csv(df, 'fd_data')
         replace_dict(df, typo, 'call_type')
         replace_dict(df, subtypo, 'call_type_group')
