@@ -189,16 +189,20 @@ def load_to_db(dataset, subdataset, df, dbc):
 
         if dataset == 'SFBS1s':
             etype = 'Saturation1'
+            end = row['end']
         elif dataset == 'SFBS2s':
             etype = 'Saturation2'
+            end = row['end']
         elif dataset == 'SFFDs':
             etype = 'Saturation'
+            end = row['end']
         else:
             etype = row[link_column['etype']]
+            end = row[link_column['end_dt']]
 
         if not check_event_exist(dbc, eid, subdataset):
             try:
-                c.execute(sql_event, [eid, subdataset, etype, row[link_column['start_dt']], row[link_column['end_dt']]])  # Syntax error in query
+                c.execute(sql_event, [eid, subdataset, etype, row[link_column['start_dt']], end])  # Syntax error in query
             except mysql.connector.Error as err:
                 error += 1
                 sys.stderr.write("Something went wrong EVENT: {}\n{} = {}\n".format(err, i, t))
@@ -313,6 +317,9 @@ def main(name, data, dict, mode):
             subdataset = name[:-2]
         else:
             subdataset = name[:-1]
+
+        df['dur'] = pd.to_datetime(df.saturation, unit='m').dt.strftime('%H:%M')
+        df['end'] = pd.to_datetime(df[link_column['start_dt']] + ' ' + df['dur'])
     else:
         subdataset = name
 

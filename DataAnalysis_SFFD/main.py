@@ -459,7 +459,7 @@ def operations_map(df):
 
 
 def year_month(df):
-    group = df.groupby(['year', 'rec_month', 'rec_day'])['unit_id'].count()
+    group = df.groupby(['year', 'rec_month', 'rec_day', 'station_area'])['unit_id'].count()
     group.to_csv('sffd.csv', index=True)
 
 
@@ -525,7 +525,7 @@ def main(path):
         df = remove_outliers(df, 'duration')
         df = remove_outliers(df, 'res_time')
 
-        export_csv(df, 'fd_data')
+        # export_csv(df, 'fd_data')
         replace_dict(df, typo, 'call_type')
         replace_dict(df, subtypo, 'call_type_group')
         export_csv(df, 'operationsSFFD_CLEANED')
@@ -536,16 +536,16 @@ def main(path):
     else:
         print("=== COMPUTING DATASET ===\n")
         # Plots
-        corr_map(df)
-        distplot(df, 'duration')
-        distplot(df, 'res_time')
-        weekday_hour(df)
-        year_calendar(df)
-        op_over_month_station(df)
-        hier_clust(df)
+        # corr_map(df)
+        # distplot(df, 'duration')
+        # distplot(df, 'res_time')
+        # weekday_hour(df)
+        # year_calendar(df)
+        # op_over_month_station(df)
+        # hier_clust(df)
         year_month(df)
-        op_unit(df)
-        station_unit(df)
+        # op_unit(df)
+        # station_unit(df)
 
         # REQUIRE SEABORN 0.9.0
         # operations_map(df)
