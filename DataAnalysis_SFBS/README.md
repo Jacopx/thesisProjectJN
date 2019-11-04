@@ -58,6 +58,8 @@ External Research
 
 * [LSTM] https://medium.com/google-cloud/predicting-san-francisco-bikeshare-availability-with-tensorflow-and-lstms-a3ced14d13dc
 
+* [API] https://bikeshare-research.org/
+
 
 Paper
 --------

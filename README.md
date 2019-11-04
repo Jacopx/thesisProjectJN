@@ -10,6 +10,7 @@ A brief description of each one:
   * **DataAnalysis_SF**: Analysis over San Francisco Bike Sharing system
   * **DataAnalysis_SFFD**: Analysis over San Francisco Fire Department data
   * **DataAnalysis_VVF**: Analysis over Vigili del Fuoco [ITA] data
+  * **Reasearch**: Various study done during the thesis
 
 ## Built With
 
