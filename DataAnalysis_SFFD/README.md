@@ -85,3 +85,4 @@ External Analysis
 * https://sfbos.org/management-audit-san-francisco-fire-department-summary
 * https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/8599738367597028/4332292154849829/3601578643761083/latest.html
 * https://medium.com/wonks-this-way/san-francisco-emergencies-7d3facb64e1b
+* https://medium.com/elitecommandtraining/fire-departments-are-response-models-not-production-models-f7943d5c623d
