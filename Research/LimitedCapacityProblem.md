@@ -27,6 +27,8 @@ Take into account the near past seems to be a good strategy for all kind of diff
 
 The common path of all the analysis is to evaluate relation between events and first, its geospatial position and second, the time position; for example, stations clustering for bikes, time of the day for rides,, etc...
 
+The most used strategies is the prediction using Random Forest
+
 
 ### Acronymous
   * **BS**: Bike Sharing
