@@ -3,7 +3,7 @@
 ### Paper
 Each paper added to the repository will be analysed and summarised to make the search process easier:
   * **Bike Sharing**:
-    * **BikeAvail_ML**: Using RF, LSBoost and PLSR to model bike available at each station. Use also near stations to make prediction.
+    * **BikeAvail_ML**: Using RF, LSBoost and PLSR to model bike available at each station. Spatial correlation of stations.
     * **DemandPrediction_BS**: Hierarchical traffic prediction model to predict check-out/in number of each station cluster. Add station clustering with iterative spectral clustering algorithms. Use GBRT to predict total check-out/in.
     * **BikeNumber**: Mathematical analysis (using BGIP) to predict number of bikes at each station.
     * **BikeForecasting_for_Rebalancing**: Full-stack system to optimise daily rebalancing operations, of BS systems, using MLP and RF algorithms.
@@ -13,10 +13,10 @@ Each paper added to the repository will be analysed and summarised to make the s
     * **PredictOneDayAhead**: Analysis at City level of granularity, different algorithm and considerations about over-fitting problems
     * **CloseLoop_PredictionBS**: Use probabilistic station-station approach. Based on large Hangzhou dataset, manage also unpredicted events. Evaluate a lot of prediction algorithm like baseline: HM, ARMA, RF, PFM, PD.
 
-  
+
   * **Analog Problem**:
     * **OilSaturation**: Paper over oil saturation prediction, based on LM Neural Network, to reduce cost of experimental analysis.
-    * **UrbanPassenger_SVN**: Forecasting of passenger demand over public urban transport based on SVM.
+    * **UrbanPassenger_SVM**: Forecasting of passenger demand over public urban transport based on SVM.
     * **ArrivalTimePrediction**: Live forecasting of arrival time of urban transportation systems with different techniques, historical, statistical, ML and hybrid models.
     * **CityTrafficPrediction**: Two models, one based on traffic flow propagation and the other one on spare road capacity.
     * **UrbanSaturationForecast**: Forecasting urban power load based on saturated load density curve. Not ML algorithms.
