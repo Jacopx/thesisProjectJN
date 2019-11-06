@@ -1,6 +1,12 @@
 ## Fit problem to DEV scenario
 The goal of this research is to get similarities between different dataset and the Development one. The focus is to conduct similar analysis to evaluate if the generalisation of the data still allow to get sensitive information despite differences.
 
+### DEV Scenario
+The DEVELOPMENT dataset is based on issue, each issue can be closed or still open, each issue can have a commit related, each commit is done by a developer. The main features are:
+  * Limited number of resources: Developers
+  * Event: issue, commit
+  * Event correlation: Commit --> Issue
+
 ### Paper
 Analysis pro and cons of each paper:
   * **BIKE SHARING**:
@@ -17,7 +23,10 @@ Analysis pro and cons of each paper:
 
   * **OTHER**:
     * **OilSaturation**: [NO DATA] Physical features, no units or discrete resource.
-    * **UrbanPassenger_SVM**: 
+    * **UrbanPassenger_SVM**: [DATA] Yearly aggregated data, passenger count, no capacity planning and no resource to manage.
+    * **ArrivalTimePrediction**: [NO DATA] Arrival time prediction based on cities specific features, like weather, traffic, driving dynamics, etc... Resources not taken into account.
+    * **CityTrafficPrediction**: [NO DATA] Research paper about traffic study, no technical implementations.
+    * **UrbanSaturationForecast**: [NO DATA] Based on population growth and architectural planning.
 
 
 The * on the data means that is similar data but from a different locations, project or structure.

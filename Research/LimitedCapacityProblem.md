@@ -58,7 +58,7 @@ The most used strategies is the prediction using Random Forest, it seems to be t
   * **ITS**: Intelligent Transportation System
   * **SVR**: Support Vector Regression
   * **RT**: Regression Tree
-  * **FFNN**: Feed Fprward NN
+  * **FFNN**: Feed Forward Neural Network
   * **MLR**: Multiple Linear Regression
   * **RL**: Reinforcement Learning
   * **LSTM**: Long Short-Term Memory
