@@ -10,7 +10,7 @@ The DEVELOPMENT dataset is based on issue, each issue can be closed or still ope
 ### Paper
 Analysis pro and cons of each paper:
   * **BIKE SHARING**:
-    * **BikeAvail_ML**: [DATA*] Add the spatial correlation of stations and weather evaluation, is not possible to spatial correlating developers, neither using weather.
+    * **BikeAvail_ML**: [DATA] Add the spatial correlation of stations and weather evaluation, is not possible to spatial correlating developers, neither using weather.
     * **DemandPrediction_BS**: [DATA*] Add stations clustering and weather evaluation, same problem reported above.
     * **BikeNumber**: [DATA] Associate the C_IN/C_OUT with the Poisson distribution.
     * **BikeForecasting_for_Rebalancing**: [DATA*] Add stations clustering, holidays and weather evaluation, same problem reported above.
