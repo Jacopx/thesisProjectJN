@@ -33,7 +33,7 @@ def random_forest(dbc, file):
     print('FILE:', file, '\n')
     print('The shape of our features is:', features.shape)
 
-    features['n'] = features['bikes_available'].shift(-horizon, fill_value=-1)
+    features['15before'] = features['n'].shift(horizon, fill_value=-1)
 
     # Descriptive statistics for each column
     features.index = pd.to_datetime(features.index, format="%Y-%m-%d %H:%M:%S")
@@ -44,7 +44,7 @@ def random_forest(dbc, file):
     features['m'] = features.index.minute
     features['h'] = features.index.hour
 
-    features['time'] = features['m'] + features['h'] * 60 + features['wday'] * 60 * 24
+    features['time'] = features['m'] + features['h'] * 60
     features = features.drop('station_id', axis=1)
     features = features.drop('docks_available', axis=1)
 
@@ -84,7 +84,7 @@ def random_forest(dbc, file):
 
     # Calculate mean absolute percentage error (MAPE)
     # mape = 100 * (errors / test_labels)  # Calculate and display accuracy
-    mape = 100 * (errors[:-horizon] / test_labels[:-horizon])
+    mape = 100 * (errors / test_labels)
     accuracy = 100 - np.mean(mape)
     print('Accuracy:', round(accuracy, 2), '%.')
     accs.append(round(accuracy, 2))
