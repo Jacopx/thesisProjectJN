@@ -105,7 +105,7 @@ def random_forest(dbc, file):
                                      reverse=True)
         [print('Variable: {:20} Importance: {}'.format(*pair)) for pair in feature_importances]
 
-        with open(file[5:] + '-' + str(test_size) + '.txt', "w") as f:
+        with open(file[5:] + '-' + str(horizon) + '_' + str(predictor) + '.txt', "w") as f:
             print('ESTIMATOR: ' + str(predictor), file=f)
             print('RANDOM: ' + str(random), file=f)
             print('AVGERR: ' + str(round(np.mean(baseline_errors), 2)), file=f)
