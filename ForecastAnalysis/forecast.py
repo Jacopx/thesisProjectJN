@@ -14,7 +14,7 @@ warnings.filterwarnings("ignore")
 
 def random_forest(dbc, file):
     test_size = 0.25
-    predictor = 1000
+    predictor = 400
     random = 12
     horizon = 15
 
@@ -33,7 +33,11 @@ def random_forest(dbc, file):
     print('FILE:', file, '\n')
     print('The shape of our features is:', features.shape)
 
-    features['15before'] = features['n'].shift(horizon, fill_value=-1)
+    features['5before'] = features['n'].shift(5, fill_value=-1)
+    features['10before'] = features['n'].shift(10, fill_value=-1)
+    features['15before'] = features['n'].shift(15, fill_value=-1)
+    features['30before'] = features['n'].shift(30, fill_value=-1)
+    features['60before'] = features['n'].shift(60, fill_value=-1)
 
     # Descriptive statistics for each column
     features.index = pd.to_datetime(features.index, format="%Y-%m-%d %H:%M:%S")
@@ -72,7 +76,7 @@ def random_forest(dbc, file):
     predictions = rf.predict(test_features)
     test_labels = test_labels[0:len(predictions)]
 
-    predictions = np.round(predictions, decimals=1)
+    predictions = np.round(predictions, decimals=0)
 
     errors = abs(predictions - test_labels)
     print('Mean Absolute Error:', round(np.mean(errors), 2), 'degrees.')
@@ -130,56 +134,65 @@ def random_forest(dbc, file):
         print('RSE: ' + str(round(rse, 3)), file=f)
         [print('Variable: {:20} Importance: {}'.format(*pair), file=f) for pair in feature_importances]
 
-    # months = features[:, feature_list.index('month')]
-    # days = features[:, feature_list.index('day')]
-    # years = features[:, feature_list.index('year')]
-    #
-    # dates = [str(int(year)) + '-' + str(int(month)) + '-' + str(int(day)) for year, month, day in
-    #          zip(years, months, days)]
-    #
-    # dates = [datetime.datetime.strptime(date, '%Y-%m-%d') for date in dates]
-    #
-    # true_data = pd.DataFrame(data={'date': dates, 'n': labels})
-    # months = test_features[:, feature_list.index('month')]
-    # days = test_features[:, feature_list.index('day')]
-    # years = test_features[:, feature_list.index('year')]
-    #
-    # test_dates = [str(int(year)) + '-' + str(int(month)) + '-' + str(int(day)) for year, month, day in
-    #               zip(years, months, days)]
-    #
-    # test_dates = [datetime.datetime.strptime(date, '%Y-%m-%d') for date in
-    #               test_dates]
-    #
-    # predictions_data = pd.DataFrame(data={'date': test_dates, 'prediction': predictions})
-    #
-    # true_data.drop_duplicates(subset='date', keep='first', inplace=True)
-    # t = pd.merge(true_data, predictions_data, on='date', how='left')
-    # r = pd.merge(true_data, predictions_data, on='date', how='right')
-    #
-    # print('DF Merged: ' + str(len(t)))
-    #
-    # plt.figure(figsize=(40, 25))
-    # sns.lineplot(true_data['date'], true_data['n'], label='real')
-    # sns.lineplot(t['date'], t['prediction'], label='predict')
-    # sns.lineplot(t['date'], mean, label='mean')
-    # plt.xticks(rotation='60')
-    # plt.legend()  # Graph labels
-    # plt.xlabel('Date')
-    # plt.ylabel('Event')
-    # plt.title(file[5:] + '-' + str(test_size) + '-all')
-    # plt.savefig(file[5:] + '-' + str(test_size) + '-all.png', dpi=300)
-    # plt.show()
-    #
-    # plt.figure(figsize=(40, 25))
-    # sns.lineplot(r['date'], r['n'], label='real')
-    # sns.lineplot(r['date'], r['prediction'], label='predict')
-    # sns.lineplot(r['date'], mean, label='mean')
-    # plt.xticks(rotation='60')
-    # plt.legend()  # Graph labels
-    # plt.xlabel('Date')
-    # plt.ylabel('Event')
-    # plt.title(file[5:] + '-' + str(test_size) + '-specific')
-    # plt.savefig(file[5:] + '-' + str(test_size) + '-specific.png', dpi=300)
-    # plt.show()
-    #
-    # print('\n\n')
+    months = features[:, feature_list.index('month')]
+    days = features[:, feature_list.index('day')]
+    years = features[:, feature_list.index('year')]
+    hours = features[:, feature_list.index('h')]
+    minutes = features[:, feature_list.index('m')]
+
+    dates = [str(int(year)) + '-' + str(int(month)) + '-' + str(int(day)) + ' ' + str(int(hour)) + ':' + str(int(minute)) for year, month, day, hour, minute in
+             zip(years, months, days, hours, minutes)]
+
+    dates = [datetime.datetime.strptime(date, '%Y-%m-%d %H:%M') for date in dates]
+
+    true_data = pd.DataFrame(data={'date': dates, 'n': labels})
+    months = test_features[:, feature_list.index('month')]
+    days = test_features[:, feature_list.index('day')]
+    years = test_features[:, feature_list.index('year')]
+    hours = test_features[:, feature_list.index('h')]
+    minutes = test_features[:, feature_list.index('m')]
+
+    test_dates = [str(int(year)) + '-' + str(int(month)) + '-' + str(int(day)) + ' ' + str(int(hour)) + ':' + str(int(minute)) for year, month, day, hour, minute in
+             zip(years, months, days, hours, minutes)]
+
+    test_dates = [datetime.datetime.strptime(date, '%Y-%m-%d %H:%M') for date in
+                  test_dates]
+
+    predictions_data = pd.DataFrame(data={'date': test_dates, 'prediction': predictions})
+
+    true_data = true_data.groupby(true_data.date.dt.date)['n'].sum()
+    predictions_data = predictions_data.groupby(predictions_data.date.dt.date)['prediction'].sum()
+
+    true_data = true_data.reset_index()
+    predictions_data = predictions_data.reset_index()
+
+    t = pd.merge(true_data, predictions_data, on='date', how='left')
+    r = pd.merge(true_data, predictions_data, on='date', how='right')
+
+    print('DF Merged: ' + str(len(t)))
+
+    plt.figure(figsize=(70, 25))
+    sns.lineplot(true_data.date, true_data['n'], label='real', ci=None, size=2)
+    sns.lineplot(t.date, t['prediction'], label='predict', ci=None, size=2)
+    # sns.lineplot(t.date, mean, label='mean', ci=None)
+    plt.xticks(rotation='60')
+    plt.legend()  # Graph labels
+    plt.xlabel('Date')
+    plt.ylabel('Event')
+    plt.title(file[5:] + '-' + str(test_size) + '-all')
+    plt.savefig(file[5:] + '-' + str(test_size) + '-all.png', dpi=300)
+    plt.show()
+
+    plt.figure(figsize=(70, 25))
+    sns.lineplot(r.date, r['n'], label='real', ci=None, size=2)
+    sns.lineplot(r.date, r['prediction'], label='predict', ci=None, size=2)
+    # sns.lineplot(r.date, mean, label='mean', ci=None)
+    plt.xticks(rotation='60')
+    plt.legend()  # Graph labels
+    plt.xlabel('Date')
+    plt.ylabel('Event')
+    plt.title(file[5:] + '-' + str(test_size) + '-specific')
+    plt.savefig(file[5:] + '-' + str(test_size) + '-specific.png', dpi=300)
+    plt.show()
+
+    print('\n\n')
