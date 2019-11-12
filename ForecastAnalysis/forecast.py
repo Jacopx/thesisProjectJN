@@ -18,7 +18,7 @@ def random_forest(dbc, file):
     predictor = 240
     random = 12
 
-    time_horizons = [5, 15, 20, 40, 60, 80, 100, 120, 180, 360]
+    time_horizons = [5, 15, 30, 45, 60, 75, 90, 105, 120, 180, 360]
     # time_horizons = [5, 15]
     # time_horizons = [5]
 
