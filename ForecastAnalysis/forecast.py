@@ -15,21 +15,38 @@ warnings.filterwarnings("ignore")
 
 def random_forest(dbc, file):
     test_size = 0.25
-    predictor = 240
+    predictor = 120
     random = 12
 
-    time_horizons = [5, 15, 30, 45, 60, 75, 90, 105, 120, 180, 360]
+    # time_horizons = [5, 15, 30, 45, 60, 75, 90, 105, 120, 180, 360]
     # time_horizons = [5, 15]
-    # time_horizons = [5]
+    time_horizons = [5]
 
     maes = []
     rels = []
     accs = []
     rses = []
 
-    # for horizon in time_horizon:
+    status = pd.read_csv(file + '.csv', parse_dates=True, index_col=3)
+    status.index = pd.to_datetime(status.index, format="%Y-%m-%d %H:%M:%S")
+    status['datetime'] = pd.to_datetime(status.index, format="%Y-%m-%d %H:%M:%S")
+    weather = pd.read_csv('data/weather.csv', parse_dates=True, index_col=0)
+    weather = weather[weather['zip_code']==94107]
+    weather = weather.drop('zip_code', axis=1)
+    weather = weather.drop('events', axis=1)
+    weather[weather['precipitation_inches'] == 'T'] = 0
+    weather['precipitation_inches'] = weather['precipitation_inches'].astype(float)
+    weather.fillna(0, inplace=True)
+    weather = weather.rename(columns={"key_0": "date"})
+    # weather = weather.set_index("date")
 
-    features_basic = pd.read_csv(file + '.csv', parse_dates=True, index_col=3)
+    weather.index = pd.to_datetime(weather.index, format="%Y-%m-%d")
+
+    features_basic = pd.merge(status, weather, left_on=status.index.date, right_on=weather.index.date)
+    features_basic = features_basic.drop('key_0', axis=1)
+    features_basic = features_basic.rename(columns={"datetime": "date"})
+    features_basic = features_basic.set_index("date")
+
 
     print('################################################')
     print('FILE:', file, '\n')
@@ -42,7 +59,7 @@ def random_forest(dbc, file):
         features = features.head(-horizon)
 
         # Descriptive statistics for each column
-        features.index = pd.to_datetime(features.index, format="%Y-%m-%d %H:%M:%S")
+        # features.index = pd.to_datetime(features.index, format="%Y-%m-%d %H:%M:%S")
         features['wday'] = features.index.dayofweek
         features['day'] = features.index.day
         features['month'] = features.index.month
