@@ -33,6 +33,9 @@ def random_forest(dbc, file):
 
     print('################################################')
     print('FILE:', file, '\n')
+    print('test_size', test_size)
+    print('predictor', predictor)
+    print('n_jobs', n_jobs)
     print('The shape of our features is:', features_basic.shape)
 
     for horizon in time_horizons:
