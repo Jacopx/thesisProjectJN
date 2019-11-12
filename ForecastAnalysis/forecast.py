@@ -15,11 +15,11 @@ warnings.filterwarnings("ignore")
 
 def random_forest(dbc, file):
     test_size = 0.25
-    predictor = 4
+    predictor = 240
     random = 12
 
-    # time_horizons = [5, 15, 20, 40, 60, 80, 100, 120, 180, 360]
-    time_horizons = [5, 15]
+    time_horizons = [5, 15, 20, 40, 60, 80, 100, 120, 180, 360]
+    # time_horizons = [5, 15]
     # time_horizons = [5]
 
     maes = []
@@ -86,7 +86,7 @@ def random_forest(dbc, file):
 
         rel = round(np.mean(errors), 2) / np.mean(test_labels)
         print('Relative:', round(rel * 100, 2), '%.')
-        rels.append(round(rel, 2) * 100)
+        rels.append(round(rel * 100, 2))
 
         # Calculate mean absolute percentage error (MAPE)
         # mape = 100 * (errors / test_labels)  # Calculate and display accuracy
@@ -183,23 +183,30 @@ def random_forest(dbc, file):
         print('Plot SPECIFIC\n')
 
     plt.figure(figsize=(10, 10))
-    fig, ax1 = plt.subplots()
-    ax2 = ax1.twinx()
-    sns.lineplot(time_horizons, maes, label='MAE')
-    # sns.lineplot(time_horizons, rels, label='REL')
-    # sns.lineplot(time_horizons, accs, label='ACC')
-    sns.lineplot(time_horizons, rses, ax=ax2, label='RSE')
+    sns.lineplot(time_horizons, rses, label='RSE')
     plt.xticks(rotation='60')
     plt.legend()  # Graph labels
     plt.xlabel('Time Horizon')
-    ax1.set_ylabel('MAE error')
-    ax2.set_ylabel('RSE error')
+    plt.ylabel('RSE error')
     # plt.grid(axis='both', which='both')
     plt.minorticks_on()
-    plt.title(file[5:] + '-' + str(predictor) + '-error')
-    plt.savefig(file[5:] + '-' + str(predictor) + '-error.png', dpi=240)
+    plt.title(file[5:] + '-' + str(predictor) + '-rse_error')
+    plt.savefig(file[5:] + '-' + str(predictor) + '-rse_error.png', dpi=240)
     plt.show()
-    print('\nPlot MAE & RSE ERRORS')
+    print('\nPlot RSE ERRORS')
+
+    plt.figure(figsize=(10, 10))
+    sns.lineplot(time_horizons, maes, label='MAE')
+    plt.xticks(rotation='60')
+    plt.legend()  # Graph labels
+    plt.xlabel('Time Horizon')
+    plt.ylabel('MAE error')
+    # plt.grid(axis='both', which='both')
+    plt.minorticks_on()
+    plt.title(file[5:] + '-' + str(predictor) + '-mae_error')
+    plt.savefig(file[5:] + '-' + str(predictor) + '-mae_error.png', dpi=240)
+    plt.show()
+    print('\nPlot MAE ERRORS')
 
     plt.figure(figsize=(10, 10))
     sns.lineplot(time_horizons, rels, label='REL')
