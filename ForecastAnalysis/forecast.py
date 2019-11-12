@@ -17,6 +17,7 @@ def random_forest(dbc, file):
     test_size = 0.25
     predictor = 240
     random = 12
+    n_jobs = -1
 
     time_horizons = [5, 15, 30, 45, 60, 75, 90, 105, 120, 180, 360]
     # time_horizons = [5, 15]
@@ -71,7 +72,7 @@ def random_forest(dbc, file):
         print('Testing Features Shape:', test_features.shape)
         print('Testing Labels Shape:', test_labels.shape)
 
-        rf = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=1, n_jobs=-1)
+        rf = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=1, n_jobs=n_jobs)
         rf.fit(train_features, train_labels)
 
         # The baseline predictions are the historical averages
