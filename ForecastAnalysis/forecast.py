@@ -16,9 +16,9 @@ def random_forest(dbc, file):
     test_size = 0.25
     predictor = 400
     random = 12
-    horizon = 15
 
-    time_horizon = [5, 20, 40, 60, 80, 100, 120, 180, 360]
+    time_horizons = [5, 15, 20, 40, 60, 80, 100, 120, 180, 360]
+    # time_horizons = [5, 15]
 
     maes = []
     rels = []
@@ -27,172 +27,171 @@ def random_forest(dbc, file):
 
     # for horizon in time_horizon:
 
-    features = pd.read_csv(file + '.csv', parse_dates=True, index_col=3)
+    features_basic = pd.read_csv(file + '.csv', parse_dates=True, index_col=3)
 
     print('################################################')
     print('FILE:', file, '\n')
-    print('The shape of our features is:', features.shape)
+    print('The shape of our features is:', features_basic.shape)
 
-    features['5before'] = features['n'].shift(5, fill_value=-1)
-    features['10before'] = features['n'].shift(10, fill_value=-1)
-    features['15before'] = features['n'].shift(15, fill_value=-1)
-    features['30before'] = features['n'].shift(30, fill_value=-1)
-    features['60before'] = features['n'].shift(60, fill_value=-1)
+    for horizon in time_horizons:
+        print('\nTIME HORIZON: {}\n'.format(horizon))
+        features = features_basic.copy()
+        features['n'] = features['bike_available'].shift(-horizon, fill_value=-1)
+        features = features.head(-horizon)
 
-    # Descriptive statistics for each column
-    features.index = pd.to_datetime(features.index, format="%Y-%m-%d %H:%M:%S")
-    features['wday'] = features.index.dayofweek
-    features['day'] = features.index.day
-    features['month'] = features.index.month
-    features['year'] = features.index.year
-    features['m'] = features.index.minute
-    features['h'] = features.index.hour
+        # Descriptive statistics for each column
+        features.index = pd.to_datetime(features.index, format="%Y-%m-%d %H:%M:%S")
+        features['wday'] = features.index.dayofweek
+        features['day'] = features.index.day
+        features['month'] = features.index.month
+        features['year'] = features.index.year
+        features['m'] = features.index.minute
+        features['h'] = features.index.hour
 
-    features['time'] = features['m'] + features['h'] * 60
-    features = features.drop('station_id', axis=1)
-    features = features.drop('docks_available', axis=1)
+        features['time'] = features['m'] + features['h'] * 60
+        features = features.drop('station_id', axis=1)
+        features = features.drop('docks_available', axis=1)
 
-    labels = np.array(features['n'])
-    mean = np.mean(labels)
-    features = features.drop('n', axis=1)  # Saving feature names for later use
-    feature_list = list(features.columns)  # Convert to numpy array
-    features = np.array(features)
+        labels = np.array(features['n'])
+        mean = np.mean(labels)
+        features = features.drop('n', axis=1)  # Saving feature names for later use
+        feature_list = list(features.columns)  # Convert to numpy array
+        features = np.array(features)
 
-    train_features, test_features, train_labels, test_labels = \
-        train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=False)
+        train_features, test_features, train_labels, test_labels = \
+            train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=False)
 
-    print('Training Features Shape:', train_features.shape)
-    print('Training Labels Shape:', train_labels.shape)
-    print('Testing Features Shape:', test_features.shape)
-    print('Testing Labels Shape:', test_labels.shape)
+        print('Training Features Shape:', train_features.shape)
+        print('Training Labels Shape:', train_labels.shape)
+        print('Testing Features Shape:', test_features.shape)
+        print('Testing Labels Shape:', test_labels.shape)
 
-    rf = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=1, n_jobs=-1)
-    rf.fit(train_features, train_labels)
+        rf = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=1, n_jobs=-1)
+        rf.fit(train_features, train_labels)
 
-    # The baseline predictions are the historical averages
-    baseline_errors = abs(mean - test_labels)
-    print('Average baseline error: ', round(np.mean(baseline_errors), 2))
+        # The baseline predictions are the historical averages
+        baseline_errors = abs(mean - test_labels)
+        print('Average baseline error: ', round(np.mean(baseline_errors), 2))
 
-    predictions = rf.predict(test_features)
-    test_labels = test_labels[0:len(predictions)]
+        predictions = rf.predict(test_features)
+        test_labels = test_labels[0:len(predictions)]
 
-    predictions = np.round(predictions, decimals=0)
+        predictions = np.round(predictions, decimals=0)
 
-    errors = abs(predictions - test_labels)
-    print('Mean Absolute Error:', round(np.mean(errors), 2), 'degrees.')
-    maes.append(round(np.mean(errors), 2))
+        errors = abs(predictions - test_labels)
+        print('Mean Absolute Error:', round(np.mean(errors), 2), 'degrees.')
+        maes.append(round(np.mean(errors), 2))
 
-    rel = round(np.mean(errors), 2) / np.mean(test_labels)
-    print('Relative:', round(rel, 2) * 100, '%.')
-    rels.append(round(rel, 2) * 100)
+        rel = round(np.mean(errors), 2) / np.mean(test_labels)
+        print('Relative:', round(rel, 2) * 100, '%.')
+        rels.append(round(rel, 2) * 100)
 
-    # Calculate mean absolute percentage error (MAPE)
-    # mape = 100 * (errors / test_labels)  # Calculate and display accuracy
-    mape = 100 * (errors / test_labels)
-    accuracy = 100 - np.mean(mape)
-    print('Accuracy:', round(accuracy, 2), '%.')
-    accs.append(round(accuracy, 2))
+        # Calculate mean absolute percentage error (MAPE)
+        # mape = 100 * (errors / test_labels)  # Calculate and display accuracy
+        mape = 100 * (errors / test_labels)
+        accuracy = 100 - np.mean(mape)
+        print('Accuracy:', round(accuracy, 2), '%.')
+        accs.append(round(accuracy, 2))
 
-    rse = mean_squared_error(test_labels, predictions)
-    print('RSE:', round(rse, 3))
-    rses.append(round(rse, 3))
+        rse = mean_squared_error(test_labels, predictions)
+        print('RSE:', round(rse, 3))
+        rses.append(round(rse, 3))
 
-    # plt.figure(figsize=(10, 10))
-    # sns.lineplot(time_horizon, maes, label='MAES')
-    # sns.lineplot(time_horizon, rels, label='REL')
-    # sns.lineplot(time_horizon, accs, label='ACC')
-    # sns.lineplot(time_horizon, rses, label='RSE')
-    # plt.xticks(rotation='60')
-    # plt.legend()  # Graph labels
-    # plt.xlabel('Time Horizon')
-    # plt.ylabel('Error')
-    # plt.title(file[5:] + '-' + str(test_size) + '-error')
-    # plt.savefig(file[5:] + '-' + str(test_size) + '-error.png', dpi=300)
-    # plt.show()
-    #
-    # print(maes)
-    # print(rels)
-    # print(accs)
-    # print(rses)
+        # Get numerical feature importances
+        importances = list(rf.feature_importances_)  # List of tuples with variable and importance
+        feature_importances = [(feature, round(importance, 4)) for feature, importance in
+                               zip(feature_list, importances)]
+        feature_importances = sorted(feature_importances, key=lambda x: x[1],
+                                     reverse=True)
+        [print('Variable: {:20} Importance: {}'.format(*pair)) for pair in feature_importances]
 
+        with open(file[5:] + '-' + str(test_size) + '.txt', "w") as f:
+            print('ESTIMATOR: ' + str(predictor), file=f)
+            print('RANDOM: ' + str(random), file=f)
+            print('AVGERR: ' + str(round(np.mean(baseline_errors), 2)), file=f)
+            print('ACC: ' + str(round(accuracy, 2)) + '%', file=f)
+            print('Relative: ' + str(round(rel * 100, 2)) + '%', file=f)
+            print('MAE: ' + str(round(np.mean(errors), 2)), file=f)
+            print('RSE: ' + str(round(rse, 3)), file=f)
+            [print('Variable: {:20} Importance: {}'.format(*pair), file=f) for pair in feature_importances]
 
-    # Get numerical feature importances
-    importances = list(rf.feature_importances_)  # List of tuples with variable and importance
-    feature_importances = [(feature, round(importance, 4)) for feature, importance in
-                           zip(feature_list, importances)]
-    feature_importances = sorted(feature_importances, key=lambda x: x[1],
-                                 reverse=True)
-    [print('Variable: {:20} Importance: {}'.format(*pair)) for pair in feature_importances]
+        months = features[:, feature_list.index('month')]
+        days = features[:, feature_list.index('day')]
+        years = features[:, feature_list.index('year')]
+        hours = features[:, feature_list.index('h')]
+        minutes = features[:, feature_list.index('m')]
 
-    with open(file[5:] + '-' + str(test_size) + '.txt', "w") as f:
-        print('ESTIMATOR: ' + str(predictor), file=f)
-        print('RANDOM: ' + str(random), file=f)
-        print('AVGERR: ' + str(round(np.mean(baseline_errors), 2)), file=f)
-        print('ACC: ' + str(round(accuracy, 2)) + '%', file=f)
-        print('Relative: ' + str(round(rel * 100, 2)) + '%', file=f)
-        print('MAE: ' + str(round(np.mean(errors), 2)), file=f)
-        print('RSE: ' + str(round(rse, 3)), file=f)
-        [print('Variable: {:20} Importance: {}'.format(*pair), file=f) for pair in feature_importances]
+        dates = [str(int(year)) + '-' + str(int(month)) + '-' + str(int(day)) + ' ' + str(int(hour)) + ':' + str(int(minute)) for year, month, day, hour, minute in
+                 zip(years, months, days, hours, minutes)]
 
-    months = features[:, feature_list.index('month')]
-    days = features[:, feature_list.index('day')]
-    years = features[:, feature_list.index('year')]
-    hours = features[:, feature_list.index('h')]
-    minutes = features[:, feature_list.index('m')]
+        dates = [datetime.datetime.strptime(date, '%Y-%m-%d %H:%M') for date in dates]
 
-    dates = [str(int(year)) + '-' + str(int(month)) + '-' + str(int(day)) + ' ' + str(int(hour)) + ':' + str(int(minute)) for year, month, day, hour, minute in
-             zip(years, months, days, hours, minutes)]
+        true_data = pd.DataFrame(data={'date': dates, 'n': labels})
+        months = test_features[:, feature_list.index('month')]
+        days = test_features[:, feature_list.index('day')]
+        years = test_features[:, feature_list.index('year')]
+        hours = test_features[:, feature_list.index('h')]
+        minutes = test_features[:, feature_list.index('m')]
 
-    dates = [datetime.datetime.strptime(date, '%Y-%m-%d %H:%M') for date in dates]
+        test_dates = [str(int(year)) + '-' + str(int(month)) + '-' + str(int(day)) + ' ' + str(int(hour)) + ':' + str(int(minute)) for year, month, day, hour, minute in
+                 zip(years, months, days, hours, minutes)]
 
-    true_data = pd.DataFrame(data={'date': dates, 'n': labels})
-    months = test_features[:, feature_list.index('month')]
-    days = test_features[:, feature_list.index('day')]
-    years = test_features[:, feature_list.index('year')]
-    hours = test_features[:, feature_list.index('h')]
-    minutes = test_features[:, feature_list.index('m')]
+        test_dates = [datetime.datetime.strptime(date, '%Y-%m-%d %H:%M') for date in
+                      test_dates]
 
-    test_dates = [str(int(year)) + '-' + str(int(month)) + '-' + str(int(day)) + ' ' + str(int(hour)) + ':' + str(int(minute)) for year, month, day, hour, minute in
-             zip(years, months, days, hours, minutes)]
+        predictions_data = pd.DataFrame(data={'date': test_dates, 'prediction': predictions})
 
-    test_dates = [datetime.datetime.strptime(date, '%Y-%m-%d %H:%M') for date in
-                  test_dates]
+        true_data = true_data.groupby(true_data.date.dt.date)['n'].sum()
+        predictions_data = predictions_data.groupby(predictions_data.date.dt.date)['prediction'].sum()
 
-    predictions_data = pd.DataFrame(data={'date': test_dates, 'prediction': predictions})
+        true_data = true_data.reset_index()
+        predictions_data = predictions_data.reset_index()
 
-    true_data = true_data.groupby(true_data.date.dt.date)['n'].sum()
-    predictions_data = predictions_data.groupby(predictions_data.date.dt.date)['prediction'].sum()
+        t = pd.merge(true_data, predictions_data, on='date', how='left')
+        r = pd.merge(true_data, predictions_data, on='date', how='right')
 
-    true_data = true_data.reset_index()
-    predictions_data = predictions_data.reset_index()
+        print('DF Merged: ' + str(len(t)))
 
-    t = pd.merge(true_data, predictions_data, on='date', how='left')
-    r = pd.merge(true_data, predictions_data, on='date', how='right')
+        plt.figure(figsize=(70, 25))
+        sns.lineplot(true_data.date, true_data['n'], label='real', ci=None, size=2)
+        sns.lineplot(t.date, t['prediction'], label='predict', ci=None, size=2)
+        # sns.lineplot(t.date, mean, label='mean', ci=None)
+        plt.xticks(rotation='60')
+        plt.legend()  # Graph labels
+        plt.xlabel('Date')
+        plt.ylabel('Event')
+        plt.title(file[5:] + '-' + str(horizon) + '_' + str(predictor) + '-all')
+        plt.savefig(file[5:] + '-' + str(horizon) + '_' + str(predictor) + '-all.png', dpi=300)
+        plt.show()
+        print('Plot ALL')
 
-    print('DF Merged: ' + str(len(t)))
+        plt.figure(figsize=(70, 25))
+        sns.lineplot(r.date, r['n'], label='real', ci=None, size=2)
+        sns.lineplot(r.date, r['prediction'], label='predict', ci=None, size=2)
+        # sns.lineplot(r.date, mean, label='mean', ci=None)
+        plt.xticks(rotation='60')
+        plt.legend()  # Graph labels
+        plt.xlabel('Date')
+        plt.ylabel('Event')
+        plt.title(file[5:] + '-' + str(horizon) + '_' + str(predictor) + '-specific')
+        plt.savefig(file[5:] + '-' + str(horizon) + '_' + str(predictor) + '-specific.png', dpi=300)
+        plt.show()
+        print('Plot SPECIFIC\n')
 
-    plt.figure(figsize=(70, 25))
-    sns.lineplot(true_data.date, true_data['n'], label='real', ci=None, size=2)
-    sns.lineplot(t.date, t['prediction'], label='predict', ci=None, size=2)
-    # sns.lineplot(t.date, mean, label='mean', ci=None)
+    plt.figure(figsize=(10, 10))
+    sns.lineplot(time_horizons, maes, label='MAES')
+    # sns.lineplot(time_horizons, rels, label='REL')
+    # sns.lineplot(time_horizons, accs, label='ACC')
+    # sns.lineplot(time_horizons, rses, label='RSE')
     plt.xticks(rotation='60')
     plt.legend()  # Graph labels
-    plt.xlabel('Date')
-    plt.ylabel('Event')
-    plt.title(file[5:] + '-' + str(test_size) + '-all')
-    plt.savefig(file[5:] + '-' + str(test_size) + '-all.png', dpi=300)
+    plt.xlabel('Time Horizon')
+    plt.ylabel('Error')
+    plt.title(file[5:] + '-' + str(test_size) + '-error')
+    plt.savefig(file[5:] + '-' + str(test_size) + '-error.png', dpi=300)
     plt.show()
 
-    plt.figure(figsize=(70, 25))
-    sns.lineplot(r.date, r['n'], label='real', ci=None, size=2)
-    sns.lineplot(r.date, r['prediction'], label='predict', ci=None, size=2)
-    # sns.lineplot(r.date, mean, label='mean', ci=None)
-    plt.xticks(rotation='60')
-    plt.legend()  # Graph labels
-    plt.xlabel('Date')
-    plt.ylabel('Event')
-    plt.title(file[5:] + '-' + str(test_size) + '-specific')
-    plt.savefig(file[5:] + '-' + str(test_size) + '-specific.png', dpi=300)
-    plt.show()
-
-    print('\n\n')
+    print(maes)
+    print(rels)
+    print(accs)
+    print(rses)
