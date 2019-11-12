@@ -57,7 +57,6 @@ def random_forest(dbc, file):
         print('\nTIME HORIZON: {}\n'.format(horizon))
         features = features_basic.copy()
         features['n'] = features['bike_available'].shift(-horizon, fill_value=-1)
-        features = features.drop('bike_available', axis=1)
         features = features.head(-horizon)
 
         # Descriptive statistics for each column
