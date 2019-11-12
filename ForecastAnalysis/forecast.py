@@ -222,7 +222,8 @@ def random_forest(dbc, file):
     plt.show()
     print('\nPlot RELATIVE ERRORS')
 
-    print(maes)
-    print(rels)
-    print(accs)
-    print(rses)
+    with open(file[5:] + '-' + str(predictor) + '-errors.txt', 'w') as f:
+        print(maes, file=f)
+        print(rels, file=f)
+        print(accs, file=f)
+        print(rses, file=f)
