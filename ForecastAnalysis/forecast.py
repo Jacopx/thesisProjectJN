@@ -1,7 +1,5 @@
 import pandas as pd
 import datetime
-import matplotlib
-# matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -9,16 +7,20 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
 import warnings
 import seaborn as sns
+import matplotlib
+
+matplotlib.use('Agg')
 warnings.filterwarnings("ignore")
 
 
 def random_forest(dbc, file):
     test_size = 0.25
-    predictor = 400
+    predictor = 4
     random = 12
 
-    time_horizons = [5, 15, 20, 40, 60, 80, 100, 120, 180, 360]
-    # time_horizons = [5, 15]
+    # time_horizons = [5, 15, 20, 40, 60, 80, 100, 120, 180, 360]
+    time_horizons = [5, 15]
+    # time_horizons = [5]
 
     maes = []
     rels = []
@@ -79,11 +81,11 @@ def random_forest(dbc, file):
         predictions = np.round(predictions, decimals=0)
 
         errors = abs(predictions - test_labels)
-        print('Mean Absolute Error:', round(np.mean(errors), 2), 'degrees.')
+        print('Mean Absolute Error:', round(np.mean(errors), 2))
         maes.append(round(np.mean(errors), 2))
 
         rel = round(np.mean(errors), 2) / np.mean(test_labels)
-        print('Relative:', round(rel, 2) * 100, '%.')
+        print('Relative:', round(rel * 100, 2), '%.')
         rels.append(round(rel, 2) * 100)
 
         # Calculate mean absolute percentage error (MAPE)
@@ -152,45 +154,66 @@ def random_forest(dbc, file):
 
         print('DF Merged: ' + str(len(t)))
 
-        plt.figure(figsize=(70, 25))
-        sns.lineplot(true_data.date, true_data['n'], label='real', ci=None, size=2)
-        sns.lineplot(t.date, t['prediction'], label='predict', ci=None, size=2)
+        plt.figure(figsize=(35, 16))
+        sns.lineplot(true_data.date, true_data['n'], label='real', ci=None)
+        sns.lineplot(t.date, t['prediction'], label='predict', ci=None)
         # sns.lineplot(t.date, mean, label='mean', ci=None)
         plt.xticks(rotation='60')
         plt.legend()  # Graph labels
         plt.xlabel('Date')
         plt.ylabel('Event')
+        plt.minorticks_on()
         plt.title(file[5:] + '-' + str(horizon) + '_' + str(predictor) + '-all')
-        plt.savefig(file[5:] + '-' + str(horizon) + '_' + str(predictor) + '-all.png', dpi=300)
+        plt.savefig(file[5:] + '-' + str(horizon) + '_' + str(predictor) + '-all.png', dpi=240)
         plt.show()
         print('Plot ALL')
 
-        plt.figure(figsize=(70, 25))
-        sns.lineplot(r.date, r['n'], label='real', ci=None, size=2)
-        sns.lineplot(r.date, r['prediction'], label='predict', ci=None, size=2)
+        plt.figure(figsize=(35, 16))
+        sns.lineplot(r.date, r['n'], label='real', ci=None)
+        sns.lineplot(r.date, r['prediction'], label='predict', ci=None)
         # sns.lineplot(r.date, mean, label='mean', ci=None)
         plt.xticks(rotation='60')
         plt.legend()  # Graph labels
         plt.xlabel('Date')
         plt.ylabel('Event')
+        plt.minorticks_on()
         plt.title(file[5:] + '-' + str(horizon) + '_' + str(predictor) + '-specific')
-        plt.savefig(file[5:] + '-' + str(horizon) + '_' + str(predictor) + '-specific.png', dpi=300)
+        plt.savefig(file[5:] + '-' + str(horizon) + '_' + str(predictor) + '-specific.png', dpi=240)
         plt.show()
         print('Plot SPECIFIC\n')
 
     plt.figure(figsize=(10, 10))
-    sns.lineplot(time_horizons, maes, label='MAES')
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
+    sns.lineplot(time_horizons, maes, label='MAE')
     # sns.lineplot(time_horizons, rels, label='REL')
     # sns.lineplot(time_horizons, accs, label='ACC')
-    # sns.lineplot(time_horizons, rses, label='RSE')
+    sns.lineplot(time_horizons, rses, ax=ax2, label='RSE')
     plt.xticks(rotation='60')
     plt.legend()  # Graph labels
     plt.xlabel('Time Horizon')
-    plt.ylabel('Error')
+    ax1.set_ylabel('MAE error')
+    ax2.set_ylabel('RSE error')
+    # plt.grid(axis='both', which='both')
+    plt.minorticks_on()
     plt.title(file[5:] + '-' + str(predictor) + '-error')
-    plt.savefig(file[5:] + '-' + str(predictor) + '-error.png', dpi=300)
+    plt.savefig(file[5:] + '-' + str(predictor) + '-error.png', dpi=240)
     plt.show()
-    print('\nPlot ERRORS')
+    print('\nPlot MAE & RSE ERRORS')
+
+    plt.figure(figsize=(10, 10))
+    sns.lineplot(time_horizons, rels, label='REL')
+    # sns.lineplot(time_horizons, accs, label='ACC')
+    plt.xticks(rotation='60')
+    plt.legend()  # Graph labels
+    plt.xlabel('Time Horizon')
+    plt.ylabel('RELATIVE error')
+    # plt.grid(axis='both', which='both')
+    plt.minorticks_on()
+    plt.title(file[5:] + '-' + str(predictor) + '-rel_error')
+    plt.savefig(file[5:] + '-' + str(predictor) + '-rel_error.png', dpi=240)
+    plt.show()
+    print('\nPlot RELATIVE ERRORS')
 
     print(maes)
     print(rels)
