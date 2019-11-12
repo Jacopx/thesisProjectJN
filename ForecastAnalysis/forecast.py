@@ -187,9 +187,10 @@ def random_forest(dbc, file):
     plt.legend()  # Graph labels
     plt.xlabel('Time Horizon')
     plt.ylabel('Error')
-    plt.title(file[5:] + '-' + str(test_size) + '-error')
-    plt.savefig(file[5:] + '-' + str(test_size) + '-error.png', dpi=300)
+    plt.title(file[5:] + '-' + str(predictor) + '-error')
+    plt.savefig(file[5:] + '-' + str(predictor) + '-error.png', dpi=300)
     plt.show()
+    print('\nPlot ERRORS')
 
     print(maes)
     print(rels)
