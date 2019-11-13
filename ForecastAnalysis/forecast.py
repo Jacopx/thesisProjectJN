@@ -44,23 +44,17 @@ def random_forest(dbc, file):
     for horizon in time_horizons:
         print('\nTIME HORIZON: {}\n'.format(horizon))
         features = features_basic.copy()
-        # features['n'] = features['bike_available'].shift(-horizon, fill_value=-1)
         features['n'] = features['nc'].shift(-horizon, fill_value=-1)
         features = features.head(-horizon)
 
         # Descriptive statistics for each column
-        # features.index = pd.to_datetime(features.index, format="%Y-%m-%d %H:%M:%S")
         features.index = pd.to_datetime(features.index, format="%Y-%m-%d")
         features['wday'] = features.index.dayofweek
         features['day'] = features.index.day
         features['month'] = features.index.month
         features['year'] = features.index.year
-        # features['m'] = features.index.minute
-        # features['h'] = features.index.hour
 
         features['time'] = features['day'] + features['month'] * 30
-        # features = features.drop('station_id', axis=1)
-        # features = features.drop('docks_available', axis=1)
 
         labels = np.array(features['n'])
         mean = np.mean(labels)
@@ -129,11 +123,6 @@ def random_forest(dbc, file):
         months = features[:, feature_list.index('month')]
         days = features[:, feature_list.index('day')]
         years = features[:, feature_list.index('year')]
-        # hours = features[:, feature_list.index('h')]
-        # minutes = features[:, feature_list.index('m')]
-
-        # dates = [str(int(year)) + '-' + str(int(month)) + '-' + str(int(day)) + ' ' + str(int(hour)) + ':' + str(int(minute)) for year, month, day, hour, minute in
-        #          zip(years, months, days, hours, minutes)]
 
         dates = [
             str(int(year)) + '-' + str(int(month)) + '-' + str(int(day)) for year, month, day in
@@ -145,11 +134,6 @@ def random_forest(dbc, file):
         months = test_features[:, feature_list.index('month')]
         days = test_features[:, feature_list.index('day')]
         years = test_features[:, feature_list.index('year')]
-        # hours = test_features[:, feature_list.index('h')]
-        # minutes = test_features[:, feature_list.index('m')]
-
-        # test_dates = [str(int(year)) + '-' + str(int(month)) + '-' + str(int(day)) + ' ' + str(int(hour)) + ':' + str(int(minute)) for year, month, day, hour, minute in
-        #          zip(years, months, days, hours, minutes)]
 
         test_dates = [
             str(int(year)) + '-' + str(int(month)) + '-' + str(int(day)) for year, month, day in
