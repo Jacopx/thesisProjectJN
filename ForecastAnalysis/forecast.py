@@ -17,13 +17,13 @@ warnings.filterwarnings("ignore")
 
 def model_evaluation(dbc, file):
     test_size = 0.25
-    predictor = 120
+    predictor = 60
     random = 12
     n_jobs = -1
 
     # time_horizons = [5, 15, 30, 45, 60, 75, 90, 105, 120, 180, 360]
-    time_horizons = [5, 15]
-    # time_horizons = [5]
+    # time_horizons = [5, 15]
+    time_horizons = [5]
 
     maes = []
     rels = []
@@ -33,17 +33,20 @@ def model_evaluation(dbc, file):
     # for horizon in time_horizon:
 
     features_basic = pd.read_csv(file + '.csv', parse_dates=True, index_col=3)
+    initial_status = pd.read_csv('data/initial_state.csv', parse_dates=True, index_col=1)
+
+    status = make_group(initial_status, features_basic)
 
     print('################################################')
     print('FILE:', file, '\n')
-    print('test_size', test_size)
-    print('predictor', predictor)
-    print('n_jobs', n_jobs)
+    print('test_size =', test_size)
+    print('predictor =', predictor)
+    print('n_jobs =', n_jobs)
     print('The shape of our features is:', features_basic.shape)
 
     for horizon in time_horizons:
         print('\nTIME HORIZON: {}\n'.format(horizon))
-        features = features_basic.copy()
+        features = status.copy()
         features['n'] = features['bike_available'].shift(-horizon, fill_value=-1)
         features = features.head(-horizon)
 
@@ -240,3 +243,10 @@ def model_evaluation(dbc, file):
         print(rels, file=f)
         print(accs, file=f)
         print(rses, file=f)
+
+# TODO: Develop function to merge initial state with initial state
+#       in order to create a DataFrame like 'status.csv'
+def make_group(initial, status):
+    s = pd.DataFrame()
+
+    return s
