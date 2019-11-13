@@ -8,20 +8,21 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.metrics import mean_squared_error
+from joblib import dump, load
 import warnings
 import seaborn as sns
 
 warnings.filterwarnings("ignore")
 
 
-def random_forest(dbc, file):
+def model_evaluation(dbc, file):
     test_size = 0.25
-    predictor = 240
+    predictor = 120
     random = 12
     n_jobs = -1
 
-    time_horizons = [5, 15, 30, 45, 60, 75, 90, 105, 120, 180, 360]
-    # time_horizons = [5, 15]
+    # time_horizons = [5, 15, 30, 45, 60, 75, 90, 105, 120, 180, 360]
+    time_horizons = [5, 15]
     # time_horizons = [5]
 
     maes = []
@@ -73,9 +74,15 @@ def random_forest(dbc, file):
         print('Testing Features Shape:', test_features.shape)
         print('Testing Labels Shape:', test_labels.shape)
 
+        ######################### MODEL DEFINITIONS ############################
+
         # model = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=1, n_jobs=n_jobs)
         model = GradientBoostingRegressor(n_estimators=predictor, random_state=random, verbose=1)
+
+        ######################### MODEL DEFINITIONS ############################
+
         model.fit(train_features, train_labels)
+        # dump(model, 'model_' + file[5:] + '-' + str(horizon) + '_' + str(predictor) + '.joblib')
 
         # The baseline predictions are the historical averages
         baseline_errors = abs(mean - test_labels)

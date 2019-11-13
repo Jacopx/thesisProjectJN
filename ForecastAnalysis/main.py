@@ -28,9 +28,9 @@ def main(dataset):
     #     df = saturation(dbc, dataset, 'act', 'start', None, 1, 0, 'SFFD')
 
     if dataset in 'SFBS':
-        forecast.random_forest(dbc, 'data/station70')
+        forecast.model_evaluation(dbc, 'data/station70')
     else:
-        forecast.random_forest(dbc, 'data/satur')
+        forecast.model_evaluation(dbc, 'data/satur')
 
 
 if __name__ == "__main__":
