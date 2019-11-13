@@ -196,5 +196,12 @@ def main():
     print('Analysis terminated: ' + str(time.time() - t0) + 's\n')
 
 
+def status():
+    status = pd.read_csv('data/station70.csv', nrows=None, parse_dates=True)
+    status['time'] = pd.to_datetime(status['time'], format="%Y-%m-%d %H:%M:%S")
+    print('ok')
+
+
 if __name__ == "__main__":
     main()
+    # status()
