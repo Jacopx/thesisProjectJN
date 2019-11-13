@@ -8,3 +8,4 @@ Functions
 * **Distance**: Calculate geodesic distance from source and destination point of events
 * **Duration**: Calculate duration of events
 * **Saturation**: Calculate amount of minute in saturation situations
+* **RandomForest**: Apply RandomForest forecasting method over some data

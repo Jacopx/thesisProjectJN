@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.metrics import mean_squared_error
 import warnings
 import seaborn as sns
@@ -19,8 +20,8 @@ def random_forest(dbc, file):
     random = 12
     n_jobs = -1
 
-    time_horizons = [5, 15, 30, 45, 60, 75, 90, 105, 120, 180, 360]
-    # time_horizons = [5, 15]
+    # time_horizons = [5, 15, 30, 45, 60, 75, 90, 105, 120, 180, 360]
+    time_horizons = [5, 15]
     # time_horizons = [5]
 
     maes = []
@@ -34,9 +35,9 @@ def random_forest(dbc, file):
 
     print('################################################')
     print('FILE:', file, '\n')
-    print('test_size', test_size)
-    print('predictor', predictor)
-    print('n_jobs', n_jobs)
+    print('test_size =', test_size)
+    print('predictor =', predictor)
+    print('n_jobs =', n_jobs)
     print('The shape of our features is:', features_basic.shape)
 
     for horizon in time_horizons:
@@ -72,14 +73,15 @@ def random_forest(dbc, file):
         print('Testing Features Shape:', test_features.shape)
         print('Testing Labels Shape:', test_labels.shape)
 
-        rf = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=1, n_jobs=n_jobs)
-        rf.fit(train_features, train_labels)
+        # model = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=1, n_jobs=n_jobs)
+        model = GradientBoostingRegressor(n_estimators=predictor, random_state=random, verbose=1)
+        model.fit(train_features, train_labels)
 
         # The baseline predictions are the historical averages
         baseline_errors = abs(mean - test_labels)
         print('Average baseline error: ', round(np.mean(baseline_errors), 2))
 
-        predictions = rf.predict(test_features)
+        predictions = model.predict(test_features)
         test_labels = test_labels[0:len(predictions)]
 
         predictions = np.round(predictions, decimals=0)
@@ -104,7 +106,7 @@ def random_forest(dbc, file):
         rses.append(round(rse, 3))
 
         # Get numerical feature importances
-        importances = list(rf.feature_importances_)  # List of tuples with variable and importance
+        importances = list(model.feature_importances_)  # List of tuples with variable and importance
         feature_importances = [(feature, round(importance, 4)) for feature, importance in
                                zip(feature_list, importances)]
         feature_importances = sorted(feature_importances, key=lambda x: x[1],

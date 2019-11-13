@@ -43,7 +43,6 @@ def saturation(dbc, dataset, unit, start, dest, type, gap, csv_name):
     df = pd.DataFrame(columns=['date', 'station', 'saturation'])
 
     for year in df_year.year.unique():
-
         sql = """
                 SELECT involved.id as ss, event.eid, MONTH(start_dt) as month, DAY(start_dt) as day, start_dt, end_dt, n.id as id
                 FROM event, involved, (select involved.dataset, eid, info.id
