@@ -37,10 +37,10 @@ def main(dataset):
         # forecast.random_forest(dbc, 'data/DateCount_59_BS')
         # forecast.random_forest(dbc, 'data/DateCount_60_BS')
         # forecast.random_forest(dbc, 'data/DateCount_69_BS')
-        # forecast.random_forest(dbc, 'data/DateCount_70_BS')
+        forecast.random_forest(dbc, 'data/DateSatur_70_BS')
         # forecast.random_forest(dbc, 'data/DateCount_BS')
         # forecast.random_forest(dbc, 'data/DateHourMinuteCount_70_BS')
-        forecast.random_forest(dbc, 'data/station70')
+        # forecast.random_forest(dbc, 'data/station70')
     else:
         forecast.random_forest(dbc, 'data/satur')
 

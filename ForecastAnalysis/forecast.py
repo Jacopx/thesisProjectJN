@@ -16,12 +16,12 @@ warnings.filterwarnings("ignore")
 
 def random_forest(dbc, file):
     test_size = 0.25
-    predictor = 240
+    predictor = 180
     random = 12
     n_jobs = -1
 
     # time_horizons = [5, 15, 30, 45, 60, 75, 90, 105, 120, 180, 360]
-    time_horizons = [5, 15]
+    time_horizons = [1, 2, 5, 10, 15]
     # time_horizons = [5]
 
     maes = []
@@ -31,7 +31,8 @@ def random_forest(dbc, file):
 
     # for horizon in time_horizon:
 
-    features_basic = pd.read_csv(file + '.csv', parse_dates=True, index_col=3)
+    # features_basic = pd.read_csv(file + '.csv', parse_dates=True, index_col=3)
+    features_basic = pd.read_csv(file + '.csv', parse_dates=True, index_col=0)
 
     print('################################################')
     print('FILE:', file, '\n')
@@ -43,21 +44,23 @@ def random_forest(dbc, file):
     for horizon in time_horizons:
         print('\nTIME HORIZON: {}\n'.format(horizon))
         features = features_basic.copy()
-        features['n'] = features['bike_available'].shift(-horizon, fill_value=-1)
+        # features['n'] = features['bike_available'].shift(-horizon, fill_value=-1)
+        features['n'] = features['nc'].shift(-horizon, fill_value=-1)
         features = features.head(-horizon)
 
         # Descriptive statistics for each column
-        features.index = pd.to_datetime(features.index, format="%Y-%m-%d %H:%M:%S")
+        # features.index = pd.to_datetime(features.index, format="%Y-%m-%d %H:%M:%S")
+        features.index = pd.to_datetime(features.index, format="%Y-%m-%d")
         features['wday'] = features.index.dayofweek
         features['day'] = features.index.day
         features['month'] = features.index.month
         features['year'] = features.index.year
-        features['m'] = features.index.minute
-        features['h'] = features.index.hour
+        # features['m'] = features.index.minute
+        # features['h'] = features.index.hour
 
-        features['time'] = features['m'] + features['h'] * 60
-        features = features.drop('station_id', axis=1)
-        features = features.drop('docks_available', axis=1)
+        features['time'] = features['day'] + features['month'] * 30
+        # features = features.drop('station_id', axis=1)
+        # features = features.drop('docks_available', axis=1)
 
         labels = np.array(features['n'])
         mean = np.mean(labels)
@@ -73,8 +76,8 @@ def random_forest(dbc, file):
         print('Testing Features Shape:', test_features.shape)
         print('Testing Labels Shape:', test_labels.shape)
 
-        # model = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=1, n_jobs=n_jobs)
-        model = GradientBoostingRegressor(n_estimators=predictor, random_state=random, verbose=1)
+        model = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=1, n_jobs=n_jobs)
+        # model = GradientBoostingRegressor(n_estimators=predictor, random_state=random, verbose=1)
         model.fit(train_features, train_labels)
 
         # The baseline predictions are the historical averages
@@ -126,25 +129,33 @@ def random_forest(dbc, file):
         months = features[:, feature_list.index('month')]
         days = features[:, feature_list.index('day')]
         years = features[:, feature_list.index('year')]
-        hours = features[:, feature_list.index('h')]
-        minutes = features[:, feature_list.index('m')]
+        # hours = features[:, feature_list.index('h')]
+        # minutes = features[:, feature_list.index('m')]
 
-        dates = [str(int(year)) + '-' + str(int(month)) + '-' + str(int(day)) + ' ' + str(int(hour)) + ':' + str(int(minute)) for year, month, day, hour, minute in
-                 zip(years, months, days, hours, minutes)]
+        # dates = [str(int(year)) + '-' + str(int(month)) + '-' + str(int(day)) + ' ' + str(int(hour)) + ':' + str(int(minute)) for year, month, day, hour, minute in
+        #          zip(years, months, days, hours, minutes)]
 
-        dates = [datetime.datetime.strptime(date, '%Y-%m-%d %H:%M') for date in dates]
+        dates = [
+            str(int(year)) + '-' + str(int(month)) + '-' + str(int(day)) for year, month, day in
+            zip(years, months, days)]
+
+        dates = [datetime.datetime.strptime(date, '%Y-%m-%d') for date in dates]
 
         true_data = pd.DataFrame(data={'date': dates, 'n': labels})
         months = test_features[:, feature_list.index('month')]
         days = test_features[:, feature_list.index('day')]
         years = test_features[:, feature_list.index('year')]
-        hours = test_features[:, feature_list.index('h')]
-        minutes = test_features[:, feature_list.index('m')]
+        # hours = test_features[:, feature_list.index('h')]
+        # minutes = test_features[:, feature_list.index('m')]
 
-        test_dates = [str(int(year)) + '-' + str(int(month)) + '-' + str(int(day)) + ' ' + str(int(hour)) + ':' + str(int(minute)) for year, month, day, hour, minute in
-                 zip(years, months, days, hours, minutes)]
+        # test_dates = [str(int(year)) + '-' + str(int(month)) + '-' + str(int(day)) + ' ' + str(int(hour)) + ':' + str(int(minute)) for year, month, day, hour, minute in
+        #          zip(years, months, days, hours, minutes)]
 
-        test_dates = [datetime.datetime.strptime(date, '%Y-%m-%d %H:%M') for date in
+        test_dates = [
+            str(int(year)) + '-' + str(int(month)) + '-' + str(int(day)) for year, month, day in
+            zip(years, months, days)]
+
+        test_dates = [datetime.datetime.strptime(date, '%Y-%m-%d') for date in
                       test_dates]
 
         predictions_data = pd.DataFrame(data={'date': test_dates, 'prediction': predictions})
