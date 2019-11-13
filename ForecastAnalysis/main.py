@@ -2,6 +2,7 @@ import sys
 import general
 import distance
 import duration
+import saturation
 import forecast
 
 def main(dataset):
@@ -27,18 +28,6 @@ def main(dataset):
     #     df = saturation(dbc, dataset, 'act', 'start', None, 1, 0, 'SFFD')
 
     if dataset in 'SFBS':
-        # forecast.random_forest(dbc, 'data/DateCount_21_BS')
-        # forecast.random_forest(dbc, 'data/DateCount_23_BS')
-        # forecast.random_forest(dbc, 'data/DateCount_24_BS')
-        # forecast.random_forest(dbc, 'data/DateCount_28_BS')
-        # forecast.random_forest(dbc, 'data/DateCount_46_BS')
-        # forecast.random_forest(dbc, 'data/DateCount_50_BS')
-        # forecast.random_forest(dbc, 'data/DateCount_59_BS')
-        # forecast.random_forest(dbc, 'data/DateCount_60_BS')
-        # forecast.random_forest(dbc, 'data/DateCount_69_BS')
-        # forecast.random_forest(dbc, 'data/DateCount_70_BS')
-        # forecast.random_forest(dbc, 'data/DateCount_BS')
-        # forecast.random_forest(dbc, 'data/DateHourMinuteCount_70_BS')
         forecast.random_forest(dbc, 'data/station70')
     else:
         forecast.random_forest(dbc, 'data/satur')
