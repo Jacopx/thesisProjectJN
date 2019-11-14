@@ -32,7 +32,7 @@ def model_evaluation(dbc, file):
 
     # for horizon in time_horizon:
 
-    features_basic = pd.read_csv(file + '.csv', parse_dates=True, index_col=3)
+    features_basic = pd.read_csv(file + '.csv', parse_dates=True, index_col=0)
     initial_status = pd.read_csv('data/initial_state.csv', parse_dates=True, index_col=1)
 
     status = make_group(initial_status, features_basic)
@@ -51,17 +51,17 @@ def model_evaluation(dbc, file):
         features = features.head(-horizon)
 
         # Descriptive statistics for each column
-        features.index = pd.to_datetime(features.index, format="%Y-%m-%d %H:%M:%S")
+        features.index = pd.to_datetime(features.index, format="%Y-%m-%d")
         features['wday'] = features.index.dayofweek
         features['day'] = features.index.day
         features['month'] = features.index.month
         features['year'] = features.index.year
-        features['m'] = features.index.minute
-        features['h'] = features.index.hour
+        # features['m'] = features.index.minute
+        # features['h'] = features.index.hour
 
         features['time'] = features['m'] + features['h'] * 60
-        features = features.drop('station_id', axis=1)
-        features = features.drop('docks_available', axis=1)
+        # features = features.drop('station_id', axis=1)
+        # features = features.drop('docks_available', axis=1)
 
         labels = np.array(features['n'])
         mean = np.mean(labels)
@@ -121,7 +121,7 @@ def model_evaluation(dbc, file):
                                zip(feature_list, importances)]
         feature_importances = sorted(feature_importances, key=lambda x: x[1],
                                      reverse=True)
-        [print('Variable: {:20} Importance: {}'.format(*pair)) for pair in feature_importances]
+        [print('Variable: {:30} Importance: {}'.format(*pair)) for pair in feature_importances]
 
         with open(file[5:] + '-' + str(horizon) + '_' + str(predictor) + '.txt', "w") as f:
             print('ESTIMATOR: ' + str(predictor), file=f)
@@ -244,9 +244,32 @@ def model_evaluation(dbc, file):
         print(accs, file=f)
         print(rses, file=f)
 
-# TODO: Develop function to merge initial state with initial state
-#       in order to create a DataFrame like 'status.csv'
-def make_group(initial, status):
-    s = pd.DataFrame()
 
-    return s
+def make_group(initial, variation):
+    # Cumulative calculate the bike variations
+    variation['cumsum'] = variation.variation.cumsum()
+    variation = variation.drop('variation', axis=1)
+
+    # Create a new complete DataFrame of a range
+    start = variation.index.min()
+    start = start.replace(hour=int(variation.h.head(1).values[0]), minute=int(variation.m.head(1).values[0]))
+    end = variation.index.max()
+    end = end.replace(hour=int(variation.h.tail(1).values[0]), minute=int(variation.m.tail(1).values[0]))
+    sd = pd.date_range(start, end, freq='T')
+    s = pd.DataFrame(index=sd)
+    s['init'] = initial[initial['id'] == 70]['initial_state'].values[0]
+
+    # Merge the created DataRange to the trip files
+    merged = pd.merge(s, variation, left_on=[s.index.date, s.index.hour, s.index.minute], right_on=[variation.index.date, variation.h, variation.m], how='left')
+    merged = merged.drop('h', axis=1)
+    merged = merged.drop('m', axis=1)
+    merged = merged.rename(columns={'key_0': 'date', 'key_1': 'h', 'key_2': 'm'})
+    merged['cumsum'] = merged['cumsum'].fillna(method='ffill')
+
+    # Compute the bikes available
+    merged['bike_available'] = merged['cumsum'] + merged['init']
+    merged = merged.drop('cumsum', axis=1)
+    merged = merged.drop('init', axis=1)
+    merged = merged.set_index('date')
+
+    return merged
