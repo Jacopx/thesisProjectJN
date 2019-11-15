@@ -34,8 +34,9 @@ def model_evaluation(dbc, file):
 
     features_basic = pd.read_csv(file + '.csv', parse_dates=True, index_col=0)
     initial_status = pd.read_csv('data/initial_state.csv', parse_dates=True, index_col=1)
+    manual_redistribution = pd.read_csv('data/station70_moved.csv', parse_dates=True, index_col=0)
 
-    status = make_group(initial_status, features_basic)
+    status = make_group(initial_status, features_basic, manual_redistribution)
 
     print('################################################')
     print('FILE:', file, '\n')
@@ -245,9 +246,10 @@ def model_evaluation(dbc, file):
         print(rses, file=f)
 
 
-def make_group(initial, variation):
+def make_group(initial, variation, correction):
     # Cumulative calculate the bike variations
     variation['cumsum'] = variation.variation.cumsum()
+    correction['delta'] = correction.n.cumsum()
     variation = variation.drop('variation', axis=1)
 
     # Create a new complete DataFrame of a range
@@ -267,9 +269,24 @@ def make_group(initial, variation):
     merged['cumsum'] = merged['cumsum'].fillna(method='ffill')
 
     # Compute the bikes available
-    merged['bike_available'] = merged['cumsum'] + merged['init']
+    merged['bike_availableT'] = merged['cumsum'] + merged['init']
     merged = merged.drop('cumsum', axis=1)
     merged = merged.drop('init', axis=1)
+    merged['date'] = pd.to_datetime(merged['date'], format="%Y-%m-%d")
+    merged = merged.set_index('date')
+    merged = pd.merge(merged, correction, left_on=[merged.index.date, merged.index.hour, merged.index.minute],
+                       right_on=[correction.index.date, correction.h, correction.m], how='left')
+    merged = merged.drop('h_y', axis=1)
+    merged = merged.drop('m_y', axis=1)
+    merged = merged.drop('n', axis=1)
+    merged = merged.drop('key_1', axis=1)
+    merged = merged.drop('key_2', axis=1)
+    merged = merged.rename(columns={'key_0': 'date', 'h_x': 'h', 'm_x': 'm'})
+    merged['delta'] = merged['delta'].fillna(method='ffill')
+    merged['delta'] = merged['delta'].fillna(0)
+
+    merged['bike_available'] = merged['bike_availableT'] + merged['delta']
+    merged = merged.drop('bike_availableT', axis=1)
     merged = merged.set_index('date')
 
     return merged

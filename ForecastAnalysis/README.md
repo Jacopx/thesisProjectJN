@@ -36,3 +36,49 @@ FROM
 GROUP BY date(date), hour(date), minute(date)
 ORDER BY date(date), hour(date), minute(date);
 ```
+
+```
+SELECT date(end_dt), hour(end_dt), minute(end_dt), sum(n)
+FROM (  SELECT *
+        FROM (SELECT end_dt, 1 as n
+                FROM (
+                    SELECT src.eid, end_dt, src.id as 'src', dst.id as 'dst', lead(src.id) over (order by start_dt) as 'nextsrc'
+                    FROM event, involved,
+                         (  SELECT event.eid, involved.id
+                            FROM event, involved
+                            WHERE event.dataset=involved.dataset AND event.eid=involved.eid AND event.dataset='SFBS'
+                             AND type='src'
+                        ) as src,
+                         (  SELECT event.eid, involved.id
+                            FROM event, involved
+                            WHERE event.dataset=involved.dataset AND event.eid=involved.eid AND event.dataset='SFBS'
+                             AND type='dest'
+                        ) as dst
+                    WHERE event.dataset=involved.dataset AND event.eid=involved.eid  AND event.dataset='SFBS'
+                         AND src.eid=event.eid AND dst.eid=event.eid AND type='with'
+                    ORDER BY start_dt) as rides
+            WHERE dst<>nextsrc AND nextsrc='70') as added
+        UNION
+        SELECT *
+        FROM (SELECT end_dt, -1 as n
+                FROM (
+                    SELECT src.eid, end_dt, src.id as 'src', dst.id as 'dst', lead(src.id) over (order by start_dt) as 'nextsrc'
+                    FROM event, involved,
+                         (  SELECT event.eid, involved.id
+                            FROM event, involved
+                            WHERE event.dataset=involved.dataset AND event.eid=involved.eid AND event.dataset='SFBS'
+                             AND type='src'
+                        ) as src,
+                         (  SELECT event.eid, involved.id
+                            FROM event, involved
+                            WHERE event.dataset=involved.dataset AND event.eid=involved.eid AND event.dataset='SFBS'
+                             AND type='dest'
+                        ) as dst
+                    WHERE event.dataset=involved.dataset AND event.eid=involved.eid  AND event.dataset='SFBS'
+                         AND src.eid=event.eid AND dst.eid=event.eid AND type='with'
+                    ORDER BY start_dt) as rides
+            WHERE dst<>nextsrc AND dst='70') as removed
+        ORDER BY end_dt) as variation
+GROUP BY date(end_dt), hour(end_dt), minute(end_dt)
+ORDER BY date(end_dt), hour(end_dt), minute(end_dt);
+```
