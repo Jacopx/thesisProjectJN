@@ -28,7 +28,8 @@ def main(dataset):
     #     df = saturation(dbc, dataset, 'act', 'start', None, 1, 0, 'SFFD')
 
     if dataset in 'SFBS':
-        forecast.model_evaluation(dbc, 'data/DateHourMinuteVariation_70_BS')
+        forecast.model_evaluation(dbc, 'data/DateVariation_70_BS')
+        # forecast.model_evaluation(dbc, 'data/station70')
     else:
         forecast.model_evaluation(dbc, 'data/satur')
 

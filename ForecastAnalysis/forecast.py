@@ -17,7 +17,7 @@ warnings.filterwarnings("ignore")
 
 def model_evaluation(dbc, file):
     test_size = 0.25
-    predictor = 60
+    predictor = 100
     random = 12
     n_jobs = -1
 
@@ -37,6 +37,7 @@ def model_evaluation(dbc, file):
     manual_redistribution = pd.read_csv('data/station70_moved.csv', parse_dates=True, index_col=0)
 
     status = make_group(initial_status, features_basic, manual_redistribution)
+    # status = features_basic
 
     print('################################################')
     print('FILE:', file, '\n')
@@ -60,7 +61,8 @@ def model_evaluation(dbc, file):
         # features['m'] = features.index.minute
         # features['h'] = features.index.hour
 
-        features['time'] = features['m'] + features['h'] * 60
+        # features['time'] = features['m'] + features['h'] * 60
+        features['time'] = features['day']
         # features = features.drop('station_id', axis=1)
         # features = features.drop('docks_available', axis=1)
 
@@ -137,25 +139,37 @@ def model_evaluation(dbc, file):
         months = features[:, feature_list.index('month')]
         days = features[:, feature_list.index('day')]
         years = features[:, feature_list.index('year')]
-        hours = features[:, feature_list.index('h')]
-        minutes = features[:, feature_list.index('m')]
+        # hours = features[:, feature_list.index('h')]
+        # minutes = features[:, feature_list.index('m')]
 
-        dates = [str(int(year)) + '-' + str(int(month)) + '-' + str(int(day)) + ' ' + str(int(hour)) + ':' + str(int(minute)) for year, month, day, hour, minute in
-                 zip(years, months, days, hours, minutes)]
+        # dates = [str(int(year)) + '-' + str(int(month)) + '-' + str(int(day)) + ' ' + str(int(hour)) + ':' + str(int(minute)) for year, month, day, hour, minute in
+        #          zip(years, months, days, hours, minutes)]
+        #
+        # dates = [datetime.datetime.strptime(date, '%Y-%m-%d %H:%M') for date in dates]
 
-        dates = [datetime.datetime.strptime(date, '%Y-%m-%d %H:%M') for date in dates]
+        dates = [
+            str(int(year)) + '-' + str(int(month)) + '-' + str(int(day))
+            for year, month, day in
+            zip(years, months, days)]
+
+        dates = [datetime.datetime.strptime(date, '%Y-%m-%d') for date in dates]
 
         true_data = pd.DataFrame(data={'date': dates, 'n': labels})
         months = test_features[:, feature_list.index('month')]
         days = test_features[:, feature_list.index('day')]
         years = test_features[:, feature_list.index('year')]
-        hours = test_features[:, feature_list.index('h')]
-        minutes = test_features[:, feature_list.index('m')]
+        # hours = test_features[:, feature_list.index('h')]
+        # minutes = test_features[:, feature_list.index('m')]
 
-        test_dates = [str(int(year)) + '-' + str(int(month)) + '-' + str(int(day)) + ' ' + str(int(hour)) + ':' + str(int(minute)) for year, month, day, hour, minute in
-                 zip(years, months, days, hours, minutes)]
+        # test_dates = [str(int(year)) + '-' + str(int(month)) + '-' + str(int(day)) + ' ' + str(int(hour)) + ':' + str(int(minute)) for year, month, day, hour, minute in
+        #          zip(years, months, days, hours, minutes)]
+        #
+        # test_dates = [datetime.datetime.strptime(date, '%Y-%m-%d %H:%M') for date in
+        #               test_dates]
 
-        test_dates = [datetime.datetime.strptime(date, '%Y-%m-%d %H:%M') for date in
+        test_dates = [str(int(year)) + '-' + str(int(month)) + '-' + str(int(day)) for year, month, day in zip(years, months, days)]
+
+        test_dates = [datetime.datetime.strptime(date, '%Y-%m-%d') for date in
                       test_dates]
 
         predictions_data = pd.DataFrame(data={'date': test_dates, 'prediction': predictions})
@@ -254,18 +268,20 @@ def make_group(initial, variation, correction):
 
     # Create a new complete DataFrame of a range
     start = variation.index.min()
-    start = start.replace(hour=int(variation.h.head(1).values[0]), minute=int(variation.m.head(1).values[0]))
+    # start = start.replace(hour=int(variation.h.head(1).values[0]), minute=int(variation.m.head(1).values[0]))
     end = variation.index.max()
-    end = end.replace(hour=int(variation.h.tail(1).values[0]), minute=int(variation.m.tail(1).values[0]))
+    # end = end.replace(hour=int(variation.h.tail(1).values[0]), minute=int(variation.m.tail(1).values[0]))
     sd = pd.date_range(start, end, freq='T')
     s = pd.DataFrame(index=sd)
     s['init'] = initial[initial['id'] == 70]['initial_state'].values[0]
 
     # Merge the created DataRange to the trip files
-    merged = pd.merge(s, variation, left_on=[s.index.date, s.index.hour, s.index.minute], right_on=[variation.index.date, variation.h, variation.m], how='left')
-    merged = merged.drop('h', axis=1)
-    merged = merged.drop('m', axis=1)
-    merged = merged.rename(columns={'key_0': 'date', 'key_1': 'h', 'key_2': 'm'})
+    # merged = pd.merge(s, variation, left_on=[s.index.date, s.index.hour, s.index.minute], right_on=[variation.index.date, variation.h, variation.m], how='left')
+    merged = pd.merge(s, variation, left_on=[s.index.date], right_on=[variation.index.date], how='left')
+    # merged = merged.drop('h', axis=1)
+    # merged = merged.drop('m', axis=1)
+    # merged = merged.rename(columns={'key_0': 'date', 'key_1': 'h', 'key_2': 'm'})
+    merged = merged.rename(columns={'key_0': 'date'})
     merged['cumsum'] = merged['cumsum'].fillna(method='ffill')
 
     # Compute the bikes available
@@ -274,19 +290,24 @@ def make_group(initial, variation, correction):
     merged = merged.drop('init', axis=1)
     merged['date'] = pd.to_datetime(merged['date'], format="%Y-%m-%d")
     merged = merged.set_index('date')
-    merged = pd.merge(merged, correction, left_on=[merged.index.date, merged.index.hour, merged.index.minute],
-                       right_on=[correction.index.date, correction.h, correction.m], how='left')
-    merged = merged.drop('h_y', axis=1)
-    merged = merged.drop('m_y', axis=1)
+    # merged = pd.merge(merged, correction, left_on=[merged.index.date, merged.index.hour, merged.index.minute], right_on=[correction.index.date, correction.h, correction.m], how='left')
+    merged = pd.merge(merged, correction, left_on=[merged.index.date], right_on=[correction.index.date], how='left')
+    # merged = merged.drop('h_y', axis=1)
+    # merged = merged.drop('m_y', axis=1)
     merged = merged.drop('n', axis=1)
-    merged = merged.drop('key_1', axis=1)
-    merged = merged.drop('key_2', axis=1)
-    merged = merged.rename(columns={'key_0': 'date', 'h_x': 'h', 'm_x': 'm'})
+    # merged = merged.drop('key_1', axis=1)
+    # merged = merged.drop('key_2', axis=1)
+    # merged = merged.rename(columns={'key_0': 'date', 'h_x': 'h', 'm_x': 'm'})
+    merged = merged.rename(columns={'key_0': 'date'})
     merged['delta'] = merged['delta'].fillna(method='ffill')
     merged['delta'] = merged['delta'].fillna(0)
 
     merged['bike_available'] = merged['bike_availableT'] + merged['delta']
     merged = merged.drop('bike_availableT', axis=1)
+    merged = merged.drop('delta', axis=1)
     merged = merged.set_index('date')
+
+    print(merged)
+    print(np.unique(np.array(merged.bike_available)))
 
     return merged
