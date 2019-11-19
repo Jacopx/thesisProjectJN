@@ -1,7 +1,7 @@
 import pandas as pd
 import datetime
 import matplotlib
-matplotlib.use('Agg')
+#matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -73,8 +73,13 @@ def random_forest(dbc, file):
         print('Testing Features Shape:', test_features.shape)
         print('Testing Labels Shape:', test_labels.shape)
 
+        ######################### MODEL DEFINITIONS ############################
+
         # model = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=1, n_jobs=n_jobs)
         model = GradientBoostingRegressor(n_estimators=predictor, random_state=random, verbose=1)
+
+        ######################### MODEL DEFINITIONS ############################
+
         model.fit(train_features, train_labels)
 
         # The baseline predictions are the historical averages
