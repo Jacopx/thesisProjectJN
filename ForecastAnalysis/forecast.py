@@ -36,8 +36,8 @@ def model_evaluation(dbc, file):
     initial_status = pd.read_csv('data/initial_state.csv', parse_dates=True, index_col=1)
     manual_redistribution = pd.read_csv('data/station70_moved.csv', parse_dates=True, index_col=0)
 
-    status = make_group(initial_status, features_basic, manual_redistribution)
-    # status = features_basic
+    # status = make_group(initial_status, features_basic, manual_redistribution)
+    status = features_basic
 
     print('################################################')
     print('FILE:', file, '\n')
@@ -49,20 +49,22 @@ def model_evaluation(dbc, file):
     for horizon in time_horizons:
         print('\nTIME HORIZON: {}\n'.format(horizon))
         features = status.copy()
-        features['n'] = features['bike_available'].shift(-horizon, fill_value=-1)
-        features = features.head(-horizon)
+        # features['n'] = features['bike_available'].shift(-horizon, fill_value=-1)
+        # features = features.head(-horizon)
 
         # Descriptive statistics for each column
+        features.index = pd.to_datetime(features.index, format="%Y-%m-%d")
+        features.index = pd.to_datetime(features['start_dt'], format="%Y-%m-%d %H:%")
         features.index = pd.to_datetime(features.index, format="%Y-%m-%d")
         features['wday'] = features.index.dayofweek
         features['day'] = features.index.day
         features['month'] = features.index.month
         features['year'] = features.index.year
-        # features['m'] = features.index.minute
-        # features['h'] = features.index.hour
+        features['m'] = features['start_dt'].dt.minute
+        features['h'] = features['start_dt'].dt.hour
 
-        # features['time'] = features['m'] + features['h'] * 60
-        features['time'] = features['day']
+        features['time'] = features['m'] + features['h'] * 60
+        # features['time'] = features['day']
         # features = features.drop('station_id', axis=1)
         # features = features.drop('docks_available', axis=1)
 
