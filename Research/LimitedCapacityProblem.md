@@ -12,6 +12,13 @@ Each paper added to the repository will be analysed and summarised to make the s
     * **OptimizationFieldOp_BS**: Full-stack system to optimised BSS management. Prediction studied with MLP algorithm.
     * **PredictOneDayAhead**: Analysis at City level of granularity, different algorithm and considerations about over-fitting problems
     * **CloseLoop_PredictionBS**: Use probabilistic station-station approach. Based on large Hangzhou dataset, manage also unpredicted events. Evaluate a lot of prediction algorithm like baseline: HM, ARMA, RF, PFM, PD.
+    * **BikePatterns**: Infer commonly used patterns from stations logs on D.C. dataset.
+    * **BS_SiliconValley**: Complete analysis, also economical, over SFBS, using weather, holidays and station clustering (by demand). RF, GBRT and ADA Boosting.
+    * **DataDriven_Dockless**: Dockless system with inferred GPS tracks, no technical infos.
+    * **BS_DestPrediction**: Dockless system analysis with normal features plus, other user and location based. No description over the forecasting model.
+    * **LargeScaleTripPlanning**: Consider the whole trip process, make use of heuristics algorithm (knapsack)
+    * **MobilityPatterns_Mexico**: Specific evaluation of stats on Mexico City system. No AI forecasting.
+    * **BS_AnalPred**: Forecasting trip duration base on different features, both standard and user related. Performed using MART=GBRT.
 
 
   * **Analog Problem**:
@@ -62,3 +69,4 @@ The most used strategies is the prediction using Random Forest, it seems to be t
   * **MLR**: Multiple Linear Regression
   * **RL**: Reinforcement Learning
   * **LSTM**: Long Short-Term Memory
+  * **MART**: Multiple Additive Regression Tree
