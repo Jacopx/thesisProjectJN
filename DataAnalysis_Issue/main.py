@@ -2,6 +2,7 @@ import sys
 import numpy as np
 import pandas as pd
 
+
 def merge(dataset):
     issue = pd.read_csv('data/issue.csv', nrows=None, parse_dates=True)
     issue = issue.drop('description', axis=1)
