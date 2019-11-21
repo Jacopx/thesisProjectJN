@@ -76,8 +76,8 @@ def issue_forecast_file(dataset):
 
     print('Starting recognition...', end='')
     vectorized = word_recognition(issue_component)
-    issue = issue.drop('summary', axis=1)
-    issue_final = pd.concat([issue, vectorized], axis=1)
+    issue_component = issue_component.drop('summary', axis=1)
+    issue_final = pd.concat([issue_component, vectorized], axis=1)
     print(' OK')
 
     print('Export...', end='')
