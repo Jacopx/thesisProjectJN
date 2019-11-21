@@ -34,12 +34,48 @@ def merge(dataset):
     print(' OK')
 
     print('Export...', end='')
-    issue_commit.to_csv(dataset + '_issue.csv', index=None)
+    issue_commit.to_csv(dataset + '_merged.csv', index=None)
+    print(' OK')
+
+
+def issue_forecast_file(dataset):
+    issue = pd.read_csv('data/' + dataset + '/issue.csv', nrows=None, parse_dates=True)
+
+    issue['open_dt'] = pd.to_datetime(issue['created_date_zoned'])
+    issue = issue.drop('created_date', axis=1)
+    issue = issue.drop('created_date_zoned', axis=1)
+
+    issue = issue.drop('updated_date', axis=1)
+    issue = issue.drop('updated_date_zoned', axis=1)
+
+    issue['close_dt'] = pd.to_datetime(issue['resolved_date_zoned'])
+    issue = issue.drop('resolved_date', axis=1)
+    issue = issue.drop('resolved_date_zoned', axis=1)
+
+    issue = issue.drop('status', axis=1)
+    issue = issue.drop('resolution', axis=1)
+    issue = issue.drop('assignee', axis=1)
+    issue = issue.drop('assignee_username', axis=1)
+    issue = issue.drop('reporter', axis=1)
+    issue = issue.drop('reporter_username', axis=1)
+
+    issue['time'] = issue['close_dt'] - issue['open_dt']
+    issue = issue.drop('open_dt', axis=1)
+    issue = issue.drop('close_dt', axis=1)
+    issue['minute'] = np.round(issue['time'].dt.total_seconds() / 60, 0)
+    issue = issue.drop('time', axis=1)
+
+    component = pd.read_csv('data/' + dataset + '/issue_component.csv', nrows=None, parse_dates=True)
+    issue_component = pd.merge(issue, component, on='issue_id', how='left')
+
+    print('Export...', end='')
+    issue_component.to_csv(dataset + '_issue.csv', index=None)
     print(' OK')
 
 
 def main(dataset):
-    merge(dataset)
+    # merge(dataset)
+    issue_forecast_file(dataset)
 
 
 if __name__ == "__main__":
