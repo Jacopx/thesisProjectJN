@@ -6,7 +6,7 @@ import sys
 
 # Environment commands
 nltk.download('punkt')
-max_features = 50
+max_features = 100
 
 
 def merge(dataset):
@@ -44,8 +44,25 @@ def merge(dataset):
     print(' OK')
 
 
-def issue_forecast_file(dataset):
+def issue_duration_forecast_file(dataset):
     issue = pd.read_csv('data/' + dataset + '/issue.csv', nrows=None, parse_dates=True)
+
+    print('Starting shape:\t{}'.format(issue.shape))
+
+    # print(issue['resolution'].unique())
+
+    issue = issue[issue['resolution'] != 'Duplicate']
+    issue = issue[issue['resolution'] != 'Not A Problem']
+    issue = issue[issue['resolution'] != 'Cannot Reproduce']
+    issue = issue[issue['resolution'] != 'Pending Closed']
+    issue = issue[issue['resolution'] != 'Auto Closed']
+    issue = issue[issue['resolution'] != "Won't Fix"]
+    issue = issue[issue['resolution'] != 'Invalid']
+    issue = issue[issue['resolution'] != 'Cannot Reproduce']
+    issue = issue[issue['resolution'] != 'Later']
+    issue = issue[issue['resolution'] != 'Feedback Received']
+    # issue = issue[(issue['resolution'] == 'Fixed') | (issue['resolution'] == 'Done')
+    #               | (issue['resolution'] == 'Resolved') | (issue['resolution'] == 'Workaround')]
 
     issue['open_dt'] = pd.to_datetime(issue['created_date_zoned'])
     issue = issue.drop('created_date', axis=1)
@@ -59,7 +76,6 @@ def issue_forecast_file(dataset):
     issue = issue.drop('resolved_date_zoned', axis=1)
 
     issue = issue.drop('status', axis=1)
-    issue = issue.drop('resolution', axis=1)
     issue = issue.drop('assignee', axis=1)
     issue = issue.drop('assignee_username', axis=1)
     issue = issue.drop('reporter', axis=1)
@@ -68,11 +84,23 @@ def issue_forecast_file(dataset):
     issue['time'] = issue['close_dt'] - issue['open_dt']
     issue = issue.drop('open_dt', axis=1)
     issue = issue.drop('close_dt', axis=1)
-    issue['minute'] = np.round(issue['time'].dt.total_seconds() / 60, 0)
+    issue['n'] = np.round(issue['time'].dt.total_seconds() / 60 / 60, 0)
     issue = issue.drop('time', axis=1)
+
+    issue = issue.dropna()
+    issue = remove_outliers(issue)
+
+    prior = ['Critical', 'Major', 'Blocker', 'Minor', 'Trivial']
+    type = ['Bug', 'Sub-task', 'Improvement', 'Test', 'Task', 'Wish', 'New Feature']
+
+    issue.priority.replace(prior, ['1', '2', '3', '4', '5'], inplace=True)
+    issue.type.replace(type, ['1', '2', '3', '4', '5', '6', '7'], inplace=True)
 
     component = pd.read_csv('data/' + dataset + '/issue_component.csv', nrows=None, parse_dates=True)
     issue_component = pd.merge(issue, component, on='issue_id', how='left')
+
+    convert(issue_component, 'component')
+    convert(issue_component, 'resolution')
 
     print('Starting recognition...', end='')
     vectorized = word_recognition(issue_component)
@@ -80,21 +108,90 @@ def issue_forecast_file(dataset):
     issue_final = pd.concat([issue_component, vectorized], axis=1)
     print(' OK')
 
+    issue_final = issue_final.drop('issue_id', axis=1)
+
+    print('Ending shape:\t{}'.format(issue_final.shape))
+
     print('Export...', end='')
-    issue_final.to_csv(dataset + '_issue.csv', index=None)
+    issue_final.to_csv(dataset + '_duration.csv', index=None)
     print(' OK')
 
 
-def word_recognition(issue):
-    vect = CountVectorizer(analyzer="word", tokenizer=None, preprocessor=None, stop_words='english', max_features=max_features)
-    X = vect.fit_transform(issue.summary)
-    token_df = pd.DataFrame(X.todense(), columns=vect.get_feature_names())
-    return token_df
+def issue_count_forecast_file(dataset):
+    issue = pd.read_csv('data/' + dataset + '/issue.csv', nrows=None, parse_dates=True)
+
+    print('Starting shape:\t{}'.format(issue.shape))
+
+    issue['open_dt'] = pd.to_datetime(issue['created_date_zoned'])
+    issue['date'] = issue['open_dt'].dt.date
+    issue['h'] = issue['open_dt'].dt.hour
+    issue['m'] = issue['open_dt'].dt.minute
+
+    issue = issue.drop('created_date', axis=1)
+    issue = issue.drop('created_date_zoned', axis=1)
+    issue = issue.drop('updated_date', axis=1)
+    issue = issue.drop('updated_date_zoned', axis=1)
+    issue = issue.drop('resolved_date', axis=1)
+    issue = issue.drop('resolved_date_zoned', axis=1)
+    issue = issue.drop('open_dt', axis=1)
+    issue = issue.drop('status', axis=1)
+    issue = issue.drop('assignee', axis=1)
+    issue = issue.drop('assignee_username', axis=1)
+    issue = issue.drop('reporter', axis=1)
+    issue = issue.drop('reporter_username', axis=1)
+    issue = issue.drop('issue_id', axis=1)
+    issue = issue.drop('summary', axis=1)
+    issue = issue.drop('type', axis=1)
+    issue = issue.drop('priority', axis=1)
+    issue = issue.drop('resolution', axis=1)
+    issue['n'] = 0
+
+    # TODO: Get correct value of date
+    issue_final = issue.groupby(by=['date', 'h', 'm'], as_index=True).count()
+    issue_final = issue_final.reset_index()
+    issue_final['month'] = issue_final['date'].dt.month
+    issue_final['year'] = issue_final['date'].dt.year
+    issue_final['day'] = issue_final['date'].dt.day
+    issue_final['wday'] = issue_final['date'].dt.weekday()
+    print(issue_final.head(20))
+
+    print('Ending shape:\t{}'.format(issue_final.shape))
+    print('Export...', end='')
+    issue_final = issue_final.reset_index()
+    issue_final.to_csv(dataset + '_count.csv', index=None)
+    print(' OK')
+
+
+def word_recognition(df):
+    vect = CountVectorizer(analyzer="word", tokenizer=None, preprocessor=None, token_pattern=r'[a-zA-Z][a-zA-Z][a-zA-Z]+', stop_words='english', max_features=max_features)
+    X = vect.fit_transform(df.summary)
+    return pd.DataFrame(X.todense(), columns=vect.get_feature_names())
+
+
+def convert(df, col):
+    dict_dest = {}
+    temp_dict = dict(df[col])
+
+    i = 0
+    for t in temp_dict.values():
+        if t not in dict_dest.keys():
+            dict_dest[t] = i
+            i = i + 1
+
+    df[col].replace(dict_dest, inplace=True)
+
+
+def remove_outliers(df):
+    # Remove outliers. Outliers defined as values greater than 99.5th percentile
+    maxVal = np.percentile(df['n'], 90)
+    df = df[df['n'] <= maxVal]
+    return df
 
 
 def main(dataset):
     # merge(dataset)
-    issue_forecast_file(dataset)
+    # issue_duration_forecast_file(dataset)
+    issue_count_forecast_file(dataset)
 
 
 if __name__ == "__main__":
