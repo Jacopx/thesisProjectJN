@@ -1,6 +1,12 @@
-import sys
-import numpy as np
+from sklearn.feature_extraction.text import CountVectorizer
 import pandas as pd
+import numpy as np
+import nltk
+import sys
+
+# Environment commands
+nltk.download('punkt')
+max_features = 50
 
 
 def merge(dataset):
@@ -68,9 +74,22 @@ def issue_forecast_file(dataset):
     component = pd.read_csv('data/' + dataset + '/issue_component.csv', nrows=None, parse_dates=True)
     issue_component = pd.merge(issue, component, on='issue_id', how='left')
 
-    print('Export...', end='')
-    issue_component.to_csv(dataset + '_issue.csv', index=None)
+    print('Starting recognition...', end='')
+    vectorized = word_recognition(issue_component)
+    issue = issue.drop('summary', axis=1)
+    issue_final = pd.concat([issue, vectorized], axis=1)
     print(' OK')
+
+    print('Export...', end='')
+    issue_final.to_csv(dataset + '_issue.csv', index=None)
+    print(' OK')
+
+
+def word_recognition(issue):
+    vect = CountVectorizer(analyzer="word", tokenizer=None, preprocessor=None, stop_words='english', max_features=max_features)
+    X = vect.fit_transform(issue.summary)
+    token_df = pd.DataFrame(X.todense(), columns=vect.get_feature_names())
+    return token_df
 
 
 def main(dataset):
