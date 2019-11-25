@@ -32,8 +32,8 @@ def main(dataset):
     elif dataset in 'SFFD':
         forecast.random_forest(dbc, 'data/satur')
     elif dataset in 'ISSUE':
-        forecast.random_forest(dbc, 'data/hadoop_issue')
-        # forecast.random_forest(dbc, 'data/hive_issue')
+        forecast.random_forest(dbc, 'data/hadoop_duration')
+        forecast.random_forest(dbc, 'data/hive_duration')
 
 
 if __name__ == "__main__":

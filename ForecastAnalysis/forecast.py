@@ -62,15 +62,15 @@ def random_forest(dbc, file):
 
     print('OK\n\n')
 
-    # # Get numerical feature importances
-    # importances = list(model.feature_importances_)  # List of tuples with variable and importance
-    # feature_importances = [(feature, round(importance, 4)) for feature, importance in
-    #                        zip(feature_list, importances)]
-    # feature_importances = sorted(feature_importances, key=lambda x: x[1],
-    #                              reverse=True)
-    # [print('Variable: {:20} Importance: {}'.format(*pair)) for pair in feature_importances]
-    #
-    # print()
+    # Get numerical feature importances
+    importances = list(model.feature_importances_)  # List of tuples with variable and importance
+    feature_importances = [(feature, round(importance, 4)) for feature, importance in
+                           zip(feature_list, importances)]
+    feature_importances = sorted(feature_importances, key=lambda x: x[1],
+                                 reverse=True)
+    [print('Variable: {:20} Importance: {}'.format(*pair)) for pair in feature_importances]
+
+    print()
 
     # The baseline predictions are the historical averages
     baseline_errors = abs(mean - test_labels)

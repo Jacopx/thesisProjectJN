@@ -1,11 +1,10 @@
 from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction import text
 import pandas as pd
 import numpy as np
-import nltk
 import sys
 
 # Environment commands
-nltk.download('punkt')
 max_features = 100
 
 
@@ -47,26 +46,32 @@ def merge(dataset):
 def issue_duration_forecast_file(dataset):
     issue = pd.read_csv('data/' + dataset + '/issue.csv', nrows=None, parse_dates=True)
 
-    print('Starting shape:\t{}'.format(issue.shape))
+    starting_shape = issue.shape
+    print('Starting shape:\t{}'.format(starting_shape))
 
+    # print(issue['priority'].unique())
     # print(issue['resolution'].unique())
 
-    issue = issue[issue['resolution'] != 'Duplicate']
-    issue = issue[issue['resolution'] != 'Not A Problem']
-    issue = issue[issue['resolution'] != 'Cannot Reproduce']
-    issue = issue[issue['resolution'] != 'Pending Closed']
-    issue = issue[issue['resolution'] != 'Auto Closed']
-    issue = issue[issue['resolution'] != "Won't Fix"]
-    issue = issue[issue['resolution'] != 'Invalid']
-    issue = issue[issue['resolution'] != 'Cannot Reproduce']
-    issue = issue[issue['resolution'] != 'Later']
-    issue = issue[issue['resolution'] != 'Feedback Received']
+    # issue = issue[issue['resolution'] != 'Duplicate']
+    # issue = issue[issue['resolution'] != 'Not A Problem']
+    # issue = issue[issue['resolution'] != 'Cannot Reproduce']
+    # issue = issue[issue['resolution'] != 'Pending Closed']
+    # issue = issue[issue['resolution'] != 'Auto Closed']
+    # issue = issue[issue['resolution'] != "Won't Fix"]
+    # issue = issue[issue['resolution'] != 'Invalid']
+    # issue = issue[issue['resolution'] != 'Cannot Reproduce']
+    # issue = issue[issue['resolution'] != 'Later']
+    # issue = issue[issue['resolution'] != 'Feedback Received']
     # issue = issue[(issue['resolution'] == 'Fixed') | (issue['resolution'] == 'Done')
     #               | (issue['resolution'] == 'Resolved') | (issue['resolution'] == 'Workaround')]
 
     issue['open_dt'] = pd.to_datetime(issue['created_date_zoned'])
     issue = issue.drop('created_date', axis=1)
     issue = issue.drop('created_date_zoned', axis=1)
+
+    # issue['wd'] = issue['open_dt'].dt.weekday
+    # issue['h'] = issue['open_dt'].dt.hour
+    # issue['m'] = issue['open_dt'].dt.minute
 
     issue = issue.drop('updated_date', axis=1)
     issue = issue.drop('updated_date_zoned', axis=1)
@@ -93,8 +98,10 @@ def issue_duration_forecast_file(dataset):
     prior = ['Critical', 'Major', 'Blocker', 'Minor', 'Trivial']
     type = ['Bug', 'Sub-task', 'Improvement', 'Test', 'Task', 'Wish', 'New Feature']
 
-    issue.priority.replace(prior, ['1', '2', '3', '4', '5'], inplace=True)
-    issue.type.replace(type, ['1', '2', '3', '4', '5', '6', '7'], inplace=True)
+    issue.priority.replace(prior, [100, 80, 65, 20, 50], inplace=True)
+    issue.type.replace(type, [10, 4, 5, 1, 7, 2, 4], inplace=True)
+
+    issue['severity'] = issue.priority * issue.type
 
     component = pd.read_csv('data/' + dataset + '/issue_component.csv', nrows=None, parse_dates=True)
     issue_component = pd.merge(issue, component, on='issue_id', how='left')
@@ -103,14 +110,17 @@ def issue_duration_forecast_file(dataset):
     convert(issue_component, 'resolution')
 
     print('Starting recognition...', end='')
-    vectorized = word_recognition(issue_component)
+    vectorized = word_recognition(issue_component['summary'])
     issue_component = issue_component.drop('summary', axis=1)
+    issue_component = issue_component.drop('description', axis=1)
     issue_final = pd.concat([issue_component, vectorized], axis=1)
+    # issue_final = issue_component
     print(' OK')
 
     issue_final = issue_final.drop('issue_id', axis=1)
 
     print('Ending shape:\t{}'.format(issue_final.shape))
+    print('\nData removed:\t{}%\n'.format(round((starting_shape[0] - issue_final.shape[0]) * 100 / starting_shape[0], 1)))
 
     print('Export...', end='')
     issue_final.to_csv(dataset + '_duration.csv', index=None)
@@ -162,9 +172,16 @@ def issue_count_forecast_file(dataset):
     print(' OK')
 
 
-def word_recognition(df):
-    vect = CountVectorizer(analyzer="word", tokenizer=None, preprocessor=None, token_pattern=r'[a-zA-Z][a-zA-Z][a-zA-Z]+', stop_words='english', max_features=max_features)
-    X = vect.fit_transform(df.summary)
+def word_recognition(df_cols):
+    additional = frozenset(['type', 'description', 'priority', 'resolution', 'n', 'add', 'com', 'command', 'common', 'currently',
+                            'data', 'dir', 'directory', 'does', 'file', 'files', 'init', 'null', 'org', 'output', 'path', 'project',
+                            'set', 'src', 'start', 'state', 'support', 'use', 'used'])
+
+    stop_words = text.ENGLISH_STOP_WORDS.union(additional)
+
+    vect = CountVectorizer(lowercase=True, preprocessor=None, analyzer='word', token_pattern=r'[a-zA-Z][a-zA-Z][a-zA-Z]+', stop_words=frozenset(stop_words), max_features=max_features)
+    X = vect.fit_transform(df_cols)
+    # print(vect.get_feature_names())
     return pd.DataFrame(X.todense(), columns=vect.get_feature_names())
 
 
@@ -184,14 +201,18 @@ def convert(df, col):
 def remove_outliers(df):
     # Remove outliers. Outliers defined as values greater than 99.5th percentile
     maxVal = np.percentile(df['n'], 90)
-    df = df[df['n'] <= maxVal]
+    # 8760 h == 365 days
+    # 720 h == 30 days
+    # 168 h == 7 days
+    # 48 h == 2 days
+    df = df[df['n'] <= 48]
     return df
 
 
 def main(dataset):
     # merge(dataset)
-    # issue_duration_forecast_file(dataset)
-    issue_count_forecast_file(dataset)
+    issue_duration_forecast_file(dataset)
+    # issue_count_forecast_file(dataset)
 
 
 if __name__ == "__main__":
