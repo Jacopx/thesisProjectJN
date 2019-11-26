@@ -47,11 +47,15 @@ def issue_duration_forecast_file(dataset):
     issue = pd.read_csv('data/' + dataset + '/issue.csv', nrows=None, parse_dates=True)
 
     starting_shape = issue.shape
+    # print(issue.dtypes)
+    # print(issue.head(4))
+    # exit(0)
     print('Starting shape:\t{}'.format(starting_shape))
 
     # print(issue['priority'].unique())
     # print(issue['resolution'].unique())
 
+    ssue = issue[issue['type'] != 'Bug']
     # issue = issue[issue['resolution'] != 'Duplicate']
     # issue = issue[issue['resolution'] != 'Not A Problem']
     # issue = issue[issue['resolution'] != 'Cannot Reproduce']
@@ -69,8 +73,8 @@ def issue_duration_forecast_file(dataset):
     issue = issue.drop('created_date', axis=1)
     issue = issue.drop('created_date_zoned', axis=1)
 
-    # issue['wd'] = issue['open_dt'].dt.weekday
-    # issue['h'] = issue['open_dt'].dt.hour
+    issue['wd'] = issue['open_dt'].dt.weekday
+    issue['h'] = issue['open_dt'].dt.hour
     # issue['m'] = issue['open_dt'].dt.minute
 
     issue = issue.drop('updated_date', axis=1)
@@ -98,8 +102,8 @@ def issue_duration_forecast_file(dataset):
     prior = ['Critical', 'Major', 'Blocker', 'Minor', 'Trivial']
     type = ['Bug', 'Sub-task', 'Improvement', 'Test', 'Task', 'Wish', 'New Feature']
 
-    issue.priority.replace(prior, [100, 80, 65, 20, 50], inplace=True)
-    issue.type.replace(type, [10, 4, 5, 1, 7, 2, 4], inplace=True)
+    issue.priority.replace(prior, [1, 2, 3, 4, 5], inplace=True)
+    issue.type.replace(type, [1, 2, 3, 4, 5, 6, 7], inplace=True)
 
     issue['severity'] = issue.priority * issue.type
 
@@ -107,10 +111,12 @@ def issue_duration_forecast_file(dataset):
     issue_component = pd.merge(issue, component, on='issue_id', how='left')
 
     convert(issue_component, 'component')
-    convert(issue_component, 'resolution')
+    # convert(issue_component, 'resolution')
+    issue_component = issue_component.drop('resolution', axis=1)
 
     print('Starting recognition...', end='')
     vectorized = word_recognition(issue_component['summary'])
+    # vectorized = word_recognition(issue_component['summary'] + ' ' + issue_component['description'])
     issue_component = issue_component.drop('summary', axis=1)
     issue_component = issue_component.drop('description', axis=1)
     issue_final = pd.concat([issue_component, vectorized], axis=1)
@@ -205,7 +211,7 @@ def remove_outliers(df):
     # 720 h == 30 days
     # 168 h == 7 days
     # 48 h == 2 days
-    df = df[df['n'] <= 48]
+    df = df[df['n'] <= 8760]
     return df
 
 
