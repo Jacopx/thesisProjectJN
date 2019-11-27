@@ -6,7 +6,7 @@ import sys
 import sqlite3
 
 # Environment commands
-max_features = 100
+max_features = 20
 
 
 def open_sqlite(dataset, table):
@@ -59,6 +59,7 @@ def issue_duration_forecast_file(dataset):
     # issue = issue[(issue['resolution'] == 'Fixed')]
 
     issue['open_dt'] = pd.to_datetime(issue['created_date_zoned'])
+    # issue = issue.sort_values(by='created_date_zoned')
     issue = issue.drop('created_date', axis=1)
     issue = issue.drop('created_date_zoned', axis=1)
 
@@ -84,18 +85,33 @@ def issue_duration_forecast_file(dataset):
     issue = issue.drop('open_dt', axis=1)
     issue = issue.drop('close_dt', axis=1)
     issue['n'] = np.round(issue['time'].dt.total_seconds() / 60 / 60, 0)
-    issue = issue.drop('time', axis=1)
-
     issue = issue.dropna()
     issue = remove_outliers(issue)
+    issue['mov_avg'] = issue['n'].expanding().mean()
+    issue['avg'] = issue['n'].mean()
+    issue = issue.drop('time', axis=1)
+
+    meansT = issue.groupby(by=['type'], as_index=True)['n'].mean()
+    meansT = meansT.reset_index()
+
+    issue = pd.merge(issue, meansT, on='type')
+    issue = issue.rename(columns={'n_y': 'type_avg', 'n_x': 'n'})
+
+    # meansP = issue.groupby(by=['priority'], as_index=True)['n'].mean()
+    # meansP = meansP.reset_index()
+    #
+    # issue = pd.merge(issue, meansP, on='priority')
+    # issue = issue.rename(columns={'n_y': 'prior_avg', 'n_x': 'n'})
 
     prior = ['Critical', 'Major', 'Blocker', 'Minor', 'Trivial']
     type = ['Bug', 'Sub-task', 'Improvement', 'Test', 'Task', 'Wish', 'New Feature']
 
+    # issue.priority.replace(prior, [100, 80, 70, 30, 50], inplace=True)
+    # issue.type.replace(type, [80, 20, 30, 20, 60, 20, 20], inplace=True)
     issue.priority.replace(prior, [1, 2, 3, 4, 5], inplace=True)
     issue.type.replace(type, [1, 2, 3, 4, 5, 6, 7], inplace=True)
 
-    issue['severity'] = issue.priority * issue.type
+    issue['typology'] = issue.priority * issue.type
 
     component = open_sqlite(dataset, 'issue_component')
     issue_component = pd.merge(issue, component, on='issue_id', how='left')
@@ -126,7 +142,6 @@ def issue_count_forecast_file(dataset):
 
     print('Starting shape:\t{}'.format(issue.shape))
 
-
     issue['open_dt'] = pd.to_datetime(issue['created_date'])
     issue['date'] = issue['open_dt'].dt.date
     # issue['h'] = issue['open_dt'].dt.hour
@@ -146,6 +161,7 @@ def issue_count_forecast_file(dataset):
     issue = issue.drop('reporter_username', axis=1)
     issue = issue.drop('issue_id', axis=1)
     issue = issue.drop('summary', axis=1)
+    issue = issue.drop('description', axis=1)
     issue = issue.drop('type', axis=1)
     # convert(issue, 'type')
     issue = issue.drop('priority', axis=1)
@@ -169,6 +185,15 @@ def issue_count_forecast_file(dataset):
     issue_final['wday'] = issue_final['date'].dt.weekday
     issue_final = issue_final.drop('date', axis=1)
 
+    issue_final['exp_avg'] = issue_final['n'].expanding().mean()
+    issue_final['mov_avg2'] = issue_final['n'].rolling(2).mean()
+    issue_final['mov_avg2'] = issue_final['mov_avg2'].shift(1, fill_value=-1)
+    issue_final = issue_final.tail(-2)
+    issue_final['mov_avg7'] = issue_final['n'].rolling(7).mean()
+    issue_final['mov_avg7'] = issue_final['mov_avg7'].shift(6, fill_value=-1)
+    issue_final = issue_final.tail(-7)
+    issue_final['avg'] = issue_final['n'].mean()
+
     issue_final['1before'] = issue_final['n'].shift(1, fill_value=-1)
     issue_final['2before'] = issue_final['n'].shift(2, fill_value=-1)
     issue_final['5before'] = issue_final['n'].shift(5, fill_value=-1)
@@ -185,7 +210,11 @@ def issue_count_forecast_file(dataset):
 
 
 def word_recognition(df_cols):
-    additional = frozenset([])
+    additional = frozenset(['add', 'allow', 'application', 'block', 'change', 'check', 'command', 'common', 'configuration', 'create', 'data',
+                            'default', 'documentation', 'does', 'doesn', 'erasure', 'fail', 'failed', 'failing', 'fails', 'failure', 'findbugs', 'fix',
+                            'improve', 'incorrect', 'instead', 'java', 'log', 'logs', 'message', 'new', 'non', 'read', 'remove', 'running', 'set',
+                            'test', 'tests', 'use', 'using', 'work', 'wrong', 'client', 'error', 'client', 'container', 'file', 'files', 'update',
+                            'make', 'support', 'branch', 'code', 'exception', 'api', 'build', 'path'])
 
     stop_words = text.ENGLISH_STOP_WORDS.union(additional)
 
@@ -210,8 +239,8 @@ def convert(df, col):
 
 def remove_outliers(df):
     # Remove outliers. Outliers defined as values greater than 99.5th percentile
-    maxVal = np.percentile(df['n'], 75)
-    minVal = np.percentile(df['n'], 25)
+    maxVal = np.percentile(df['n'], 60)
+    minVal = np.percentile(df['n'], 5)
     # 8760 h == 365 days
     # 720 h == 30 days
     # 168 h == 7 days
@@ -223,7 +252,7 @@ def remove_outliers(df):
 
 def main(dataset):
     # merge(dataset)
-    issue_duration_forecast_file(dataset)
+    # issue_duration_forecast_file(dataset)
     issue_count_forecast_file(dataset)
 
 
