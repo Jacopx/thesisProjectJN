@@ -47,27 +47,9 @@ def issue_duration_forecast_file(dataset):
     issue = pd.read_csv('data/' + dataset + '/issue.csv', nrows=None, parse_dates=True)
 
     starting_shape = issue.shape
-    # print(issue.dtypes)
-    # print(issue.head(4))
-    # exit(0)
     print('Starting shape:\t{}'.format(starting_shape))
 
-    # print(issue['priority'].unique())
-    # print(issue['resolution'].unique())
-
-    ssue = issue[issue['type'] != 'Bug']
-    # issue = issue[issue['resolution'] != 'Duplicate']
-    # issue = issue[issue['resolution'] != 'Not A Problem']
-    # issue = issue[issue['resolution'] != 'Cannot Reproduce']
-    # issue = issue[issue['resolution'] != 'Pending Closed']
-    # issue = issue[issue['resolution'] != 'Auto Closed']
-    # issue = issue[issue['resolution'] != "Won't Fix"]
-    # issue = issue[issue['resolution'] != 'Invalid']
-    # issue = issue[issue['resolution'] != 'Cannot Reproduce']
-    # issue = issue[issue['resolution'] != 'Later']
-    # issue = issue[issue['resolution'] != 'Feedback Received']
-    # issue = issue[(issue['resolution'] == 'Fixed') | (issue['resolution'] == 'Done')
-    #               | (issue['resolution'] == 'Resolved') | (issue['resolution'] == 'Workaround')]
+    # issue = issue[(issue['resolution'] == 'Fixed')]
 
     issue['open_dt'] = pd.to_datetime(issue['created_date_zoned'])
     issue = issue.drop('created_date', axis=1)
@@ -89,6 +71,7 @@ def issue_duration_forecast_file(dataset):
     issue = issue.drop('assignee_username', axis=1)
     issue = issue.drop('reporter', axis=1)
     issue = issue.drop('reporter_username', axis=1)
+    issue = issue.drop('resolution', axis=1)
 
     issue['time'] = issue['close_dt'] - issue['open_dt']
     issue = issue.drop('open_dt', axis=1)
@@ -102,8 +85,8 @@ def issue_duration_forecast_file(dataset):
     prior = ['Critical', 'Major', 'Blocker', 'Minor', 'Trivial']
     type = ['Bug', 'Sub-task', 'Improvement', 'Test', 'Task', 'Wish', 'New Feature']
 
-    issue.priority.replace(prior, [1, 2, 3, 4, 5], inplace=True)
-    issue.type.replace(type, [1, 2, 3, 4, 5, 6, 7], inplace=True)
+    issue.priority.replace(prior, [1,2,3,4,5], inplace=True)
+    issue.type.replace(type, [1,2,3,4,5,6,7], inplace=True)
 
     issue['severity'] = issue.priority * issue.type
 
@@ -111,16 +94,14 @@ def issue_duration_forecast_file(dataset):
     issue_component = pd.merge(issue, component, on='issue_id', how='left')
 
     convert(issue_component, 'component')
-    # convert(issue_component, 'resolution')
-    issue_component = issue_component.drop('resolution', axis=1)
 
     print('Starting recognition...', end='')
-    vectorized = word_recognition(issue_component['summary'])
+    # vectorized = word_recognition(issue_component['summary'])
     # vectorized = word_recognition(issue_component['summary'] + ' ' + issue_component['description'])
     issue_component = issue_component.drop('summary', axis=1)
     issue_component = issue_component.drop('description', axis=1)
-    issue_final = pd.concat([issue_component, vectorized], axis=1)
-    # issue_final = issue_component
+    # issue_final = pd.concat([issue_component, vectorized], axis=1)
+    issue_final = issue_component
     print(' OK')
 
     issue_final = issue_final.drop('issue_id', axis=1)
@@ -140,8 +121,8 @@ def issue_count_forecast_file(dataset):
 
     issue['open_dt'] = pd.to_datetime(issue['created_date_zoned'])
     issue['date'] = issue['open_dt'].dt.date
-    issue['h'] = issue['open_dt'].dt.hour
-    issue['m'] = issue['open_dt'].dt.minute
+    # issue['h'] = issue['open_dt'].dt.hour
+    # issue['m'] = issue['open_dt'].dt.minute
 
     issue = issue.drop('created_date', axis=1)
     issue = issue.drop('created_date_zoned', axis=1)
@@ -157,19 +138,34 @@ def issue_count_forecast_file(dataset):
     issue = issue.drop('reporter_username', axis=1)
     issue = issue.drop('issue_id', axis=1)
     issue = issue.drop('summary', axis=1)
-    issue = issue.drop('type', axis=1)
+    # issue = issue.drop('type', axis=1)
+    convert(issue, 'type')
     issue = issue.drop('priority', axis=1)
+    # convert(issue, 'priority')
     issue = issue.drop('resolution', axis=1)
+    issue = issue.drop('description', axis=1)
     issue['n'] = 0
 
-    # TODO: Get correct value of date
-    issue_final = issue.groupby(by=['date', 'h', 'm'], as_index=True).count()
+    # issue_final = issue.groupby(by=['date', 'h', 'm'], as_index=True).count()
+    # issue_final = issue.groupby(by=['date', 'type'], as_index=True).count()
+    issue_final = issue.groupby(by=['date'], as_index=True).count()
+    # issue_final = issue_final.reset_index()
+    # issue_final = issue_final.set_index(['date', 'type'])['n'].unstack()
+    issue_final = issue_final.fillna(0)
     issue_final = issue_final.reset_index()
+
+    # issue_final['n'] = issue_final[0] + issue_final[1] + issue_final[2] + issue_final[3] + issue_final[4] + issue_final[5] + issue_final[6]
+    # issue_final = issue.drop('type', axis=1)
+
+    issue_final['date'] = pd.to_datetime(issue_final['date'])
     issue_final['month'] = issue_final['date'].dt.month
-    issue_final['year'] = issue_final['date'].dt.year
-    issue_final['day'] = issue_final['date'].dt.day
-    issue_final['wday'] = issue_final['date'].dt.weekday()
-    print(issue_final.head(20))
+    # issue_final['year'] = issue_final['date'].dt.year
+    # issue_final['day'] = issue_final['date'].dt.day
+    issue_final['wday'] = issue_final['date'].dt.weekday
+    # issue_final = issue_final.drop('type', axis=1)
+    issue_final = issue_final.drop('date', axis=1)
+    # issue_final = issue_final.drop('h', axis=1)
+    # issue_final = issue_final.drop('m', axis=1)
 
     print('Ending shape:\t{}'.format(issue_final.shape))
     print('Export...', end='')
@@ -179,9 +175,7 @@ def issue_count_forecast_file(dataset):
 
 
 def word_recognition(df_cols):
-    additional = frozenset(['type', 'description', 'priority', 'resolution', 'n', 'add', 'com', 'command', 'common', 'currently',
-                            'data', 'dir', 'directory', 'does', 'file', 'files', 'init', 'null', 'org', 'output', 'path', 'project',
-                            'set', 'src', 'start', 'state', 'support', 'use', 'used'])
+    additional = frozenset([])
 
     stop_words = text.ENGLISH_STOP_WORDS.union(additional)
 
@@ -206,12 +200,14 @@ def convert(df, col):
 
 def remove_outliers(df):
     # Remove outliers. Outliers defined as values greater than 99.5th percentile
-    maxVal = np.percentile(df['n'], 90)
+    maxVal = np.percentile(df['n'], 75)
+    minVal = np.percentile(df['n'], 25)
     # 8760 h == 365 days
     # 720 h == 30 days
     # 168 h == 7 days
     # 48 h == 2 days
-    df = df[df['n'] <= 8760]
+    df = df[df['n'] <= maxVal]
+    df = df[df['n'] >= minVal]
     return df
 
 
