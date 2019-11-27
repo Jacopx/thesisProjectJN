@@ -21,53 +21,42 @@ random = 12
 n_jobs = 6
 
 def duration_model(file):
-    features_basic = pd.read_csv(file + '.csv')
+    features = pd.read_csv(file + '.csv')
 
-    infos(file, features_basic)
+    infos(file, features)
 
-    priorities = [1, 2, 3, 4, 5]
-    types = [1, 2, 3, 4, 5, 6, 7]
+    features = features.dropna()
 
-    for prior in priorities:
-        features_main = features_basic.copy()
-        for type in types:
-            features = features_main.copy()
-            features = features[features_basic['priority'] == prior]
-            features = features[features_basic['type'] == type]
-            features = features.dropna()
+    features['n'] = features['n'].astype('int32')
 
-            if features.shape[0] < 100:
-                continue
-            print('Priority\t{}\nType\t{}\n'.format(prior, type))
+    labels = np.array(features['n'])
+    mean = np.mean(labels)
+    features = features.drop('n', axis=1)  # Saving feature names for later use
+    feature_list = list(features.columns)  # Convert to numpy array
+    features = np.array(features)
 
-            features['n'] = features['n'].astype('int32')
+    train_features, test_features, train_labels, test_labels = \
+        train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=True)
 
-            labels = np.array(features['n'])
-            mean = np.mean(labels)
-            features = features.drop('n', axis=1)  # Saving feature names for later use
-            feature_list = list(features.columns)  # Convert to numpy array
-            features = np.array(features)
+    ######################### MODEL DEFINITIONS ############################
 
-            train_features, test_features, train_labels, test_labels = \
-                train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=False)
+    # model = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=1, n_jobs=n_jobs)
+    model = GradientBoostingRegressor(n_estimators=predictor, random_state=random, verbose=0)
+    # model = MLPRegressor(verbose=1)
+    model.fit(train_features, train_labels)
 
-            ######################### MODEL DEFINITIONS ############################
+    ######################### MODEL DEFINITIONS ############################
+    predictions = model.predict(test_features)
 
-            # model = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=1, n_jobs=n_jobs)
-            model = GradientBoostingRegressor(n_estimators=predictor, random_state=random, verbose=0)
-            # model = MLPRegressor(verbose=1)
-            model.fit(train_features, train_labels)
-
-            ######################### MODEL DEFINITIONS ############################
-            predictions = model.predict(test_features)
-
-            importances(model, feature_list)
-            errors(test_labels, predictions, mean)
+    plot(file, test_labels, predictions)
+    importances(model, feature_list)
+    errors(test_labels, predictions, mean)
 
 
 def count_model(file):
 
     features_basic = pd.read_csv(file + '.csv')
+    features_basic = features_basic.drop('index', axis=1)  # Saving feature names for later use
 
     infos(file, features_basic)
 
@@ -96,6 +85,7 @@ def count_model(file):
 
     predictions = model.predict(test_features)
 
+    plot(file, test_labels, predictions)
     importances(model, feature_list)
     errors(test_labels, predictions, mean)
 
@@ -108,6 +98,24 @@ def infos(file, features_basic):
     print('n_jobs = ', n_jobs)
     print('The shape of our features is:', features_basic.shape)
 
+
+def plot(file, test_labels, predictions):
+    n=[]
+    for i in range(0, len(predictions)):
+        n.append(i)
+
+    plt.figure(figsize=(100, 25))
+    sns.lineplot(n, test_labels, label='real')
+    sns.lineplot(n, predictions, label='predict')
+    # sns.lineplot(r.date, mean, label='mean', ci=None)
+    plt.xticks(rotation='60')
+    plt.legend()  # Graph labels
+    plt.xlabel('Issue')
+    plt.ylabel('n')
+    plt.minorticks_on()
+    plt.title(file + ' predictions')
+    plt.savefig(file + '_predictions.png', dpi=240)
+    plt.show()
 
 def importances(model, feature_list):
     print('#######################################')
