@@ -16,7 +16,7 @@ import seaborn as sns
 warnings.filterwarnings("ignore")
 
 test_size = 0.25
-predictor = 400
+predictor = 200
 random = 12
 n_jobs = 6
 
@@ -54,7 +54,6 @@ def duration_model(file):
 
 
 def count_model(file):
-
     features_basic = pd.read_csv(file + '.csv')
     features_basic = features_basic.drop('index', axis=1)  # Saving feature names for later use
 
@@ -76,7 +75,7 @@ def count_model(file):
 
     ######################### MODEL DEFINITIONS ############################
 
-    model = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=0, n_jobs=n_jobs)
+    model = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=1, n_jobs=n_jobs)
     # model = GradientBoostingRegressor(n_estimators=predictor, random_state=random, verbose=0)
     # model = MLPRegressor(verbose=1)
     model.fit(train_features, train_labels)
@@ -142,7 +141,8 @@ def errors(test_labels, predictions, mean):
     print('Mean Absolute Error:', round(np.mean(errors), 2))
 
     rel = round(np.mean(errors), 2) / np.mean(test_labels)
-    print('Relative:', round(rel * 100, 2), '%.')
+    rela = abs(test_labels - predictions) / test_labels
+    print('Relative:', np.round(np.mean(rela * 100), 2), '%.')
 
     # Calculate mean absolute percentage error (MAPE)
     mape = 100 * (errors / test_labels)

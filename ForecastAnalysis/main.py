@@ -28,11 +28,11 @@ def main(dataset):
     #     df = saturation(dbc, dataset, 'act', 'start', None, 1, 0, 'SFFD')
 
     if dataset in 'SFBS':
-        forecast.random_forest(dbc, 'data/station70')
+        forecast.count_model('data/station70_forecast')
     elif dataset in 'SFFD':
-        forecast.random_forest(dbc, 'data/satur')
+        forecast.count_model('data/satur')
     elif dataset in 'ISSUE':
-        # forecast.duration_model('data/hadoop_duration')
+        forecast.duration_model('data/hadoop_duration')
         forecast.count_model('data/hadoop_count')
         # forecast.duration_model('data/hive_duration')
         # forecast.count_model('data/hive_count')
