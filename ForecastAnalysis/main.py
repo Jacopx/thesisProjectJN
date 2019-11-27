@@ -29,8 +29,17 @@ def main(dataset):
 
     if dataset in 'SFBS':
         forecast.random_forest(dbc, 'data/station70')
-    else:
+    elif dataset in 'SFFD':
         forecast.random_forest(dbc, 'data/satur')
+    elif dataset in 'ISSUE':
+        forecast.duration_model('data/hadoop_duration')
+        forecast.count_model('data/hadoop_count')
+        # forecast.duration_model('data/hive_duration')
+        # forecast.count_model('data/hive_count')
+        # forecast.duration_model('data/jbpm_duration')
+        # forecast.count_model('data/jbpm_count')
+        # forecast.duration_model('data/maven_duration')
+        # forecast.count_model('data/maven_count')
 
 
 if __name__ == "__main__":

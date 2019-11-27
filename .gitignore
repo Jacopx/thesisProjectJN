@@ -1,3 +1,4 @@
+cp.sh
 data/*.js
 .DS_Store
 __pycache__/
@@ -6,20 +7,26 @@ venv/
 *.png
 *.html
 .idea
+
 DataAnalysis_SFBS/EiS_Thesis.json
 DataAnalysis_SFBS/venv
 DataAnalysis_SFBS/data/*.csv
 DataAnalysis_SFBS/play.csv
+
 DataAnalysis_VVF/data/*.csv
+
 DataAnalysis_SFFD/data/*.csv
 DataAnalysis_SFFD/data/*.bz2
+
 CommonDB/data_to_load/*
+
 ForecastAnalysis/data/*
 ForecastAnalysis/*.txt
 ForecastAnalysis/*.png
+ForecastAnalysis/log.log
 
-DataAnalysis_Issue/data/*.csv
-DataAnalysis_Issue/*.csv
+DataAnalysis_Issue/data/SQLITE3/*.sqlite3
+DataAnalysis_Issue/data/CSV/*.csv
 
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and WebStorm
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
