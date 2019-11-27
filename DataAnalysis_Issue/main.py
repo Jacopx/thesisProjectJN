@@ -185,13 +185,22 @@ def issue_count_forecast_file(dataset):
     issue_final['wday'] = issue_final['date'].dt.weekday
     issue_final = issue_final.drop('date', axis=1)
 
+    issue_final['exp_avg'] = issue_final['n'].expanding().mean()
+    issue_final['mov_avg2'] = issue_final['n'].rolling(2).mean()
+    issue_final['mov_avg2'] = issue_final['mov_avg2'].shift(1, fill_value=-1)
+    issue_final = issue_final.tail(-2)
+    issue_final['mov_avg7'] = issue_final['n'].rolling(7).mean()
+    issue_final['mov_avg7'] = issue_final['mov_avg7'].shift(6, fill_value=-1)
+    issue_final = issue_final.tail(-7)
+    issue_final['avg'] = issue_final['n'].mean()
+
     issue_final['1before'] = issue_final['n'].shift(1, fill_value=-1)
     issue_final['2before'] = issue_final['n'].shift(2, fill_value=-1)
     issue_final['5before'] = issue_final['n'].shift(5, fill_value=-1)
     issue_final['7before'] = issue_final['n'].shift(7, fill_value=-1)
     issue_final['14before'] = issue_final['n'].shift(14, fill_value=-1)
-    # issue_final['30before'] = issue_final['n'].shift(30, fill_value=-1)
-    issue_final = issue_final.tail(-14)
+    issue_final['30before'] = issue_final['n'].shift(30, fill_value=-1)
+    issue_final = issue_final.tail(-30)
 
     print('Ending shape:\t{}'.format(issue_final.shape))
     print('Export...', end='')
@@ -243,8 +252,8 @@ def remove_outliers(df):
 
 def main(dataset):
     # merge(dataset)
-    issue_duration_forecast_file(dataset)
-    # issue_count_forecast_file(dataset)
+    # issue_duration_forecast_file(dataset)
+    issue_count_forecast_file(dataset)
 
 
 if __name__ == "__main__":

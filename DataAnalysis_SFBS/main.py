@@ -199,9 +199,20 @@ def main():
 def status():
     status = pd.read_csv('data/station70.csv', nrows=None, parse_dates=True)
     status['time'] = pd.to_datetime(status['time'], format="%Y-%m-%d %H:%M:%S")
+    status = status.drop('docks_available', axis=1)
+    status = status.drop('station_id', axis=1)
+    status = status.rename(columns={'bikes_available': 'n'})
+    status['mon'] = status['time'].dt.month
+    status['d'] = status['time'].dt.day
+    status['wd'] = status['time'].dt.weekday
+    status['h'] = status['time'].dt.hour
+    status['m'] = status['time'].dt.minute
+    status = status.drop('time', axis=1)
+
+    status.to_csv('data/station70_forecast.csv', index=None)
     print('ok')
 
 
 if __name__ == "__main__":
-    main()
-    # status()
+    # main()
+    status()
