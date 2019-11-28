@@ -201,7 +201,28 @@ def status():
     status['time'] = pd.to_datetime(status['time'], format="%Y-%m-%d %H:%M:%S")
     status = status.drop('docks_available', axis=1)
     status = status.drop('station_id', axis=1)
-    status = status.rename(columns={'bikes_available': 'n'})
+    # status = status.rename(columns={'bikes_available': 'n'})
+    status['index'] = 0
+
+    status['mov_avg2'] = status['bikes_available'].rolling(2).mean()
+    status['mov_avg2'] = status['mov_avg2'].shift(1, fill_value=-1)
+    status = status.tail(-1)
+
+    # status['mov_avg3'] = status['bikes_available'].rolling(3).mean()
+    # status['mov_avg3'] = status['mov_avg3'].shift(1, fill_value=-1)
+    # status = status.tail(-2)
+
+    status['mov_avg5'] = status['bikes_available'].rolling(5).mean()
+    status['mov_avg5'] = status['mov_avg5'].shift(1, fill_value=-1)
+    status = status.tail(-4)
+
+    status['mov_avg15'] = status['bikes_available'].rolling(15).mean()
+    status['mov_avg15'] = status['mov_avg15'].shift(1, fill_value=-1)
+    status = status.tail(-14)
+
+    status['n'] = status['bikes_available'].shift(-15, fill_value=-1)
+    status = status.head(-15)
+
     status['mon'] = status['time'].dt.month
     status['d'] = status['time'].dt.day
     status['wd'] = status['time'].dt.weekday
