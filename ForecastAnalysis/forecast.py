@@ -48,7 +48,7 @@ def duration_model(file):
     ######################### MODEL DEFINITIONS ############################
     predictions = model.predict(test_features)
 
-    plot(file, test_labels, predictions)
+    # plot(file, test_labels, predictions)
     importances(model, feature_list)
     errors(test_labels, predictions, mean)
 
@@ -84,7 +84,7 @@ def count_model(file):
 
     predictions = model.predict(test_features)
 
-    plot(file, test_labels, predictions)
+    # plot(file, test_labels, predictions)
     importances(model, feature_list)
     errors(test_labels, predictions, mean)
 
@@ -96,7 +96,6 @@ def infos(file, features_basic):
     print('predictor = ', predictor)
     print('n_jobs = ', n_jobs)
     print('The shape of our features is:', features_basic.shape)
-
 
 def plot(file, test_labels, predictions):
     n=[]
@@ -125,7 +124,6 @@ def importances(model, feature_list):
     feature_importances = sorted(feature_importances, key=lambda x: x[1],
                                  reverse=True)
     [print('Variable: {:20} [{}]'.format(*pair)) for pair in feature_importances]
-
 
 def errors(test_labels, predictions, mean):
     print('#######################################')
