@@ -137,6 +137,86 @@ def issue_duration_forecast_file(dataset):
     print(' OK')
 
 
+def issue_count_mixed_forecast_file(dataset):
+    conn = sqlite3.connect('data/SQLITE3/' + dataset + '.sqlite3')
+
+    query = \
+    """
+        SELECT date, component, COUNT(DISTINCT commit_hash) as 'count_commit', SUM(line_change) as 'line_change'
+        FROM
+         (  SELECT changes.issue_id, changes.commit_hash, component, date, line_change
+            FROM issue_component,
+                (   SELECT issue_id, change.commit_hash, date, line_change
+                    FROM change_set_link,
+                     (  SELECT change_set.commit_hash, DATE(committed_date) as 'date', SUM(sum_added_lines)-SUM(sum_removed_lines) AS 'line_change'
+                        FROM code_change, change_set
+                        WHERE change_set.commit_hash=code_change.commit_hash
+                        GROUP BY change_set.commit_hash
+                    ) as 'change'
+                    WHERE change_set_link.commit_hash=change.commit_hash
+                    ORDER BY issue_id
+                ) as changes
+            WHERE issue_component.issue_id=changes.issue_id
+        )
+        GROUP BY date, component;
+    """
+
+    date_component_change = pd.read_sql_query(query, conn)
+    date_component_change['date'] = pd.to_datetime(date_component_change['date'])
+    date_component_change['w'] = date_component_change['date'].dt.week
+    date_component_change = date_component_change.drop('date', axis=1)
+
+    # TODO: Convert row of components to be like bag of words
+    # week_commit = date_component_change.groupby(by='w')[''].sum()
+
+    issue = open_sqlite(dataset, 'issue')
+    print('Starting shape:\t{}'.format(issue.shape))
+
+    issue['open_dt'] = pd.to_datetime(issue['created_date'])
+    issue['date'] = issue['open_dt'].dt.date
+    issue['y'] = issue['open_dt'].dt.year
+    issue['w'] = issue['open_dt'].dt.week
+    # issue['h'] = issue['open_dt'].dt.hour
+    # issue['m'] = issue['open_dt'].dt.minute
+
+    issue = issue.drop('created_date', axis=1)
+    issue = issue.drop('created_date_zoned', axis=1)
+    issue = issue.drop('updated_date', axis=1)
+    issue = issue.drop('updated_date_zoned', axis=1)
+    issue = issue.drop('resolved_date', axis=1)
+    issue = issue.drop('resolved_date_zoned', axis=1)
+    issue = issue.drop('open_dt', axis=1)
+    issue = issue.drop('status', axis=1)
+    issue = issue.drop('assignee', axis=1)
+    issue = issue.drop('assignee_username', axis=1)
+    issue = issue.drop('reporter', axis=1)
+    issue = issue.drop('reporter_username', axis=1)
+    issue = issue.drop('issue_id', axis=1)
+    issue = issue.drop('summary', axis=1)
+    issue = issue.drop('description', axis=1)
+    issue = issue.drop('type', axis=1)
+
+    issue = issue[(issue['y'] >= 2012) & (issue['y'] <= 2018)]
+
+    issue = issue.dropna()
+    # issue = remove_outliers(issue)
+
+    prior = ['Critical', 'Major', 'Blocker', 'Minor', 'Trivial']
+    type = ['Bug', 'Sub-task', 'Improvement', 'Test', 'Task', 'Wish', 'New Feature']
+
+    issue.priority.replace(prior, [1.00, 0.80, 0.70, 0.30, 0.50], inplace=True)
+
+    issue_sum = issue.groupby(by=['w'], as_index=True)['priority'].sum()
+    issue_final = pd.merge(issue_sum, date_component_change, on='w')
+
+    # TODO (Final shape): | week# | commit# | comp_1 | ... | comp_N | line_variation | SUM(severity) | Others...
+    print('Ending shape:\t{}'.format(issue_final.shape))
+    print('Export...', end='')
+    issue_final = issue_final.reset_index()
+    issue_final.to_csv('data/CSV/' + dataset + '_mixed_count.csv', index=None)
+    print(' OK')
+
+
 def issue_count_forecast_file(dataset):
     issue = open_sqlite(dataset, 'issue')
 
@@ -208,6 +288,7 @@ def issue_count_forecast_file(dataset):
     issue_final = issue_final.reset_index()
     issue_final.to_csv('data/CSV/' + dataset + '_count.csv', index=None)
     print(' OK')
+    return issue_final
 
 
 def word_recognition(df_cols):
@@ -239,22 +320,20 @@ def convert(df, col):
 
 
 def remove_outliers(df):
-    # Remove outliers. Outliers defined as values greater than 99.5th percentile
-    maxVal = np.percentile(df['n'], 60)
-    minVal = np.percentile(df['n'], 5)
-    # 8760 h == 365 days
-    # 720 h == 30 days
-    # 168 h == 7 days
-    # 48 h == 2 days
-    df = df[df['n'] <= maxVal]
-    df = df[df['n'] >= minVal]
+    max_val = np.percentile(df['n'], 60)
+    df = df[df['n'] <= max_val]
+
+    min_val = np.percentile(df['n'], 5)
+    df = df[df['n'] >= min_val]
+
     return df
 
 
 def main(dataset):
     # merge(dataset)
     # issue_duration_forecast_file(dataset)
-    issue_count_forecast_file(dataset)
+    issue_count_mixed_forecast_file(dataset)
+    # issue_count_forecast_file(dataset)
 
 
 if __name__ == "__main__":

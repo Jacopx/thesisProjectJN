@@ -32,8 +32,8 @@ def main(dataset):
     elif dataset in 'SFFD':
         forecast.count_model('data/satur')
     elif dataset in 'ISSUE':
-        # forecast.duration_model('data/hadoop_duration')
-        forecast.count_model('data/hadoop_count')
+        forecast.duration_model('data/hadoop_duration')
+        # forecast.count_model('data/hadoop_count')
         # forecast.duration_model('data/hive_duration')
         # forecast.count_model('data/hive_count')
         # forecast.duration_model('data/hbase_duration')
