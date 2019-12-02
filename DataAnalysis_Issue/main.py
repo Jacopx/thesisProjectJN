@@ -142,13 +142,16 @@ def issue_count_mixed_forecast_file(dataset):
     date_component_change['date'] = pd.to_datetime(date_component_change['date'])
     date_component_change['w'] = date_component_change['date'].dt.week
     date_component_change['y'] = date_component_change['date'].dt.year
+    date_component_change['m'] = date_component_change['date'].dt.month
+    date_component_change['d'] = date_component_change['date'].dt.day
+    date_component_change['wd'] = date_component_change['date'].dt.weekday
     date_component_change = date_component_change[(date_component_change['y'] >= 2012) & (date_component_change['y'] <= 2018)]
     date_component_change = date_component_change.drop('date', axis=1)
 
     vectorized = word_recognition(date_component_change['component'])
     date_component_change = date_component_change.drop('component', axis=1)
     date_wb_component = pd.concat([date_component_change, vectorized], axis=1)
-    week_commit = date_wb_component.groupby(by=['w', 'y']).sum()
+    week_commit = date_wb_component.groupby(by=['y', 'm', 'd']).sum()
 
     issue = open_sqlite(dataset, 'issue')
     print('Starting shape:\t{}'.format(issue.shape))
@@ -157,6 +160,9 @@ def issue_count_mixed_forecast_file(dataset):
     issue['date'] = issue['open_dt'].dt.date
     issue['y'] = issue['open_dt'].dt.year
     issue['w'] = issue['open_dt'].dt.week
+    issue['m'] = issue['open_dt'].dt.month
+    issue['wd'] = issue['open_dt'].dt.weekday
+    issue['d'] = issue['open_dt'].dt.day
 
     # FILTER
     issue = issue[(issue['y'] >= 2012) & (issue['y'] <= 2018)]
@@ -189,8 +195,8 @@ def issue_count_mixed_forecast_file(dataset):
     issue_count = make_issue_count(issue)
     issue_sum = make_issue_sum(issue)
 
-    issue_cnt_sum = pd.merge(issue_sum, issue_count, on=['y', 'w'])
-    issue_final = pd.merge(issue_cnt_sum, week_commit, on=['y', 'w'])
+    issue_cnt_sum = pd.merge(issue_sum, issue_count, on=['y', 'm', 'd'])
+    issue_final = pd.merge(issue_cnt_sum, week_commit, on=['y', 'm', 'd'])
 
     issue_final['issue_count'] = issue_final['issue_count'].astype('int32')
 
@@ -201,12 +207,12 @@ def issue_count_mixed_forecast_file(dataset):
         issue_final[issue_final.columns[i]] = issue_final[issue_final.columns[i]].astype('int32')
 
     print('Ending shape:\t{}'.format(issue_final.shape))
-    print('Export...', end='')
+    print('Export...')
 
     issue_finalC = issue_final.copy()
     issue_finalP = issue_final.copy()
 
-    horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 40, 52]
+    horizons = [7, 14, 28, 42, 56, 70, 84, 112, 140, 280, 365]
 
     for shift in horizons:
         print('Horizon: ' + str(shift) + '.', end='')
@@ -343,7 +349,7 @@ def make_component_change(dataset):
 
 
 def make_issue_count(df):
-    df = df.groupby(by=['y', 'w'], as_index=True).count()
+    df = df.groupby(by=['y', 'm', 'd'], as_index=True).count()
     df = df.drop('priority', axis=1)
     df = df.drop('resolution', axis=1)
     df = df.drop('date', axis=1)
@@ -352,7 +358,7 @@ def make_issue_count(df):
 
 
 def make_issue_sum(df):
-    df = df.groupby(by=['y', 'w'], as_index=True).sum()
+    df = df.groupby(by=['y', 'm', 'd'], as_index=True).sum()
     df = df.drop('n', axis=1)
     df = df.rename(columns={"priority": "priority_sum"})
     return df

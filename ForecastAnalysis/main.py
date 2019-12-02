@@ -32,7 +32,7 @@ def main(dataset):
     elif dataset in 'SFFD':
         forecast.count_model('data/satur')
     elif dataset in 'ISSUE':
-        horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 40, 52]
+        horizons = [7, 14, 28, 42, 56, 70, 84, 112, 140, 280, 365]
 
         for shift in horizons:
             forecast.count_model('data/hadoop_mixed_prior' + str(shift))
