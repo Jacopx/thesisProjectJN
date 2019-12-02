@@ -32,25 +32,12 @@ def main(dataset):
     elif dataset in 'SFFD':
         forecast.count_model('data/satur')
     elif dataset in 'ISSUE':
-        # forecast.count_model('data/hadoop_mixed_count')
-        # forecast.count_model('data/hadoop_mixed_prior')
-        # forecast.count_model('data/hadoop_mixed_count4')
-        # forecast.count_model('data/hadoop_mixed_prior4')
-        forecast.count_model('data/hadoop_mixed_count8')
-        forecast.count_model('data/hadoop_mixed_prior8')
-        # forecast.count_model('data/hadoop_mixed_count16')
-        # forecast.count_model('data/hadoop_mixed_prior16')
+        # horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 40, 52]
+        #
+        # for shift in horizons:
+        #     forecast.count_model('data/hadoop_mixed_count' + str(shift))
 
-        # forecast.duration_model('data/hive_duration')
-        # forecast.count_model('data/hive_count')
-        # forecast.duration_model('data/hbase_duration')
-        # forecast.count_model('data/hbase_count')
-        # forecast.duration_model('data/jbpm_duration')
-        # forecast.count_model('data/jbpm_count')
-        # forecast.duration_model('data/maven_duration')
-        # forecast.count_model('data/maven_count')
-        # forecast.duration_model('data/lucene_duration')
-        # forecast.count_model('data/lucene_count')
+        forecast.count_model('data/hadoop_mixed_count8')
 
 
 if __name__ == "__main__":

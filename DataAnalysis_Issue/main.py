@@ -237,25 +237,37 @@ def issue_count_mixed_forecast_file(dataset):
     issue_finalC = issue_final.copy()
     issue_finalP = issue_final.copy()
 
-    shift = 8
+    horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 40, 52]
 
-    issue_finalC[str(shift) + 'before'] = issue_finalC['issue_count'].shift(-shift, fill_value=-1)
-    issue_finalC = issue_finalC.head(-shift)
-    issue_finalC = issue_finalC.drop('issue_count', axis=1)
-    issue_finalC = issue_finalC.rename(columns={str(shift) + "before": "n"})
-    issue_finalC['n'] = np.round(issue_finalC['n'], 1)
+    for shift in horizons:
+        print('Horizon: ' + str(shift) + '.', end='')
 
-    issue_finalP[str(shift) + 'before'] = issue_finalP['issue_count'].shift(-shift, fill_value=-1)
-    issue_finalP = issue_finalP.head(-shift)
-    issue_finalP = issue_finalP.drop('priority_sum', axis=1)
-    issue_finalP = issue_finalP.rename(columns={str(shift) + "before": "n"})
-    issue_finalP['n'] = np.round(issue_finalP['n'], 1)
+        # COUNT
+        issue_finalC = issue_final.copy()
+        issue_finalC[str(shift) + 'before'] = issue_finalC['issue_count'].shift(-shift, fill_value=-1)
+        issue_finalC = issue_finalC.head(-shift)
+        issue_finalC = issue_finalC.drop('issue_count', axis=1)
+        issue_finalC = issue_finalC.rename(columns={str(shift) + "before": "n"})
+        issue_finalC['n'] = np.round(issue_finalC['n'], 1)
 
-    issue_finalC = issue_finalC.reset_index()
-    issue_finalP = issue_finalP.reset_index()
-    issue_finalC.to_csv('data/CSV/' + dataset + '_mixed_count' + str(shift) + '.csv', index=None)
-    issue_finalP.to_csv('data/CSV/' + dataset + '_mixed_prior' + str(shift) + '.csv', index=None)
-    print(' OK')
+        print('.', end='')
+
+        # PRIORITY
+        issue_finalP = issue_final.copy()
+        issue_finalP[str(shift) + 'before'] = issue_finalP['issue_count'].shift(-shift, fill_value=-1)
+        issue_finalP = issue_finalP.head(-shift)
+        issue_finalP = issue_finalP.drop('priority_sum', axis=1)
+        issue_finalP = issue_finalP.rename(columns={str(shift) + "before": "n"})
+        issue_finalP['n'] = np.round(issue_finalP['n'], 1)
+
+        print('.', end='')
+
+        # EXPORT
+        issue_finalC = issue_finalC.reset_index()
+        issue_finalP = issue_finalP.reset_index()
+        issue_finalC.to_csv('data/CSV/' + dataset + '_mixed_count' + str(shift) + '.csv', index=None)
+        issue_finalP.to_csv('data/CSV/' + dataset + '_mixed_prior' + str(shift) + '.csv', index=None)
+        print(' OK')
 
 
 def issue_count_forecast_file(dataset):

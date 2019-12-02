@@ -10,6 +10,12 @@ from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.neural_network import MLPRegressor
 from sklearn.neural_network import BernoulliRBM
 from sklearn.metrics import mean_squared_error
+from sklearn.metrics import explained_variance_score
+from sklearn.metrics import r2_score
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics import average_precision_score
+from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import max_error
 import warnings
 import seaborn as sns
 
@@ -73,7 +79,7 @@ def count_model(file):
 
     ######################### MODEL DEFINITIONS ############################
 
-    model = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=1, n_jobs=n_jobs)
+    model = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=0, n_jobs=n_jobs)
     # model = GradientBoostingRegressor(n_estimators=predictor, random_state=random, verbose=0)
     # model = MLPRegressor(verbose=1)
     model.fit(train_features, train_labels)
@@ -81,6 +87,8 @@ def count_model(file):
     ######################### MODEL DEFINITIONS ############################
 
     predictions = model.predict(test_features)
+
+    predictions = np.round(predictions, decimals=1)
 
     plot(file, test_labels, predictions)
     importances(model, feature_list)
@@ -112,7 +120,7 @@ def plot(file, test_labels, predictions):
     plt.grid(axis='both')
     plt.title(file + ' predictions')
     plt.savefig(file + '_predictions.png', dpi=240)
-    plt.show()
+    # plt.show()
 
 def importances(model, feature_list):
     print('#######################################')
@@ -128,23 +136,22 @@ def errors(test_labels, predictions, mean):
     print('#######################################')
     # The baseline predictions are the historical averages
     baseline_errors = abs(mean - test_labels)
-    print('Average baseline error: ', round(np.mean(baseline_errors), 2))
-
-    test_labels = test_labels[0:len(predictions)]
-
-    predictions = np.round(predictions, decimals=1)
+    # print('Average baseline error: ', round(np.mean(baseline_errors), 2))
 
     errors = abs(predictions - test_labels)
-    print('Mean Absolute Error:', round(np.mean(errors), 2))
+    test_labels = test_labels[0:len(predictions)]
 
-    rel = round(np.mean(errors), 2) / np.mean(test_labels)
-    rela = abs(test_labels - predictions) / test_labels
-    print('Relative:', np.round(np.mean(rela * 100), 2), '%.')
+    MAE = mean_absolute_error(test_labels, predictions)
+    EVS = explained_variance_score(test_labels, predictions)
+    R2 = r2_score(test_labels, predictions)
+    RSE = mean_squared_error(test_labels, predictions)
+    REL = 100 * (abs(test_labels - predictions) / test_labels)
+    MAX = max_error(test_labels, predictions)
 
-    # Calculate mean absolute percentage error (MAPE)
-    mape = 100 * (errors / test_labels)
-    accuracy = 100 - np.mean(mape)
-    print('Accuracy:', round(accuracy, 2), '%.')
-
-    rse = mean_squared_error(test_labels, predictions)
-    print('RSE:', round(rse, 3))
+    print('Mean Absolute Error:', round(MAE, 2))
+    print('Max Error:', round(MAX, 2))
+    # print('Exaplined Variance:', round(EVS, 3))
+    # print('R2 Scoring:', round(R2, 3))
+    print('RSE:', round(RSE, 3))
+    print('Relative:', np.round(np.mean(REL), 2), '%.')
+    print('\nAccuracy:', np.round(100-np.mean(REL), 2), '%.')
