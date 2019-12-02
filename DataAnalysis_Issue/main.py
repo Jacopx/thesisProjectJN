@@ -6,7 +6,7 @@ import sys
 import sqlite3
 
 # Environment commands
-max_features = 20
+max_features = 2000
 
 
 def open_sqlite(dataset, table):
@@ -166,8 +166,10 @@ def issue_count_mixed_forecast_file(dataset):
     date_component_change['w'] = date_component_change['date'].dt.week
     date_component_change = date_component_change.drop('date', axis=1)
 
-    # TODO: Convert row of components to be like bag of words
-    # week_commit = date_component_change.groupby(by='w')[''].sum()
+    vectorized = word_recognition(date_component_change['component'])
+    date_component_change = date_component_change.drop('component', axis=1)
+    date_wb_component = pd.concat([date_component_change, vectorized], axis=1)
+    week_commit = date_wb_component.groupby(by='w').sum()
 
     issue = open_sqlite(dataset, 'issue')
     print('Starting shape:\t{}'.format(issue.shape))
