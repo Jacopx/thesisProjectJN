@@ -16,7 +16,7 @@ import seaborn as sns
 warnings.filterwarnings("ignore")
 
 test_size = 0.25
-predictor = 200
+predictor = 400
 random = 12
 n_jobs = 6
 
@@ -55,14 +55,12 @@ def duration_model(file):
 
 def count_model(file):
     features_basic = pd.read_csv(file + '.csv')
-    features_basic = features_basic.drop('index', axis=1)  # Saving feature names for later use
+    # features_basic = features_basic.drop('index', axis=1)
 
     infos(file, features_basic)
 
     features = features_basic.copy()
     features = features.dropna()
-
-    features['n'] = features['n'].astype('int32')
 
     labels = np.array(features['n'])
     mean = np.mean(labels)
@@ -71,7 +69,7 @@ def count_model(file):
     features = np.array(features)
 
     train_features, test_features, train_labels, test_labels = \
-        train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=False)
+        train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=True)
 
     ######################### MODEL DEFINITIONS ############################
 
@@ -84,7 +82,7 @@ def count_model(file):
 
     predictions = model.predict(test_features)
 
-    # plot(file, test_labels, predictions)
+    plot(file, test_labels, predictions)
     importances(model, feature_list)
     errors(test_labels, predictions, mean)
 
@@ -102,15 +100,16 @@ def plot(file, test_labels, predictions):
     for i in range(0, len(predictions)):
         n.append(i)
 
-    plt.figure(figsize=(100, 25))
-    sns.lineplot(n, test_labels, label='real')
-    sns.lineplot(n, predictions, label='predict')
+    plt.figure(figsize=(15, 8))
+    sns.lineplot(n, test_labels, label='real', ci=None)
+    sns.lineplot(n, predictions, label='predict', ci=None)
     # sns.lineplot(r.date, mean, label='mean', ci=None)
     plt.xticks(rotation='60')
     plt.legend()  # Graph labels
     plt.xlabel('Issue')
     plt.ylabel('n')
     plt.minorticks_on()
+    plt.grid(axis='both')
     plt.title(file + ' predictions')
     plt.savefig(file + '_predictions.png', dpi=240)
     plt.show()
@@ -133,7 +132,7 @@ def errors(test_labels, predictions, mean):
 
     test_labels = test_labels[0:len(predictions)]
 
-    predictions = np.round(predictions, decimals=0)
+    predictions = np.round(predictions, decimals=1)
 
     errors = abs(predictions - test_labels)
     print('Mean Absolute Error:', round(np.mean(errors), 2))
