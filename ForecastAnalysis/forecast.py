@@ -22,7 +22,7 @@ import seaborn as sns
 warnings.filterwarnings("ignore")
 
 test_size = 0.25
-predictor = 400
+predictor = 600
 random = 12
 n_jobs = 6
 
@@ -79,7 +79,7 @@ def count_model(file):
 
     ######################### MODEL DEFINITIONS ############################
 
-    model = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=1, n_jobs=n_jobs)
+    model = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=0, n_jobs=n_jobs)
     # model = GradientBoostingRegressor(n_estimators=predictor, random_state=random, verbose=0)
     # model = MLPRegressor(verbose=1)
     model.fit(train_features, train_labels)
@@ -87,11 +87,10 @@ def count_model(file):
     ######################### MODEL DEFINITIONS ############################
 
     predictions = model.predict(test_features)
+    predictions = np.round(predictions, decimals=0)
 
-    predictions = np.round(predictions, decimals=1)
-
-    plot(file, test_labels, predictions)
-    importances(model, feature_list)
+    # plot(file, test_labels, predictions)
+    # importances(model, feature_list)
     errors(test_labels, predictions, mean)
 
 
@@ -149,9 +148,9 @@ def errors(test_labels, predictions, mean):
     MAX = max_error(test_labels, predictions)
 
     print('Mean Absolute Error:', round(MAE, 2))
-    print('Max Error:', round(MAX, 2))
+    # print('Max Error:', round(MAX, 2))
     # print('Exaplined Variance:', round(EVS, 3))
     # print('R2 Scoring:', round(R2, 3))
-    print('RSE:', round(RSE, 3))
+    # print('RSE:', round(RSE, 3))
     print('Relative:', np.round(np.mean(REL), 2), '%.')
     print('\nAccuracy:', np.round(100-np.mean(REL), 2), '%.')

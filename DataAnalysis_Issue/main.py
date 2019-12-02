@@ -206,8 +206,7 @@ def issue_count_mixed_forecast_file(dataset):
     issue_finalC = issue_final.copy()
     issue_finalP = issue_final.copy()
 
-    # horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 40, 52]
-    horizons = [8]
+    horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 40, 52]
 
     for shift in horizons:
         print('Horizon: ' + str(shift) + '.', end='')
