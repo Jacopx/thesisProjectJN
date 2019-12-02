@@ -79,7 +79,7 @@ def count_model(file):
 
     ######################### MODEL DEFINITIONS ############################
 
-    model = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=0, n_jobs=n_jobs)
+    model = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=1, n_jobs=n_jobs)
     # model = GradientBoostingRegressor(n_estimators=predictor, random_state=random, verbose=0)
     # model = MLPRegressor(verbose=1)
     model.fit(train_features, train_labels)
@@ -111,7 +111,7 @@ def plot(file, test_labels, predictions):
     plt.figure(figsize=(15, 8))
     sns.lineplot(n, test_labels, label='real', ci=None)
     sns.lineplot(n, predictions, label='predict', ci=None)
-    # sns.lineplot(r.date, mean, label='mean', ci=None)
+    sns.lineplot(n, np.mean(test_labels), label='mean', ci=None)
     plt.xticks(rotation='60')
     plt.legend()  # Graph labels
     plt.xlabel('Issue')
@@ -120,7 +120,7 @@ def plot(file, test_labels, predictions):
     plt.grid(axis='both')
     plt.title(file + ' predictions')
     plt.savefig(file + '_predictions.png', dpi=240)
-    # plt.show()
+    plt.show()
 
 def importances(model, feature_list):
     print('#######################################')

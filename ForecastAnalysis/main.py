@@ -37,7 +37,12 @@ def main(dataset):
         # for shift in horizons:
         #     forecast.count_model('data/hadoop_mixed_count' + str(shift))
 
-        forecast.count_model('data/hadoop_mixed_count8')
+        # forecast.count_model('data/hadoop_mixed_count8')
+        # forecast.count_model('data/hbase_mixed_count8')
+        # forecast.count_model('data/hive_mixed_count8')
+        # forecast.count_model('data/maven_mixed_count8')
+        # forecast.count_model('data/lucene_mixed_count8')
+        forecast.count_model('data/cassandra_mixed_count8')
 
 
 if __name__ == "__main__":

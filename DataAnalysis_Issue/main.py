@@ -138,36 +138,12 @@ def issue_duration_forecast_file(dataset):
 
 
 def issue_count_mixed_forecast_file(dataset):
-    conn = sqlite3.connect('data/SQLITE3/' + dataset + '.sqlite3')
-
-    query = \
-    """
-        SELECT date, component, COUNT(DISTINCT commit_hash) as 'commit_count', SUM(line_change) as 'line_change'
-        FROM
-         (  SELECT changes.commit_hash, component, date, line_change
-            FROM issue_component,
-                (   SELECT change_set_link.issue_id, change.commit_hash, date, line_change
-                    FROM issue, change_set_link,
-                     (  SELECT change_set.commit_hash, DATE(committed_date) as 'date', SUM(sum_added_lines)-SUM(sum_removed_lines) AS 'line_change'
-                        FROM code_change, change_set
-                        WHERE change_set.commit_hash=code_change.commit_hash
-                        GROUP BY change_set.commit_hash
-                    ) as 'change'
-                    WHERE issue.issue_id=change_set_link.issue_id AND change_set_link.commit_hash=change.commit_hash AND type='Bug'
-                    ORDER BY issue.issue_id
-                ) as changes
-            WHERE issue_component.issue_id=changes.issue_id
-        )
-        GROUP BY date, component;
-    """
-
-    date_component_change = pd.read_sql_query(query, conn)
+    date_component_change = make_component_change(dataset)
     date_component_change['date'] = pd.to_datetime(date_component_change['date'])
     date_component_change['w'] = date_component_change['date'].dt.week
     date_component_change['y'] = date_component_change['date'].dt.year
     date_component_change = date_component_change[(date_component_change['y'] >= 2012) & (date_component_change['y'] <= 2018)]
     date_component_change = date_component_change.drop('date', axis=1)
-
 
     vectorized = word_recognition(date_component_change['component'])
     date_component_change = date_component_change.drop('component', axis=1)
@@ -182,9 +158,12 @@ def issue_count_mixed_forecast_file(dataset):
     issue['y'] = issue['open_dt'].dt.year
     issue['w'] = issue['open_dt'].dt.week
 
+    # FILTER
     issue = issue[(issue['y'] >= 2012) & (issue['y'] <= 2018)]
     issue = issue[(issue['type'] == 'Bug')]
+    issue = issue.dropna()
 
+    # DROP UNUSED FEATURES
     issue = issue.drop('created_date', axis=1)
     issue = issue.drop('created_date_zoned', axis=1)
     issue = issue.drop('updated_date', axis=1)
@@ -202,23 +181,13 @@ def issue_count_mixed_forecast_file(dataset):
     issue = issue.drop('description', axis=1)
     issue = issue.drop('type', axis=1)
 
-    issue = issue.dropna()
-    # issue = remove_outliers(issue)
-
     prior = ['Critical', 'Major', 'Blocker', 'Minor', 'Trivial']
 
     issue.priority.replace(prior, [1.00, 0.80, 0.70, 0.30, 0.50], inplace=True)
     issue['n'] = 0
 
-    issue_count = issue.groupby(by=['y', 'w'], as_index=True).count()
-    issue_count = issue_count.drop('priority', axis=1)
-    issue_count = issue_count.drop('resolution', axis=1)
-    issue_count = issue_count.drop('date', axis=1)
-    issue_count = issue_count.rename(columns={"n": "issue_count"})
-
-    issue_sum = issue.groupby(by=['y', 'w'], as_index=True).sum()
-    issue_sum = issue_sum.drop('n', axis=1)
-    issue_sum = issue_sum.rename(columns={"priority": "priority_sum"})
+    issue_count = make_issue_count(issue)
+    issue_sum = make_issue_sum(issue)
 
     issue_cnt_sum = pd.merge(issue_sum, issue_count, on=['y', 'w'])
     issue_final = pd.merge(issue_cnt_sum, week_commit, on=['y', 'w'])
@@ -237,7 +206,8 @@ def issue_count_mixed_forecast_file(dataset):
     issue_finalC = issue_final.copy()
     issue_finalP = issue_final.copy()
 
-    horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 40, 52]
+    # horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 40, 52]
+    horizons = [8]
 
     for shift in horizons:
         print('Horizon: ' + str(shift) + '.', end='')
@@ -249,6 +219,7 @@ def issue_count_mixed_forecast_file(dataset):
         issue_finalC = issue_finalC.drop('issue_count', axis=1)
         issue_finalC = issue_finalC.rename(columns={str(shift) + "before": "n"})
         issue_finalC['n'] = np.round(issue_finalC['n'], 1)
+        issue_finalC = remove_outliers(issue_finalC)
 
         print('.', end='')
 
@@ -259,6 +230,7 @@ def issue_count_mixed_forecast_file(dataset):
         issue_finalP = issue_finalP.drop('priority_sum', axis=1)
         issue_finalP = issue_finalP.rename(columns={str(shift) + "before": "n"})
         issue_finalP['n'] = np.round(issue_finalP['n'], 1)
+        issue_finalP = remove_outliers(issue_finalP)
 
         print('.', end='')
 
@@ -344,6 +316,49 @@ def issue_count_forecast_file(dataset):
     return issue_final
 
 
+def make_component_change(dataset):
+    conn = sqlite3.connect('data/SQLITE3/' + dataset + '.sqlite3')
+
+    query = \
+        """
+            SELECT date, component, COUNT(DISTINCT commit_hash) as 'commit_count', SUM(line_change) as 'line_change'
+            FROM
+             (  SELECT changes.commit_hash, component, date, line_change
+                FROM issue_component,
+                    (   SELECT change_set_link.issue_id, change.commit_hash, date, line_change
+                        FROM issue, change_set_link,
+                         (  SELECT change_set.commit_hash, DATE(committed_date) as 'date', SUM(sum_added_lines)-SUM(sum_removed_lines) AS 'line_change'
+                            FROM code_change, change_set
+                            WHERE change_set.commit_hash=code_change.commit_hash
+                            GROUP BY change_set.commit_hash
+                        ) as 'change'
+                        WHERE issue.issue_id=change_set_link.issue_id AND change_set_link.commit_hash=change.commit_hash AND type='Bug'
+                        ORDER BY issue.issue_id
+                    ) as changes
+                WHERE issue_component.issue_id=changes.issue_id
+            )
+            GROUP BY date, component;
+        """
+
+    return pd.read_sql_query(query, conn)
+
+
+def make_issue_count(df):
+    df = df.groupby(by=['y', 'w'], as_index=True).count()
+    df = df.drop('priority', axis=1)
+    df = df.drop('resolution', axis=1)
+    df = df.drop('date', axis=1)
+    df = df.rename(columns={"n": "issue_count"})
+    return df
+
+
+def make_issue_sum(df):
+    df = df.groupby(by=['y', 'w'], as_index=True).sum()
+    df = df.drop('n', axis=1)
+    df = df.rename(columns={"priority": "priority_sum"})
+    return df
+
+
 def word_recognition(df_cols):
     # additional = frozenset(['add', 'allow', 'application', 'block', 'change', 'check', 'command', 'common', 'configuration', 'create', 'data',
     #                         'default', 'documentation', 'does', 'doesn', 'erasure', 'fail', 'failed', 'failing', 'fails', 'failure', 'findbugs', 'fix',
@@ -375,11 +390,11 @@ def convert(df, col):
 
 
 def remove_outliers(df):
-    max_val = np.percentile(df['n'], 60)
-    df = df[df['n'] <= max_val]
+    # max_val = np.percentile(df['n'], 99.5)
+    # df = df[df['n'] <= max_val]
 
-    min_val = np.percentile(df['n'], 5)
-    df = df[df['n'] >= min_val]
+    # min_val = np.percentile(df['n'], 1)
+    # df = df[df['n'] >= min_val]
 
     return df
 
