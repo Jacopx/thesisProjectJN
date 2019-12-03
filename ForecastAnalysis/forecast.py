@@ -31,13 +31,22 @@ from keras.wrappers.scikit_learn import KerasRegressor
 
 import warnings
 import seaborn as sns
-
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 warnings.filterwarnings("ignore")
 
 test_size = 0.25
+
 predictor = 600
+epochs_nn = 400
+epochs_lstm = 50
+batch_size = 1
+
+shape = 113
+
 random = 12
 n_jobs = 6
+verbose = 2
 
 def duration_model(file):
     features = pd.read_csv(file + '.csv')
@@ -92,7 +101,7 @@ def count_model(file):
 
     ######################### MODEL DEFINITIONS ############################
 
-    model = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=0, n_jobs=n_jobs)
+    model = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=verbose, n_jobs=n_jobs)
     # model = GradientBoostingRegressor(n_estimators=predictor, random_state=random, verbose=0)
     model.fit(train_features, train_labels)
 
@@ -107,7 +116,7 @@ def count_model(file):
     return predictions
 
 
-def count_model_keras(file):
+def count_model_keras_nn(file):
     features_basic = pd.read_csv(file + '.csv')
     # features_basic = features_basic.drop('index', axis=1)
 
@@ -127,7 +136,7 @@ def count_model_keras(file):
 
     ######################### MODEL DEFINITIONS ############################
 
-    estimator = KerasRegressor(build_fn=baseline_model, epochs=200, batch_size=8, verbose=2)
+    estimator = KerasRegressor(build_fn=personal_model, epochs=epochs_nn, batch_size=batch_size, verbose=verbose)
     estimator.fit(train_features, train_labels)
 
     ######################### MODEL DEFINITIONS ############################
@@ -138,18 +147,68 @@ def count_model_keras(file):
     plot(file + ' NN', test_labels, predictions)
     # importances(model, feature_list)
     errors(test_labels, predictions, mean)
-    return predictions
 
-def baseline_model():
+
+def personal_model():
     model = Sequential()
-    model.add(Dense(112, input_dim=112, kernel_initializer='normal', activation='relu'))
+    model.add(Dense(shape-1, input_dim=shape-1, kernel_initializer='normal', activation='relu'))
     model.add(Dense(56, activation='relu'))
     # model.add(Dropout(0.001, input_shape=(56,)))
     model.add(Dense(36, activation='linear'))
     model.add(Dense(28, activation='relu'))
     model.add(Dense(12, activation='linear'))
     model.add(Dense(1, activation='linear'))
-    model.compile(loss='mean_absolute_error', optimizer='adam', metrics=['mse'])
+    model.compile(loss='mae', optimizer='adam', metrics=['mse'])
+    # model.summary()
+
+    return model
+
+
+def count_model_keras_lstm(file):
+    features_basic = pd.read_csv(file + '.csv')
+    # features_basic = features_basic.drop('index', axis=1)
+
+    infos(file, features_basic)
+
+    features = features_basic.copy()
+    features = features.dropna()
+
+    labels = np.array(features['n'])
+    mean = np.mean(labels)
+    features = features.drop('n', axis=1)  # Saving feature names for later use
+    feature_list = list(features.columns)  # Convert to numpy array
+    features = np.array(features)
+
+    train_features, test_features, train_labels, test_labels = \
+        train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=True)
+
+    train_features = train_features.reshape((train_features.shape[0], 1, train_features.shape[1]))
+    test_features = test_features.reshape((test_features.shape[0], 1, test_features.shape[1]))
+
+    ######################### MODEL DEFINITIONS ############################
+
+    estimator = KerasRegressor(build_fn=lstm_model, epochs=epochs_lstm, batch_size=batch_size, verbose=verbose)
+    estimator.fit(train_features, train_labels)
+
+    ######################### MODEL DEFINITIONS ############################
+
+    predictions = estimator.predict(test_features)
+    predictions = np.round(predictions, decimals=0)
+
+    plot(file + ' LSTM', test_labels, predictions)
+    # importances(model, feature_list)
+    errors(test_labels, predictions, mean)
+
+
+def lstm_model():
+    model = Sequential()
+    model.add(LSTM(shape-1, input_shape=(1, shape-1)))
+    model.add(Dense(56, activation='relu'))
+    model.add(Dense(36, activation='linear'))
+    model.add(Dense(28, activation='relu'))
+    model.add(Dense(12, activation='linear'))
+    model.add(Dense(1, activation='linear'))
+    model.compile(loss='mae', optimizer='adam',  metrics=['mse'])
     model.summary()
 
     return model
@@ -210,8 +269,8 @@ def errors(test_labels, predictions, mean):
 
     print('Mean Absolute Error:', round(MAE, 2))
     print('Max Error:', round(MAX, 2))
-    # print('Exaplined Variance:', round(EVS, 3))
-    # print('R2 Scoring:', round(R2, 3))
-    # print('RSE:', round(RSE, 3))
+    print('Exaplined Variance:', round(EVS, 3))
+    print('R2 Scoring:', round(R2, 3))
+    print('RSE:', round(RSE, 3))
     print('Relative:', np.round(np.mean(REL), 2), '%.')
     print('\nAccuracy:', np.round(100-np.mean(REL), 2), '%.')
