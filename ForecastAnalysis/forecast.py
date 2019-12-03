@@ -38,15 +38,15 @@ warnings.filterwarnings("ignore")
 test_size = 0.25
 
 predictor = 600
-epochs_nn = 400
+epochs_nn = 300
 epochs_lstm = 50
-batch_size = 1
+batch_size = 4
 
 shape = 113
 
 random = 12
 n_jobs = 6
-verbose = 2
+verbose = 0
 
 def duration_model(file):
     features = pd.read_csv(file + '.csv')
@@ -134,19 +134,25 @@ def count_model_keras_nn(file):
     train_features, test_features, train_labels, test_labels = \
         train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=True)
 
-    ######################### MODEL DEFINITIONS ############################
+    with open('multiple_test.txt', 'w') as f:
+        for b in [1,2,4,8,16,32,64,128]:
+            print(b, end=',', file=f)
+            for i in range(1, 10):
+                ######################### MODEL DEFINITIONS ############################
 
-    estimator = KerasRegressor(build_fn=personal_model, epochs=epochs_nn, batch_size=batch_size, verbose=verbose)
-    estimator.fit(train_features, train_labels)
+                estimator = KerasRegressor(build_fn=personal_model, epochs=epochs_nn, batch_size=batch_size, verbose=verbose)
+                estimator.fit(train_features, train_labels)
 
-    ######################### MODEL DEFINITIONS ############################
+                ######################### MODEL DEFINITIONS ############################
 
-    predictions = estimator.predict(test_features)
-    predictions = np.round(predictions, decimals=0)
+                predictions = estimator.predict(test_features)
+                predictions = np.round(predictions, decimals=0)
 
-    plot(file + ' NN', test_labels, predictions)
-    # importances(model, feature_list)
-    errors(test_labels, predictions, mean)
+                plot(file + ' NN', test_labels, predictions)
+                # importances(model, feature_list)
+                errors(test_labels, predictions, mean)
+                print(errors(test_labels, predictions, mean), end=',', file=f)
+            print('',file=f)
 
 
 def personal_model():
@@ -197,7 +203,6 @@ def count_model_keras_lstm(file):
 
     plot(file + ' LSTM', test_labels, predictions)
     # importances(model, feature_list)
-    errors(test_labels, predictions, mean)
 
 
 def lstm_model():
@@ -268,9 +273,10 @@ def errors(test_labels, predictions, mean):
     MAX = max_error(test_labels, predictions)
 
     print('Mean Absolute Error:', round(MAE, 2))
-    print('Max Error:', round(MAX, 2))
-    print('Exaplined Variance:', round(EVS, 3))
-    print('R2 Scoring:', round(R2, 3))
-    print('RSE:', round(RSE, 3))
+    # print('Max Error:', round(MAX, 2))
+    # print('Exaplined Variance:', round(EVS, 3))
+    # print('R2 Scoring:', round(R2, 3))
+    # print('RSE:', round(RSE, 3))
     print('Relative:', np.round(np.mean(REL), 2), '%.')
-    print('\nAccuracy:', np.round(100-np.mean(REL), 2), '%.')
+    # print('\nAccuracy:', np.round(100-np.mean(REL), 2), '%.')
+    return np.round(np.mean(REL), 2)
