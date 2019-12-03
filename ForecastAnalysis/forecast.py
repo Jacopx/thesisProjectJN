@@ -39,14 +39,14 @@ test_size = 0.25
 
 predictor = 600
 epochs_nn = 300
-epochs_lstm = 50
+epochs_lstm = 100
 batch_size = 4
 
 shape = 113
 
 random = 12
 n_jobs = 6
-verbose = 0
+verbose = 2
 
 def duration_model(file):
     features = pd.read_csv(file + '.csv')
@@ -110,7 +110,7 @@ def count_model(file):
     predictions = model.predict(test_features)
     predictions = np.round(predictions, decimals=0)
 
-    plot(file, test_labels, predictions)
+    plot(file + ' RF', test_labels, predictions)
     # importances(model, feature_list)
     errors(test_labels, predictions, mean)
     return predictions
@@ -134,25 +134,19 @@ def count_model_keras_nn(file):
     train_features, test_features, train_labels, test_labels = \
         train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=True)
 
-    with open('multiple_test.txt', 'w') as f:
-        for b in [1,2,4,8,16,32,64,128]:
-            print(b, end=',', file=f)
-            for i in range(1, 10):
-                ######################### MODEL DEFINITIONS ############################
+    ######################### MODEL DEFINITIONS ############################
 
-                estimator = KerasRegressor(build_fn=personal_model, epochs=epochs_nn, batch_size=batch_size, verbose=verbose)
-                estimator.fit(train_features, train_labels)
+    estimator = KerasRegressor(build_fn=personal_model, epochs=epochs_nn, batch_size=batch_size, verbose=verbose)
+    estimator.fit(train_features, train_labels)
 
-                ######################### MODEL DEFINITIONS ############################
+    ######################### MODEL DEFINITIONS ############################
 
-                predictions = estimator.predict(test_features)
-                predictions = np.round(predictions, decimals=0)
+    predictions = estimator.predict(test_features)
+    predictions = np.round(predictions, decimals=0)
 
-                plot(file + ' NN', test_labels, predictions)
-                # importances(model, feature_list)
-                errors(test_labels, predictions, mean)
-                print(errors(test_labels, predictions, mean), end=',', file=f)
-            print('',file=f)
+    plot(file + ' NN', test_labels, predictions)
+    # importances(model, feature_list)
+    errors(test_labels, predictions, mean)
 
 
 def personal_model():
@@ -164,8 +158,10 @@ def personal_model():
     model.add(Dense(28, activation='relu'))
     model.add(Dense(12, activation='linear'))
     model.add(Dense(1, activation='linear'))
-    model.compile(loss='mae', optimizer='adam', metrics=['mse'])
+    model.compile(loss='mse', optimizer='adam', metrics=['accuracy', 'mae'])
     # model.summary()
+
+
 
     return model
 
@@ -193,7 +189,7 @@ def count_model_keras_lstm(file):
 
     ######################### MODEL DEFINITIONS ############################
 
-    estimator = KerasRegressor(build_fn=lstm_model, epochs=epochs_lstm, batch_size=batch_size, verbose=verbose)
+    estimator = KerasRegressor(build_fn=lstm_model, epochs=epochs_lstm, batch_size=1, verbose=verbose)
     estimator.fit(train_features, train_labels)
 
     ######################### MODEL DEFINITIONS ############################
@@ -203,6 +199,8 @@ def count_model_keras_lstm(file):
 
     plot(file + ' LSTM', test_labels, predictions)
     # importances(model, feature_list)
+    errors(test_labels, predictions, mean)
+
 
 
 def lstm_model():
@@ -213,7 +211,7 @@ def lstm_model():
     model.add(Dense(28, activation='relu'))
     model.add(Dense(12, activation='linear'))
     model.add(Dense(1, activation='linear'))
-    model.compile(loss='mae', optimizer='adam',  metrics=['mse'])
+    model.compile(loss='mse', optimizer='adam',  metrics=['accuracy', 'mae'])
     model.summary()
 
     return model
@@ -276,7 +274,6 @@ def errors(test_labels, predictions, mean):
     # print('Max Error:', round(MAX, 2))
     # print('Exaplined Variance:', round(EVS, 3))
     # print('R2 Scoring:', round(R2, 3))
-    # print('RSE:', round(RSE, 3))
+    print('RSE:', round(RSE, 3))
     print('Relative:', np.round(np.mean(REL), 2), '%.')
     # print('\nAccuracy:', np.round(100-np.mean(REL), 2), '%.')
-    return np.round(np.mean(REL), 2)
