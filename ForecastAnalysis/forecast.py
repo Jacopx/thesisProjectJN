@@ -4,6 +4,9 @@ import matplotlib
 #matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
+from numpy.random import seed
+
+# SKLEARN
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.ensemble import GradientBoostingRegressor
@@ -16,6 +19,16 @@ from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import max_error
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import KFold
+
+# KERAS
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import Dropout
+from keras.layers import LSTM
+from keras.wrappers.scikit_learn import KerasRegressor
+
 import warnings
 import seaborn as sns
 
@@ -81,7 +94,6 @@ def count_model(file):
 
     model = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=0, n_jobs=n_jobs)
     # model = GradientBoostingRegressor(n_estimators=predictor, random_state=random, verbose=0)
-    # model = MLPRegressor(verbose=1)
     model.fit(train_features, train_labels)
 
     ######################### MODEL DEFINITIONS ############################
@@ -89,9 +101,58 @@ def count_model(file):
     predictions = model.predict(test_features)
     predictions = np.round(predictions, decimals=0)
 
-    # plot(file, test_labels, predictions)
+    plot(file, test_labels, predictions)
     # importances(model, feature_list)
     errors(test_labels, predictions, mean)
+    return predictions
+
+
+def count_model_keras(file):
+    features_basic = pd.read_csv(file + '.csv')
+    # features_basic = features_basic.drop('index', axis=1)
+
+    infos(file, features_basic)
+
+    features = features_basic.copy()
+    features = features.dropna()
+
+    labels = np.array(features['n'])
+    mean = np.mean(labels)
+    features = features.drop('n', axis=1)  # Saving feature names for later use
+    feature_list = list(features.columns)  # Convert to numpy array
+    features = np.array(features)
+
+    train_features, test_features, train_labels, test_labels = \
+        train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=True)
+
+    ######################### MODEL DEFINITIONS ############################
+
+    estimator = KerasRegressor(build_fn=baseline_model, epochs=200, batch_size=8, verbose=2)
+    estimator.fit(train_features, train_labels)
+
+    ######################### MODEL DEFINITIONS ############################
+
+    predictions = estimator.predict(test_features)
+    predictions = np.round(predictions, decimals=0)
+
+    plot(file + ' NN', test_labels, predictions)
+    # importances(model, feature_list)
+    errors(test_labels, predictions, mean)
+    return predictions
+
+def baseline_model():
+    model = Sequential()
+    model.add(Dense(112, input_dim=112, kernel_initializer='normal', activation='relu'))
+    model.add(Dense(56, activation='relu'))
+    # model.add(Dropout(0.001, input_shape=(56,)))
+    model.add(Dense(36, activation='linear'))
+    model.add(Dense(28, activation='relu'))
+    model.add(Dense(12, activation='linear'))
+    model.add(Dense(1, activation='linear'))
+    model.compile(loss='mean_absolute_error', optimizer='adam', metrics=['mse'])
+    model.summary()
+
+    return model
 
 
 def infos(file, features_basic):
@@ -148,7 +209,7 @@ def errors(test_labels, predictions, mean):
     MAX = max_error(test_labels, predictions)
 
     print('Mean Absolute Error:', round(MAE, 2))
-    # print('Max Error:', round(MAX, 2))
+    print('Max Error:', round(MAX, 2))
     # print('Exaplined Variance:', round(EVS, 3))
     # print('R2 Scoring:', round(R2, 3))
     # print('RSE:', round(RSE, 3))
