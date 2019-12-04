@@ -40,13 +40,13 @@ test_size = 0.25
 predictor = 600
 epochs_nn = 300
 epochs_lstm = 100
-batch_size = 4
+batch_size = 8
 
-shape = 113
+shape = 127
 
 random = 12
 n_jobs = 6
-verbose = 2
+verbose = 0
 
 def duration_model(file):
     features = pd.read_csv(file + '.csv')
@@ -83,7 +83,7 @@ def duration_model(file):
 
 def count_model(file):
     features_basic = pd.read_csv(file + '.csv')
-    # features_basic = features_basic.drop('index', axis=1)
+    plot_all(features_basic)
 
     infos(file, features_basic)
 
@@ -97,7 +97,7 @@ def count_model(file):
     features = np.array(features)
 
     train_features, test_features, train_labels, test_labels = \
-        train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=True)
+        train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=False)
 
     ######################### MODEL DEFINITIONS ############################
 
@@ -132,7 +132,7 @@ def count_model_keras_nn(file):
     features = np.array(features)
 
     train_features, test_features, train_labels, test_labels = \
-        train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=True)
+        train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=False)
 
     ######################### MODEL DEFINITIONS ############################
 
@@ -152,16 +152,14 @@ def count_model_keras_nn(file):
 def personal_model():
     model = Sequential()
     model.add(Dense(shape-1, input_dim=shape-1, kernel_initializer='normal', activation='relu'))
-    model.add(Dense(56, activation='relu'))
-    # model.add(Dropout(0.001, input_shape=(56,)))
-    model.add(Dense(36, activation='linear'))
-    model.add(Dense(28, activation='relu'))
-    model.add(Dense(12, activation='linear'))
+    # model.add(Dense(63, activation='relu'))
+    model.add(Dense(63, activation='relu'))
+    # model.add(Dense(36, activation='linear'))
+    # model.add(Dense(28, activation='relu'))
+    model.add(Dense(21, activation='relu'))
     model.add(Dense(1, activation='linear'))
     model.compile(loss='mse', optimizer='adam', metrics=['accuracy', 'mae'])
     # model.summary()
-
-
 
     return model
 
@@ -182,7 +180,7 @@ def count_model_keras_lstm(file):
     features = np.array(features)
 
     train_features, test_features, train_labels, test_labels = \
-        train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=True)
+        train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=False)
 
     train_features = train_features.reshape((train_features.shape[0], 1, train_features.shape[1]))
     test_features = test_features.reshape((test_features.shape[0], 1, test_features.shape[1]))
@@ -212,7 +210,7 @@ def lstm_model():
     model.add(Dense(12, activation='linear'))
     model.add(Dense(1, activation='linear'))
     model.compile(loss='mse', optimizer='adam',  metrics=['accuracy', 'mae'])
-    model.summary()
+    # model.summary()
 
     return model
 
@@ -224,6 +222,7 @@ def infos(file, features_basic):
     print('predictor = ', predictor)
     print('n_jobs = ', n_jobs)
     print('The shape of our features is:', features_basic.shape)
+
 
 def plot(file, test_labels, predictions):
     n=[]
@@ -243,6 +242,25 @@ def plot(file, test_labels, predictions):
     plt.title(file + ' predictions')
     plt.savefig(file + '_predictions.png', dpi=240)
     plt.show()
+
+
+def plot_all(df_original):
+    plt.figure(figsize=(15, 8))
+    df = df_original.copy()
+    df['n'] = df['n'].astype('int32')
+    df['date'] = df[['y', 'w']].astype(str).apply('-'.join, axis=1)
+    sns.lineplot(df['date'], df['n'], label='value', ci=None)
+    plt.xticks(rotation='60')
+    plt.legend()  # Graph labels
+    plt.xlabel('Date')
+    plt.ylabel('n')
+    # plt.minorticks_on()
+    plt.grid(axis='y')
+    plt.title('Data distribution')
+    # plt.savefig('Data distribution', dpi=240)
+    plt.show()
+    # exit(0)
+
 
 def importances(model, feature_list):
     print('#######################################')

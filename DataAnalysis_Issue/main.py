@@ -218,8 +218,11 @@ def issue_count_mixed_forecast_file(dataset):
 
     issue_sum = pd.merge(open_issue_sum, close_issue_sum, on=['y', 'w'])
     issue_sum['severity_diff'] = issue_sum['open_severity_sum'] + issue_sum['close_severity_sum']
+    issue_sum['cumsum_severity'] = issue_sum['severity_diff'].cumsum()
+
     issue_count = pd.merge(open_issue_count, close_issue_count, on=['y', 'w'])
     issue_count['issue_diff'] = issue_count['open_issue_count'] + issue_count['close_issue_count']
+    issue_count['cumsum_issue'] = issue_count['issue_diff'].cumsum()
 
     issue_cnt_sum = pd.merge(issue_sum, issue_count, on=['y', 'w'])
     issue_final = pd.merge(issue_cnt_sum, week_commit, on=['y', 'w'])
@@ -236,26 +239,31 @@ def issue_count_mixed_forecast_file(dataset):
     issue_finalC = issue_final.copy()
     issue_finalP = issue_final.copy()
 
-    horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 40, 52]
+    # horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 40, 52]
+    horizons = [4]
 
     for shift in horizons:
         print('Horizon: ' + str(shift) + '.', end='')
 
         # COUNT
-        issue_finalC = issue_final.copy()
-        issue_finalC[str(shift) + 'before'] = issue_finalC['issue_diff'].shift(-shift, fill_value=-1)
+        issue_finalCx = issue_final.copy()
+        issue_finalC = extracted_calculation(issue_finalCx, 'cumsum_issue')
+        # issue_finalC = issue_finalCx
+        issue_finalC[str(shift) + 'before'] = issue_finalC['cumsum_issue'].shift(-shift, fill_value=-1)
         issue_finalC = issue_finalC.head(-shift)
-        issue_finalC = issue_finalC.drop('issue_diff', axis=1)
+        issue_finalC = issue_finalC.drop('cumsum_issue', axis=1)
         issue_finalC = issue_finalC.rename(columns={str(shift) + "before": "n"})
         issue_finalC['n'] = np.round(issue_finalC['n'], 1)
 
         print('.', end='')
 
         # PRIORITY
-        issue_finalP = issue_final.copy()
-        issue_finalP[str(shift) + 'before'] = issue_finalP['severity_diff'].shift(-shift, fill_value=-1)
+        issue_finalPx = issue_final.copy()
+        issue_finalP = extracted_calculation(issue_finalPx, 'cumsum_severity')
+        # issue_finalP = issue_finalPx
+        issue_finalP[str(shift) + 'before'] = issue_finalP['cumsum_severity'].shift(-shift, fill_value=-1)
         issue_finalP = issue_finalP.head(-shift)
-        issue_finalP = issue_finalP.drop('severity_diff', axis=1)
+        issue_finalP = issue_finalP.drop('cumsum_severity', axis=1)
         issue_finalP = issue_finalP.rename(columns={str(shift) + "before": "n"})
         issue_finalP['n'] = np.round(issue_finalP['n'], 1)
 
@@ -390,7 +398,6 @@ def make_issue_count(df, root):
         df = df.drop('o_w', axis=1)
         df = df.rename(columns={'n': 'close_issue_count'})
 
-
     return df
 
 
@@ -443,13 +450,28 @@ def convert(df, col):
 
 
 def remove_outliers(df, column):
-    max_val = np.percentile(df[column], 99)
+    max_val = np.percentile(df[column], 95)
     df = df[df[column] <= max_val]
 
     min_val = np.percentile(df[column], 1)
     df = df[df[column] >= min_val]
 
     return df
+
+def extracted_calculation(issue_final, column):
+    issue_final['exp_avg'] = issue_final[column].expanding().mean()
+    issue_final['mov_avg2'] = issue_final[column].rolling(2).mean()
+    issue_final['mov_avg2'] = issue_final['mov_avg2'].shift(1, fill_value=-1)
+    issue_final['mov_avg4'] = issue_final[column].rolling(4).mean()
+    issue_final['mov_avg4'] = issue_final['mov_avg4'].shift(1, fill_value=-1)
+    issue_final = issue_final.tail(-1)
+
+    issue_final['avg'] = issue_final[column].mean()
+
+    issue_final['1before'] = issue_final[column].shift(1, fill_value=-1)
+    issue_final['2before'] = issue_final[column].shift(2, fill_value=-1)
+    issue_final['4before'] = issue_final[column].shift(4, fill_value=-1)
+    return issue_final.tail(-4)
 
 
 def main(dataset):

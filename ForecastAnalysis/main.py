@@ -32,9 +32,13 @@ def main(dataset):
     elif dataset in 'SFFD':
         forecast.count_model('data/satur')
     elif dataset in 'ISSUE':
-        forecast.count_model('data/hadoop_mixed_count4')
-        forecast.count_model_keras_nn('data/hadoop_mixed_count4')
-        forecast.count_model_keras_lstm('data/hadoop_mixed_count4')
+        # forecast.count_model('data/hadoop_mixed_count4')
+        # forecast.count_model_keras_nn('data/hadoop_mixed_count4')
+        # forecast.count_model_keras_lstm('data/hadoop_mixed_count4')
+
+        forecast.count_model('data/hadoop_mixed_prior4')
+        forecast.count_model_keras_nn('data/hadoop_mixed_prior4')
+        # forecast.count_model_keras_lstm('data/hadoop_mixed_prior4')
 
         # forecast.count_model('data/hadoop_mixed_count8')
         # forecast.count_model_keras_nn('data/hadoop_mixed_count8')
