@@ -138,6 +138,7 @@ def issue_duration_forecast_file(dataset):
 
 
 def issue_count_mixed_forecast_file(dataset):
+    # Get all commit by WEEK and YEAR
     date_component_change = make_component_change(dataset)
     date_component_change['date'] = pd.to_datetime(date_component_change['date'])
     date_component_change['w'] = date_component_change['date'].dt.week
@@ -154,23 +155,40 @@ def issue_count_mixed_forecast_file(dataset):
     print('Starting shape:\t{}'.format(issue.shape))
 
     issue['open_dt'] = pd.to_datetime(issue['created_date'])
-    issue['date'] = issue['open_dt'].dt.date
-    issue['y'] = issue['open_dt'].dt.year
-    issue['w'] = issue['open_dt'].dt.week
+    issue['o_date'] = issue['open_dt'].dt.date
+    issue['o_y'] = issue['open_dt'].dt.year
+    issue['o_w'] = issue['open_dt'].dt.week
+
+    issue['close_dt'] = pd.to_datetime(issue['resolved_date'])
+    issue['c_date'] = issue['close_dt'].dt.date
+    issue['c_y'] = issue['close_dt'].dt.year
+    issue['c_w'] = issue['close_dt'].dt.week
+
+    issue['time'] = issue['close_dt'] - issue['open_dt']
+    issue['duration'] = np.round(issue['time'].dt.total_seconds() / 60 / 60, 0)
 
     # FILTER
-    issue = issue[(issue['y'] >= 2012) & (issue['y'] <= 2018)]
+    issue = issue[(issue['o_y'] >= 2012) & (issue['o_y'] <= 2018) & (issue['c_y'] >= 2012) & (issue['c_y'] <= 2018)]
     issue = issue[(issue['type'] == 'Bug')]
     issue = issue.dropna()
+    issue = remove_outliers(issue, 'duration')
+
+    issue['o_y'] = issue['o_y'].astype('int32')
+    issue['o_w'] = issue['o_w'].astype('int32')
+    issue['c_y'] = issue['c_y'].astype('int32')
+    issue['c_w'] = issue['c_w'].astype('int32')
 
     # DROP UNUSED FEATURES
+    issue = issue.drop('open_dt', axis=1)
+    issue = issue.drop('close_dt', axis=1)
+    issue = issue.drop('time', axis=1)
+    issue = issue.drop('duration', axis=1)
     issue = issue.drop('created_date', axis=1)
     issue = issue.drop('created_date_zoned', axis=1)
     issue = issue.drop('updated_date', axis=1)
     issue = issue.drop('updated_date_zoned', axis=1)
     issue = issue.drop('resolved_date', axis=1)
     issue = issue.drop('resolved_date_zoned', axis=1)
-    issue = issue.drop('open_dt', axis=1)
     issue = issue.drop('status', axis=1)
     issue = issue.drop('assignee', axis=1)
     issue = issue.drop('assignee_username', axis=1)
@@ -183,16 +201,28 @@ def issue_count_mixed_forecast_file(dataset):
 
     prior = ['Critical', 'Major', 'Blocker', 'Minor', 'Trivial']
 
-    issue.priority.replace(prior, [1.00, 0.80, 0.70, 0.30, 0.50], inplace=True)
+    # issue.priority.replace(prior, [1.00, 0.80, 0.70, 0.30, 0.50], inplace=True)
+    issue = issue.rename(columns={'priority': 'severity'})
+
     issue['n'] = 0
 
-    issue_count = make_issue_count(issue)
-    issue_sum = make_issue_sum(issue)
+    open_issue = issue.copy()
+    open_issue.severity.replace(prior, [50.00, 10.00, 2.00, 1.00, 0.50], inplace=True)
+    open_issue_count = make_issue_count(open_issue, 'o_')
+    open_issue_sum = make_issue_sum(open_issue, 'o_')
+
+    close_issue = issue.copy()
+    close_issue.severity.replace(prior, [-50.00, -10.00, -2.00, -1.00, -0.50], inplace=True)
+    close_issue_count = make_issue_count(close_issue, 'c_')
+    close_issue_sum = make_issue_sum(close_issue, 'c_')
+
+    issue_sum = pd.merge(open_issue_sum, close_issue_sum, on=['y', 'w'])
+    issue_sum['severity_diff'] = issue_sum['open_severity_sum'] + issue_sum['close_severity_sum']
+    issue_count = pd.merge(open_issue_count, close_issue_count, on=['y', 'w'])
+    issue_count['issue_diff'] = issue_count['open_issue_count'] + issue_count['close_issue_count']
 
     issue_cnt_sum = pd.merge(issue_sum, issue_count, on=['y', 'w'])
     issue_final = pd.merge(issue_cnt_sum, week_commit, on=['y', 'w'])
-
-    issue_final['issue_count'] = issue_final['issue_count'].astype('int32')
 
     issue_final['line_change'] = issue_final['line_change'].astype('int32')
     issue_final['commit_count'] = issue_final['commit_count'].astype('int32')
@@ -213,23 +243,21 @@ def issue_count_mixed_forecast_file(dataset):
 
         # COUNT
         issue_finalC = issue_final.copy()
-        issue_finalC[str(shift) + 'before'] = issue_finalC['issue_count'].shift(-shift, fill_value=-1)
+        issue_finalC[str(shift) + 'before'] = issue_finalC['issue_diff'].shift(-shift, fill_value=-1)
         issue_finalC = issue_finalC.head(-shift)
-        issue_finalC = issue_finalC.drop('issue_count', axis=1)
+        issue_finalC = issue_finalC.drop('issue_diff', axis=1)
         issue_finalC = issue_finalC.rename(columns={str(shift) + "before": "n"})
         issue_finalC['n'] = np.round(issue_finalC['n'], 1)
-        issue_finalC = remove_outliers(issue_finalC)
 
         print('.', end='')
 
         # PRIORITY
         issue_finalP = issue_final.copy()
-        issue_finalP[str(shift) + 'before'] = issue_finalP['issue_count'].shift(-shift, fill_value=-1)
+        issue_finalP[str(shift) + 'before'] = issue_finalP['severity_diff'].shift(-shift, fill_value=-1)
         issue_finalP = issue_finalP.head(-shift)
-        issue_finalP = issue_finalP.drop('priority_sum', axis=1)
+        issue_finalP = issue_finalP.drop('severity_diff', axis=1)
         issue_finalP = issue_finalP.rename(columns={str(shift) + "before": "n"})
         issue_finalP['n'] = np.round(issue_finalP['n'], 1)
-        issue_finalP = remove_outliers(issue_finalP)
 
         print('.', end='')
 
@@ -342,19 +370,44 @@ def make_component_change(dataset):
     return pd.read_sql_query(query, conn)
 
 
-def make_issue_count(df):
+def make_issue_count(df, root):
+    df = df.rename(columns={root + 'y': 'y', root + 'w': 'w'})
     df = df.groupby(by=['y', 'w'], as_index=True).count()
-    df = df.drop('priority', axis=1)
+    df = df.drop('severity', axis=1)
     df = df.drop('resolution', axis=1)
-    df = df.drop('date', axis=1)
-    df = df.rename(columns={"n": "issue_count"})
+
+    if root in 'o_':
+        df = df.drop('o_date', axis=1)
+        df = df.drop('c_date', axis=1)
+        df = df.drop('c_y', axis=1)
+        df = df.drop('c_w', axis=1)
+        df = df.rename(columns={'n': 'open_issue_count'})
+    else:
+        df['n'] = -df['n']
+        df = df.drop('o_date', axis=1)
+        df = df.drop('c_date', axis=1)
+        df = df.drop('o_y', axis=1)
+        df = df.drop('o_w', axis=1)
+        df = df.rename(columns={'n': 'close_issue_count'})
+
+
     return df
 
 
-def make_issue_sum(df):
+def make_issue_sum(df, root):
+    df = df.rename(columns={root + 'y': 'y', root + 'w': 'w'})
     df = df.groupby(by=['y', 'w'], as_index=True).sum()
     df = df.drop('n', axis=1)
-    df = df.rename(columns={"priority": "priority_sum"})
+
+    if root in 'o_':
+        df = df.drop('c_y', axis=1)
+        df = df.drop('c_w', axis=1)
+        df = df.rename(columns={'severity': 'open_severity_sum'})
+    else:
+        df = df.drop('o_y', axis=1)
+        df = df.drop('o_w', axis=1)
+        df = df.rename(columns={'severity': 'close_severity_sum'})
+
     return df
 
 
@@ -369,7 +422,8 @@ def word_recognition(df_cols):
 
     stop_words = text.ENGLISH_STOP_WORDS.union(additional)
 
-    vect = CountVectorizer(lowercase=True, preprocessor=None, analyzer='word', token_pattern=r'[a-zA-Z][a-zA-Z][a-zA-Z]+', stop_words=frozenset(stop_words), max_features=max_features)
+    # vect = CountVectorizer(lowercase=True, preprocessor=None, analyzer='word', token_pattern=r'[a-zA-Z][a-zA-Z][a-zA-Z]+', stop_words=frozenset(stop_words), max_features=max_features)
+    vect = CountVectorizer(lowercase=True, preprocessor=None, analyzer='word', stop_words=frozenset(stop_words), max_features=max_features)
     X = vect.fit_transform(df_cols)
     # print(vect.get_feature_names())
     return pd.DataFrame(X.todense(), columns=vect.get_feature_names())
@@ -388,12 +442,12 @@ def convert(df, col):
     df[col].replace(dict_dest, inplace=True)
 
 
-def remove_outliers(df):
-    # max_val = np.percentile(df['n'], 99.5)
-    # df = df[df['n'] <= max_val]
+def remove_outliers(df, column):
+    max_val = np.percentile(df[column], 99)
+    df = df[df[column] <= max_val]
 
-    # min_val = np.percentile(df['n'], 1)
-    # df = df[df['n'] >= min_val]
+    min_val = np.percentile(df[column], 1)
+    df = df[df[column] >= min_val]
 
     return df
 
