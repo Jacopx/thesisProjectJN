@@ -40,9 +40,7 @@ test_size = 0.25
 predictor = 600
 epochs_nn = 300
 epochs_lstm = 100
-batch_size = 8
-
-shape = 127
+batch_size = 4
 
 random = 12
 n_jobs = 6
@@ -119,6 +117,7 @@ def count_model(file):
 def count_model_keras_nn(file):
     features_basic = pd.read_csv(file + '.csv')
     # features_basic = features_basic.drop('index', axis=1)
+    plot_all(features_basic)
 
     infos(file, features_basic)
 
@@ -136,7 +135,7 @@ def count_model_keras_nn(file):
 
     ######################### MODEL DEFINITIONS ############################
 
-    estimator = KerasRegressor(build_fn=personal_model, epochs=epochs_nn, batch_size=batch_size, verbose=verbose)
+    estimator = KerasRegressor(build_fn=personal_model, shape=train_features.shape[1], epochs=epochs_nn, batch_size=batch_size, verbose=verbose)
     estimator.fit(train_features, train_labels)
 
     ######################### MODEL DEFINITIONS ############################
@@ -149,14 +148,14 @@ def count_model_keras_nn(file):
     errors(test_labels, predictions, mean)
 
 
-def personal_model():
+def personal_model(shape):
     model = Sequential()
-    model.add(Dense(shape-1, input_dim=shape-1, kernel_initializer='normal', activation='relu'))
-    # model.add(Dense(63, activation='relu'))
-    model.add(Dense(63, activation='relu'))
+    model.add(Dense(shape, input_dim=shape, kernel_initializer='normal', activation='relu'))
+    # model.add(Dense(shape, activation='relu'))
+    model.add(Dense(int(shape/2), activation='relu'))
     # model.add(Dense(36, activation='linear'))
     # model.add(Dense(28, activation='relu'))
-    model.add(Dense(21, activation='relu'))
+    model.add(Dense(int(shape/4), activation='relu'))
     model.add(Dense(1, activation='linear'))
     model.compile(loss='mse', optimizer='adam', metrics=['accuracy', 'mae'])
     # model.summary()
@@ -187,7 +186,7 @@ def count_model_keras_lstm(file):
 
     ######################### MODEL DEFINITIONS ############################
 
-    estimator = KerasRegressor(build_fn=lstm_model, epochs=epochs_lstm, batch_size=1, verbose=verbose)
+    estimator = KerasRegressor(build_fn=lstm_model, shape=train_features.shape[1], epochs=epochs_lstm, batch_size=1, verbose=verbose)
     estimator.fit(train_features, train_labels)
 
     ######################### MODEL DEFINITIONS ############################
@@ -201,13 +200,13 @@ def count_model_keras_lstm(file):
 
 
 
-def lstm_model():
+def lstm_model(shape):
     model = Sequential()
-    model.add(LSTM(shape-1, input_shape=(1, shape-1)))
-    model.add(Dense(56, activation='relu'))
-    model.add(Dense(36, activation='linear'))
-    model.add(Dense(28, activation='relu'))
-    model.add(Dense(12, activation='linear'))
+    model.add(LSTM(shape, input_shape=(1, shape)))
+    model.add(Dense(63, activation='relu'))
+    # model.add(Dense(36, activation='linear'))
+    # model.add(Dense(28, activation='relu'))
+    # model.add(Dense(12, activation='linear'))
     model.add(Dense(1, activation='linear'))
     model.compile(loss='mse', optimizer='adam',  metrics=['accuracy', 'mae'])
     # model.summary()
@@ -245,21 +244,21 @@ def plot(file, test_labels, predictions):
 
 
 def plot_all(df_original):
-    plt.figure(figsize=(15, 8))
+    plt.figure(figsize=(60, 20))
     df = df_original.copy()
     df['n'] = df['n'].astype('int32')
     df['date'] = df[['y', 'w']].astype(str).apply('-'.join, axis=1)
-    sns.lineplot(df['date'], df['n'], label='value', ci=None)
+    sns.pointplot(df['date'], df['n'], label='value', ci=None, markersize=0.01, color='green')
     plt.xticks(rotation='60')
     plt.legend()  # Graph labels
     plt.xlabel('Date')
     plt.ylabel('n')
     # plt.minorticks_on()
-    plt.grid(axis='y')
+    plt.grid(axis='both')
     plt.title('Data distribution')
-    # plt.savefig('Data distribution', dpi=240)
+    plt.savefig('DataDistribution.png', dpi=240)
     plt.show()
-    # exit(0)
+    exit(0)
 
 
 def importances(model, feature_list):
@@ -291,7 +290,7 @@ def errors(test_labels, predictions, mean):
     print('Mean Absolute Error:', round(MAE, 2))
     # print('Max Error:', round(MAX, 2))
     # print('Exaplined Variance:', round(EVS, 3))
-    # print('R2 Scoring:', round(R2, 3))
+    print('R2 Scoring:', round(R2, 3))
     print('RSE:', round(RSE, 3))
     print('Relative:', np.round(np.mean(REL), 2), '%.')
-    # print('\nAccuracy:', np.round(100-np.mean(REL), 2), '%.')
+    print('\nAccuracy:', np.round(100-np.mean(REL), 2), '%.')

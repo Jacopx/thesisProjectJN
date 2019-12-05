@@ -168,15 +168,14 @@ def issue_count_mixed_forecast_file(dataset):
     issue['duration'] = np.round(issue['time'].dt.total_seconds() / 60 / 60, 0)
 
     # FILTER
-    issue = issue[(issue['o_y'] >= 2012) & (issue['o_y'] <= 2018) & (issue['c_y'] >= 2012) & (issue['c_y'] <= 2018)]
+    issue = filter(issue)
+    issue = issue[((issue['o_y'] >= 2012) & (issue['o_y'] <= 2018) & (issue['c_y'] >= 2012) & (issue['c_y'] <= 2018)) | (issue['c_y'].isna() == True & (issue['o_y'] == 2017))]
     issue = issue[(issue['type'] == 'Bug')]
-    issue = issue.dropna()
-    issue = remove_outliers(issue, 'duration')
 
-    issue['o_y'] = issue['o_y'].astype('int32')
-    issue['o_w'] = issue['o_w'].astype('int32')
-    issue['c_y'] = issue['c_y'].astype('int32')
-    issue['c_w'] = issue['c_w'].astype('int32')
+    # issue['o_y'] = issue['o_y'].astype('int32')
+    # issue['o_w'] = issue['o_w'].astype('int32')
+    # issue['c_y'] = issue['c_y'].astype('int32')
+    # issue['c_w'] = issue['c_w'].astype('int32')
 
     # DROP UNUSED FEATURES
     issue = issue.drop('open_dt', axis=1)
@@ -213,6 +212,7 @@ def issue_count_mixed_forecast_file(dataset):
 
     close_issue = issue.copy()
     close_issue.severity.replace(prior, [-50.00, -10.00, -2.00, -1.00, -0.50], inplace=True)
+    # close_issue = close_issue.dropna()
     close_issue_count = make_issue_count(close_issue, 'c_')
     close_issue_sum = make_issue_sum(close_issue, 'c_')
 
@@ -240,7 +240,8 @@ def issue_count_mixed_forecast_file(dataset):
     issue_finalP = issue_final.copy()
 
     # horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 40, 52]
-    horizons = [4]
+    # horizons = [1, 2, 4, 8]
+    horizons = [1]
 
     for shift in horizons:
         print('Horizon: ' + str(shift) + '.', end='')
@@ -458,7 +459,8 @@ def remove_outliers(df, column):
 
     return df
 
-def extracted_calculation(issue_final, column):
+def extracted_calculation(issue_start, column):
+    issue_final = issue_start.copy()
     issue_final['exp_avg'] = issue_final[column].expanding().mean()
     issue_final['mov_avg2'] = issue_final[column].rolling(2).mean()
     issue_final['mov_avg2'] = issue_final['mov_avg2'].shift(1, fill_value=-1)
