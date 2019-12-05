@@ -116,8 +116,7 @@ def count_model(file):
 
 def count_model_keras_nn(file):
     features_basic = pd.read_csv(file + '.csv')
-    # features_basic = features_basic.drop('index', axis=1)
-    plot_all(features_basic)
+    # plot_all(features_basic)
 
     infos(file, features_basic)
 
@@ -165,7 +164,7 @@ def personal_model(shape):
 
 def count_model_keras_lstm(file):
     features_basic = pd.read_csv(file + '.csv')
-    # features_basic = features_basic.drop('index', axis=1)
+    # plot_all(features_basic)
 
     infos(file, features_basic)
 
@@ -197,7 +196,6 @@ def count_model_keras_lstm(file):
     plot(file + ' LSTM', test_labels, predictions)
     # importances(model, feature_list)
     errors(test_labels, predictions, mean)
-
 
 
 def lstm_model(shape):
@@ -244,7 +242,7 @@ def plot(file, test_labels, predictions):
 
 
 def plot_all(df_original):
-    plt.figure(figsize=(60, 20))
+    plt.figure(figsize=(40, 18))
     df = df_original.copy()
     df['n'] = df['n'].astype('int32')
     df['date'] = df[['y', 'w']].astype(str).apply('-'.join, axis=1)
@@ -255,10 +253,10 @@ def plot_all(df_original):
     plt.ylabel('n')
     # plt.minorticks_on()
     plt.grid(axis='both')
-    plt.title('Data distribution')
+    plt.title('Data Distribution')
     plt.savefig('DataDistribution.png', dpi=240)
     plt.show()
-    exit(0)
+    # exit(0)
 
 
 def importances(model, feature_list):

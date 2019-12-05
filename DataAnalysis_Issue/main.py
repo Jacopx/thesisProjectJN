@@ -190,6 +190,8 @@ def issue_count_mixed_forecast_file(dataset):
     issue = issue.drop('summary', axis=1)
     issue = issue.drop('description', axis=1)
     issue = issue.drop('type', axis=1)
+    # issue = issue.drop('status', axis=1)
+    # issue = issue.drop('resolution', axis=1)
 
     prior = ['Critical', 'Major', 'Blocker', 'Minor', 'Trivial']
 
@@ -233,8 +235,8 @@ def issue_count_mixed_forecast_file(dataset):
     issue_finalP = issue_final.copy()
 
     # horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 40, 52]
-    # horizons = [1, 2, 4, 8]
-    horizons = [1]
+    horizons = [1, 2, 4, 8]
+    # horizons = [1]
 
     for shift in horizons:
         print('Horizon: ' + str(shift) + '.', end='')
@@ -350,11 +352,11 @@ def make_component_change(dataset):
 
     query = \
         """
-            SELECT date, component, COUNT(DISTINCT commit_hash) as 'commit_count', SUM(line_change) as 'line_change'
+            SELECT date, component, COUNT(DISTINCT commit_hash) as 'commit_count', SUM(line_change) as 'line_change', resolution, status
             FROM
-             (  SELECT changes.commit_hash, component, date, line_change
+             (  SELECT changes.commit_hash, component, date, line_change, resolution, status
                 FROM issue_component,
-                    (   SELECT change_set_link.issue_id, change.commit_hash, date, line_change
+                    (   SELECT change_set_link.issue_id, change.commit_hash, date, line_change, resolution, status
                         FROM issue, change_set_link,
                          (  SELECT change_set.commit_hash, DATE(committed_date) as 'date', SUM(sum_added_lines)-SUM(sum_removed_lines) AS 'line_change'
                             FROM code_change, change_set
@@ -416,6 +418,7 @@ def filter(df_init):
     df = df_init.copy()
     df = df[((df['o_y'] >= 2012) & (df['o_y'] <= 2018) & (df['c_y'] >= 2012) & (df['c_y'] <= 2018)) | (df['c_y'].isna() == True & (df['o_y'] == 2017))]
     df = df[(df['type'] == 'Bug')]
+    df = df[((df['status'] == 'Closed') & (df['resolution'] == 'Fixed')) | ((df['status'] == 'Resolved') & (df['resolution'] == 'Fixed')) | (df['status'] == 'Open')]
     return df
 
 
