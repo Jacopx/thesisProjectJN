@@ -32,16 +32,27 @@ def main(dataset):
     elif dataset in 'SFFD':
         forecast.count_model('data/satur')
     elif dataset in 'ISSUE':
-        forecast.count_model('data/hadoop_mixed_count4')
-        forecast.count_model_keras_nn('data/hadoop_mixed_count4')
-        forecast.count_model_keras_lstm('data/hadoop_mixed_count4')
+        # forecast.count_model('data/hadoop_mixed_count4')
+        # forecast.count_model_keras_nn('data/hadoop_mixed_count1')
+        # forecast.count_model_keras_nn('data/hbase_mixed_count1')
+        # forecast.count_model_keras_lstm('data/hadoop_mixed_count4')
 
-        # forecast.count_model('data/hadoop_mixed_count8')
-        # forecast.count_model_keras_nn('data/hadoop_mixed_count8')
-        # forecast.count_model_keras_lstm('data/hadoop_mixed_count8')
+        # forecast.count_model('data/hadoop_mixed_prior4')
+        # forecast.count_model_keras_nn('data/hadoop_mixed_prior4')
+        # forecast.count_model_keras_lstm('data/hadoop_mixed_prior4')
 
-        # forecast.count_model('data/hadoop_mixed_prior8')
-
+        forecast.count_model_keras_nn('data/hadoop_mixed_prior1')
+        # forecast.count_model_keras_nn('data/hbase_mixed_prior1')
+        forecast.count_model_keras_nn('data/hadoop_mixed_prior2')
+        forecast.count_model_keras_nn('data/hadoop_mixed_prior4')
+        forecast.count_model_keras_nn('data/hadoop_mixed_prior6')
+        forecast.count_model_keras_nn('data/hadoop_mixed_prior8')
+        forecast.count_model_keras_nn('data/hadoop_mixed_prior10')
+        forecast.count_model_keras_nn('data/hadoop_mixed_prior12')
+        forecast.count_model_keras_nn('data/hadoop_mixed_prior16')
+        forecast.count_model_keras_nn('data/hadoop_mixed_prior20')
+        forecast.count_model_keras_nn('data/hadoop_mixed_prior40')
+        forecast.count_model_keras_nn('data/hadoop_mixed_prior52')
 
 if __name__ == "__main__":
     main(sys.argv[1])
