@@ -169,13 +169,6 @@ def issue_count_mixed_forecast_file(dataset):
 
     # FILTER
     issue = filter(issue)
-    issue = issue[((issue['o_y'] >= 2012) & (issue['o_y'] <= 2018) & (issue['c_y'] >= 2012) & (issue['c_y'] <= 2018)) | (issue['c_y'].isna() == True & (issue['o_y'] == 2017))]
-    issue = issue[(issue['type'] == 'Bug')]
-
-    # issue['o_y'] = issue['o_y'].astype('int32')
-    # issue['o_w'] = issue['o_w'].astype('int32')
-    # issue['c_y'] = issue['c_y'].astype('int32')
-    # issue['c_w'] = issue['c_w'].astype('int32')
 
     # DROP UNUSED FEATURES
     issue = issue.drop('open_dt', axis=1)
@@ -416,6 +409,13 @@ def make_issue_sum(df, root):
         df = df.drop('o_w', axis=1)
         df = df.rename(columns={'severity': 'close_severity_sum'})
 
+    return df
+
+
+def filter(df_init):
+    df = df_init.copy()
+    df = df[((df['o_y'] >= 2012) & (df['o_y'] <= 2018) & (df['c_y'] >= 2012) & (df['c_y'] <= 2018)) | (df['c_y'].isna() == True & (df['o_y'] == 2017))]
+    df = df[(df['type'] == 'Bug')]
     return df
 
 
