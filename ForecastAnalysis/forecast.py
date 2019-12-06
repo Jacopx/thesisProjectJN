@@ -119,7 +119,7 @@ def count_model_keras_nn(file):
     features_basic = pd.read_csv(file + '.csv')
     # plot_all(features_basic)
 
-    infos(file, features_basic)
+    infos_nn(file, features_basic)
 
     features = features_basic.copy()
     features = features.dropna()
@@ -133,9 +133,6 @@ def count_model_keras_nn(file):
     train_features, test_features, train_labels, test_labels = \
         train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=False)
 
-    x_val = train_features[-10:]
-    y_val = train_labels[-10:]
-
     ######################### MODEL DEFINITIONS ############################
 
     estimator = KerasRegressor(build_fn=personal_model, shape=train_features.shape[1], epochs=epochs_nn, batch_size=batch_size, verbose=verbose)
@@ -148,9 +145,11 @@ def count_model_keras_nn(file):
     # plot_history(file + '_NN_', history, 'mse', 'MSE')
 
     predictions = estimator.predict(test_features)
+    all_predictions = estimator.predict(features)
     predictions = np.round(predictions, decimals=0)
 
-    plot(file + '_NN_', test_labels, predictions)
+    plot_predict(file + '_NN_', test_labels, predictions)
+    plot_mixed(file + '_NN_', labels, all_predictions)
     # importances(model, feature_list)
     errors(test_labels, predictions, mean)
 
@@ -171,7 +170,7 @@ def count_model_keras_lstm(file):
     features_basic = pd.read_csv(file + '.csv')
     # plot_all(features_basic)
 
-    infos(file, features_basic)
+    infos_nn(file, features_basic)
 
     features = features_basic.copy()
     features = features.dropna()
@@ -200,9 +199,11 @@ def count_model_keras_lstm(file):
     # plot_history(file + '_NN_', history, 'mse', 'MSE')
 
     predictions = estimator.predict(test_features)
+    all_predictions = estimator.predict(features)
     predictions = np.round(predictions, decimals=0)
 
-    plot(file + ' LSTM', test_labels, predictions)
+    plot_predict(file + '_NN_', test_labels, predictions)
+    plot_mixed(file + '_NN_', labels, all_predictions)
     # importances(model, feature_list)
     errors(test_labels, predictions, mean)
 
@@ -224,10 +225,21 @@ def infos(file, features_basic):
     print('test_size =', test_size)
     print('predictor = ', predictor)
     print('n_jobs = ', n_jobs)
+    print('verbose = ', verbose)
     print('The shape of our features is:', features_basic.shape)
 
 
-def plot(file, test_labels, predictions):
+def infos_nn(file, features_basic):
+    print('#######################################')
+    print('FILE:', file, '\n')
+    print('test_size =', test_size)
+    print('epochs = ', epochs_nn)
+    print('batch_size = ', batch_size)
+    print('verbose = ', verbose)
+    print('The shape of our features is:', features_basic.shape)
+
+
+def plot_predict(file, test_labels, predictions):
     n=[]
     for i in range(0, len(predictions)):
         n.append(i)
@@ -242,8 +254,28 @@ def plot(file, test_labels, predictions):
     plt.ylabel('n')
     plt.minorticks_on()
     plt.grid(axis='both')
-    plt.title(file + ' predictions')
+    plt.title(file[5:] + '_predictions')
     plt.savefig(file + '_predictions.png', dpi=240)
+    plt.show()
+
+
+def plot_mixed(file, labels, predictions):
+    n=[]
+    for i in range(0, len(predictions)):
+        n.append(i)
+
+    plt.figure(figsize=(15, 8))
+    sns.lineplot(n, labels, label='real', ci=None)
+    sns.lineplot(n, predictions, label='predict', ci=None)
+    plt.axvline(int(len(predictions) * (1 - test_size)), linestyle='--', label='split', c='red')
+    plt.xticks(rotation='60')
+    plt.legend()  # Graph labels
+    plt.xlabel('Issue')
+    plt.ylabel('n')
+    plt.minorticks_on()
+    plt.grid(axis='both')
+    plt.title(file[5:] + '_all_predictions')
+    plt.savefig(file + '_all_predictions.png', dpi=240)
     plt.show()
 
 
@@ -256,8 +288,8 @@ def plot_history(file, history, name, label):
     plt.ylabel('Error')
     plt.minorticks_on()
     plt.grid(axis='both')
-    plt.title(file + label + '_History')
-    plt.savefig(file + label + '_history.png', dpi=240)
+    plt.title(file[5:] + label + '_History')
+    plt.savefig(file[5:] + label + '_history.png', dpi=240)
     plt.show()
 
 
