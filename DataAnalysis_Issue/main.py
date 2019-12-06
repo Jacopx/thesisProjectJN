@@ -151,9 +151,9 @@ def issue_count_mixed_forecast_file(dataset):
     date_wb_component = pd.concat([date_component_change, vectorized], axis=1)
     week_commit = date_wb_component.groupby(by=['w', 'y']).sum()
 
-    seniority = aggregate_sen(dataset)
-    week_commit_seniority = pd.merge(week_commit, seniority, on=['w', 'y'])
-    # week_commit_seniority = week_commit
+    # seniority = aggregate_sen(dataset)
+    # week_commit_seniority = pd.merge(week_commit, seniority, on=['w', 'y'])
+    week_commit_seniority = week_commit
 
     issue = open_sqlite(dataset, 'issue')
     print('Starting shape:\t{}'.format(issue.shape))
