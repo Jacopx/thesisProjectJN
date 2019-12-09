@@ -18,6 +18,7 @@ from sklearn.metrics import r2_score
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
 from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import mean_squared_log_error
 from sklearn.metrics import max_error
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import KFold
@@ -38,9 +39,9 @@ warnings.filterwarnings("ignore")
 test_size = 0.25
 
 predictor = 600
-epochs_nn = 300
-epochs_lstm = 100
-batch_size = 4
+epochs_nn = 400
+epochs_lstm = 500
+batch_size = 8
 
 random = 12
 n_jobs = 6
@@ -118,7 +119,7 @@ def count_model_keras_nn(file):
     features_basic = pd.read_csv(file + '.csv')
     # plot_all(features_basic)
 
-    infos(file, features_basic)
+    infos_nn(file, features_basic)
 
     features = features_basic.copy()
     features = features.dropna()
@@ -135,14 +136,20 @@ def count_model_keras_nn(file):
     ######################### MODEL DEFINITIONS ############################
 
     estimator = KerasRegressor(build_fn=personal_model, shape=train_features.shape[1], epochs=epochs_nn, batch_size=batch_size, verbose=verbose)
-    estimator.fit(train_features, train_labels)
+    history = estimator.fit(train_features, train_labels)
 
     ######################### MODEL DEFINITIONS ############################
 
+    # plot_history(file + '_NN_', history, 'loss', 'MAE')
+    # plot_history(file + '_NN_', history, 'msle', 'MSLE')
+    # plot_history(file + '_NN_', history, 'mse', 'MSE')
+
     predictions = estimator.predict(test_features)
+    all_predictions = estimator.predict(features)
     predictions = np.round(predictions, decimals=0)
 
-    plot(file + ' NN', test_labels, predictions)
+    plot_predict(file + '_NN_', test_labels, predictions)
+    plot_mixed(file + '_NN_', labels, all_predictions)
     # importances(model, feature_list)
     errors(test_labels, predictions, mean)
 
@@ -150,13 +157,10 @@ def count_model_keras_nn(file):
 def personal_model(shape):
     model = Sequential()
     model.add(Dense(shape, input_dim=shape, kernel_initializer='normal', activation='relu'))
-    # model.add(Dense(shape, activation='relu'))
     model.add(Dense(int(shape/2), activation='relu'))
-    # model.add(Dense(36, activation='linear'))
-    # model.add(Dense(28, activation='relu'))
     model.add(Dense(int(shape/4), activation='relu'))
     model.add(Dense(1, activation='linear'))
-    model.compile(loss='mse', optimizer='adam', metrics=['accuracy', 'mae'])
+    model.compile(loss='mae', optimizer='adam', metrics=['msle', 'mse'])
     # model.summary()
 
     return model
@@ -166,7 +170,7 @@ def count_model_keras_lstm(file):
     features_basic = pd.read_csv(file + '.csv')
     # plot_all(features_basic)
 
-    infos(file, features_basic)
+    infos_nn(file, features_basic)
 
     features = features_basic.copy()
     features = features.dropna()
@@ -185,15 +189,21 @@ def count_model_keras_lstm(file):
 
     ######################### MODEL DEFINITIONS ############################
 
-    estimator = KerasRegressor(build_fn=lstm_model, shape=train_features.shape[1], epochs=epochs_lstm, batch_size=1, verbose=verbose)
-    estimator.fit(train_features, train_labels)
+    estimator = KerasRegressor(build_fn=lstm_model, shape=train_features.shape[2], epochs=epochs_lstm, batch_size=1, verbose=verbose)
+    history = estimator.fit(train_features, train_labels)
 
     ######################### MODEL DEFINITIONS ############################
 
+    # plot_history(file + '_NN_', history, 'loss', 'MSLE')
+    # plot_history(file + '_NN_', history, 'mae', 'MAE')
+    # plot_history(file + '_NN_', history, 'mse', 'MSE')
+
     predictions = estimator.predict(test_features)
+    all_predictions = estimator.predict(features)
     predictions = np.round(predictions, decimals=0)
 
-    plot(file + ' LSTM', test_labels, predictions)
+    plot_predict(file + '_NN_', test_labels, predictions)
+    plot_mixed(file + '_NN_', labels, all_predictions)
     # importances(model, feature_list)
     errors(test_labels, predictions, mean)
 
@@ -201,12 +211,9 @@ def count_model_keras_lstm(file):
 def lstm_model(shape):
     model = Sequential()
     model.add(LSTM(shape, input_shape=(1, shape)))
-    model.add(Dense(63, activation='relu'))
-    # model.add(Dense(36, activation='linear'))
-    # model.add(Dense(28, activation='relu'))
-    # model.add(Dense(12, activation='linear'))
+    model.add(Dense(64, activation='relu'))
     model.add(Dense(1, activation='linear'))
-    model.compile(loss='mse', optimizer='adam',  metrics=['accuracy', 'mae'])
+    model.compile(loss='mae', optimizer='adam',  metrics=['mse', 'msle'])
     # model.summary()
 
     return model
@@ -218,10 +225,21 @@ def infos(file, features_basic):
     print('test_size =', test_size)
     print('predictor = ', predictor)
     print('n_jobs = ', n_jobs)
+    print('verbose = ', verbose)
     print('The shape of our features is:', features_basic.shape)
 
 
-def plot(file, test_labels, predictions):
+def infos_nn(file, features_basic):
+    print('#######################################')
+    print('FILE:', file, '\n')
+    print('test_size =', test_size)
+    print('epochs = ', epochs_nn)
+    print('batch_size = ', batch_size)
+    print('verbose = ', verbose)
+    print('The shape of our features is:', features_basic.shape)
+
+
+def plot_predict(file, test_labels, predictions):
     n=[]
     for i in range(0, len(predictions)):
         n.append(i)
@@ -236,8 +254,42 @@ def plot(file, test_labels, predictions):
     plt.ylabel('n')
     plt.minorticks_on()
     plt.grid(axis='both')
-    plt.title(file + ' predictions')
+    plt.title(file[5:] + '_predictions')
     plt.savefig(file + '_predictions.png', dpi=240)
+    plt.show()
+
+
+def plot_mixed(file, labels, predictions):
+    n=[]
+    for i in range(0, len(predictions)):
+        n.append(i)
+
+    plt.figure(figsize=(15, 8))
+    sns.lineplot(n, labels, label='real', ci=None)
+    sns.lineplot(n, predictions, label='predict', ci=None)
+    plt.axvline(int(len(predictions) * (1 - test_size)), linestyle='--', label='split', c='red')
+    plt.xticks(rotation='60')
+    plt.legend()  # Graph labels
+    plt.xlabel('Issue')
+    plt.ylabel('n')
+    plt.minorticks_on()
+    plt.grid(axis='both')
+    plt.title(file[5:] + '_all_predictions')
+    plt.savefig(file + '_all_predictions.png', dpi=240)
+    plt.show()
+
+
+def plot_history(file, history, name, label):
+    plt.figure(figsize=(15, 8))
+    sns.lineplot(history.epoch, history.history[name], label=label, ci=None)
+    plt.xticks(rotation='60')
+    plt.legend()  # Graph labels
+    plt.xlabel('Epochs')
+    plt.ylabel('Error')
+    plt.minorticks_on()
+    plt.grid(axis='both')
+    plt.title(file[5:] + label + '_History')
+    plt.savefig(file[5:] + label + '_history.png', dpi=240)
     plt.show()
 
 
@@ -251,7 +303,6 @@ def plot_all(df_original):
     plt.legend()  # Graph labels
     plt.xlabel('Date')
     plt.ylabel('n')
-    # plt.minorticks_on()
     plt.grid(axis='both')
     plt.title('Data Distribution')
     plt.savefig('DataDistribution.png', dpi=240)
@@ -284,11 +335,13 @@ def errors(test_labels, predictions, mean):
     RSE = mean_squared_error(test_labels, predictions)
     REL = 100 * (abs(test_labels - predictions) / test_labels)
     MAX = max_error(test_labels, predictions)
+    # MSLE = mean_squared_log_error(test_labels, predictions)
 
     print('Mean Absolute Error:', round(MAE, 2))
     # print('Max Error:', round(MAX, 2))
     # print('Exaplined Variance:', round(EVS, 3))
-    print('R2 Scoring:', round(R2, 3))
-    print('RSE:', round(RSE, 3))
+    # print('R2 Scoring:', round(R2, 3))
+    # print('MSLE Scoring:', round(MSLE, 5))
+    # print('RSE:', round(RSE, 3))
     print('Relative:', np.round(np.mean(REL), 2), '%.')
     print('\nAccuracy:', np.round(100-np.mean(REL), 2), '%.')

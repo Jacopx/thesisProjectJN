@@ -1,18 +1,7 @@
-Hadoop Data Analysis
+SEOSS33 Data Analysis
 ------------------
 
-The data structure is composed of:
-  # hadoop_issue.csv:
-    * issue_id: Reference to sourcing platform ID
-    * type: Type of the issue [Bug, Improvement, SubTask, New F, Test, Task, Wish]
-    * Priority: The importance of the issue opened [Blocker, Critical, Major, Minor, Trivial]
-    * create_date: datetime of issue open
-    * resolved_date: datetime of issue closing
-
-  # hadoop_issue-modification.csv:
-    * issue_id: Reference to sourcing platform ID
-    * added_lines: Aggregation, respect multiple commit, of the number of line added
-    * removed_lines: Aggregation, respect multiple commit, of the number of line removed
+The whole data structure and other infos can be found in the reference paper [https://www.researchgate.net/publication/333347361_The_SEOSS_33_Dataset_-_Requirements_Bug_Reports_Code_History_and_Trace_Links_for_Entire_Projects]
 
 
 To forecast
@@ -20,6 +9,9 @@ To forecast
 Every analysis performed over this dataset has not yet been published. Here some ideas:
   - Issue over time
   - Issue prediction after commit
+
+After a lot of research, the new target, is to predict the severity of the issue that will be opened in the future,
+this task require extraction of a lot of different features. More information will be available in the thesis document. 
 
 
 Analysis

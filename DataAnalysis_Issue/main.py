@@ -1,5 +1,7 @@
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction import text
+import matplotlib.pyplot as plt
+import seaborn as sns
 import pandas as pd
 import numpy as np
 import sys
@@ -151,6 +153,10 @@ def issue_count_mixed_forecast_file(dataset):
     date_wb_component = pd.concat([date_component_change, vectorized], axis=1)
     week_commit = date_wb_component.groupby(by=['w', 'y']).sum()
 
+    # seniority = aggregate_sen(dataset)
+    # week_commit_seniority = pd.merge(week_commit, seniority, on=['w', 'y'])
+    week_commit_seniority = week_commit
+
     issue = open_sqlite(dataset, 'issue')
     print('Starting shape:\t{}'.format(issue.shape))
 
@@ -170,81 +176,67 @@ def issue_count_mixed_forecast_file(dataset):
     # FILTER
     issue = filter(issue)
 
-    # DROP UNUSED FEATURES
-    issue = issue.drop('open_dt', axis=1)
-    issue = issue.drop('close_dt', axis=1)
-    issue = issue.drop('time', axis=1)
-    issue = issue.drop('duration', axis=1)
-    issue = issue.drop('created_date', axis=1)
-    issue = issue.drop('created_date_zoned', axis=1)
-    issue = issue.drop('updated_date', axis=1)
-    issue = issue.drop('updated_date_zoned', axis=1)
-    issue = issue.drop('resolved_date', axis=1)
-    issue = issue.drop('resolved_date_zoned', axis=1)
-    issue = issue.drop('status', axis=1)
-    issue = issue.drop('assignee', axis=1)
-    issue = issue.drop('assignee_username', axis=1)
-    issue = issue.drop('reporter', axis=1)
-    issue = issue.drop('reporter_username', axis=1)
-    issue = issue.drop('issue_id', axis=1)
-    issue = issue.drop('summary', axis=1)
-    issue = issue.drop('description', axis=1)
-    issue = issue.drop('type', axis=1)
-    # issue = issue.drop('status', axis=1)
-    # issue = issue.drop('resolution', axis=1)
+    # REMOVE OR UPDATE FEATURES
+    issue = issue.drop(['open_dt', 'close_dt', 'time', 'duration'], axis=1)
+    issue = issue.drop(['created_date', 'created_date_zoned', 'updated_date', 'updated_date_zoned', 'resolved_date', 'resolved_date_zoned'], axis=1)
+    issue = issue.drop(['status', 'assignee', 'assignee_username', 'reporter', 'reporter_username'], axis=1)
+    issue = issue.drop(['issue_id', 'summary', 'description', 'type'], axis=1)
+    issue = issue.rename(columns={'priority': 'severity'})
 
     prior = ['Critical', 'Major', 'Blocker', 'Minor', 'Trivial']
 
-    # issue.priority.replace(prior, [1.00, 0.80, 0.70, 0.30, 0.50], inplace=True)
-    issue = issue.rename(columns={'priority': 'severity'})
-
+    # ADDING EMPTY COLUMN
     issue['n'] = 0
 
+    # MAKE DF COPY TO COMPUTE OPEN ISSUE
     open_issue = issue.copy()
     open_issue.severity.replace(prior, [50.00, 10.00, 2.00, 1.00, 0.50], inplace=True)
     open_issue_count = make_issue_count(open_issue, 'o_')
     open_issue_sum = make_issue_sum(open_issue, 'o_')
 
+    # MAKE DF COPY TO COMPUTE CLOSED ISSUE
     close_issue = issue.copy()
     close_issue.severity.replace(prior, [-50.00, -10.00, -2.00, -1.00, -0.50], inplace=True)
-    # close_issue = close_issue.dropna()
     close_issue_count = make_issue_count(close_issue, 'c_')
     close_issue_sum = make_issue_sum(close_issue, 'c_')
 
+    # COMPUTE SUM OF SEVERITY
     issue_sum = pd.merge(open_issue_sum, close_issue_sum, on=['y', 'w'])
     issue_sum['severity_diff'] = issue_sum['open_severity_sum'] + issue_sum['close_severity_sum']
     issue_sum['cumsum_severity'] = issue_sum['severity_diff'].cumsum()
 
+    # COMPUTE COUNT OF ISSUE
     issue_count = pd.merge(open_issue_count, close_issue_count, on=['y', 'w'])
     issue_count['issue_diff'] = issue_count['open_issue_count'] + issue_count['close_issue_count']
     issue_count['cumsum_issue'] = issue_count['issue_diff'].cumsum()
 
+    # MERGE THE COUNT
     issue_cnt_sum = pd.merge(issue_sum, issue_count, on=['y', 'w'])
-    issue_final = pd.merge(issue_cnt_sum, week_commit, on=['y', 'w'])
+    issue_final = pd.merge(issue_cnt_sum, week_commit_seniority, on=['y', 'w'])
 
     issue_final['line_change'] = issue_final['line_change'].astype('int32')
     issue_final['commit_count'] = issue_final['commit_count'].astype('int32')
 
+    # CAST
     for i in range(3, len(issue_final.columns)):
         issue_final[issue_final.columns[i]] = issue_final[issue_final.columns[i]].astype('int32')
 
     print('Ending shape:\t{}'.format(issue_final.shape))
-    print('Export...', end='')
+    print('Export:')
 
     issue_finalC = issue_final.copy()
     issue_finalP = issue_final.copy()
 
-    # horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 40, 52]
-    horizons = [1, 2, 4, 8]
-    # horizons = [1]
+    horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 40, 52]
+    # horizons = [1, 2, 4, 8]
 
+    # EXPORT FOR DIFFERENT TIME HORIZONS
     for shift in horizons:
         print('Horizon: ' + str(shift) + '.', end='')
 
         # COUNT
         issue_finalCx = issue_final.copy()
         issue_finalC = extracted_calculation(issue_finalCx, 'cumsum_issue')
-        # issue_finalC = issue_finalCx
         issue_finalC[str(shift) + 'before'] = issue_finalC['cumsum_issue'].shift(-shift, fill_value=-1)
         issue_finalC = issue_finalC.head(-shift)
         issue_finalC = issue_finalC.drop('cumsum_issue', axis=1)
@@ -256,7 +248,6 @@ def issue_count_mixed_forecast_file(dataset):
         # PRIORITY
         issue_finalPx = issue_final.copy()
         issue_finalP = extracted_calculation(issue_finalPx, 'cumsum_severity')
-        # issue_finalP = issue_finalPx
         issue_finalP[str(shift) + 'before'] = issue_finalP['cumsum_severity'].shift(-shift, fill_value=-1)
         issue_finalP = issue_finalP.head(-shift)
         issue_finalP = issue_finalP.drop('cumsum_severity', axis=1)
@@ -280,8 +271,6 @@ def issue_count_forecast_file(dataset):
 
     issue['open_dt'] = pd.to_datetime(issue['created_date'])
     issue['date'] = issue['open_dt'].dt.date
-    # issue['h'] = issue['open_dt'].dt.hour
-    # issue['m'] = issue['open_dt'].dt.minute
 
     issue = issue.drop('created_date', axis=1)
     issue = issue.drop('created_date_zoned', axis=1)
@@ -307,8 +296,6 @@ def issue_count_forecast_file(dataset):
 
     issue['n'] = 0
 
-    # issue_final = issue.groupby(by=['date', 'h', 'm'], as_index=True).count()
-    # issue_final = issue.groupby(by=['date', 'h'], as_index=True).count()
     issue_final = issue.groupby(by=['date'], as_index=True).count()
 
     issue_final = issue_final.fillna(0)
@@ -316,8 +303,6 @@ def issue_count_forecast_file(dataset):
 
     issue_final['date'] = pd.to_datetime(issue_final['date'])
     issue_final['month'] = issue_final['date'].dt.month
-    # issue_final['year'] = issue_final['date'].dt.year
-    # issue_final['day'] = issue_final['date'].dt.day
     issue_final['wday'] = issue_final['date'].dt.weekday
     issue_final = issue_final.drop('date', axis=1)
 
@@ -325,18 +310,11 @@ def issue_count_forecast_file(dataset):
     issue_final['mov_avg2'] = issue_final['n'].rolling(2).mean()
     issue_final['mov_avg2'] = issue_final['mov_avg2'].shift(1, fill_value=-1)
     issue_final = issue_final.tail(-2)
-    # issue_final['mov_avg7'] = issue_final['n'].rolling(7).mean()
-    # issue_final['mov_avg7'] = issue_final['mov_avg7'].shift(1, fill_value=-1)
-    # issue_final = issue_final.tail(-7)
 
     issue_final['avg'] = issue_final['n'].mean()
 
-    # issue_final['1before'] = issue_final['n'].shift(1, fill_value=-1)
-    # issue_final['2before'] = issue_final['n'].shift(2, fill_value=-1)
-    # issue_final['5before'] = issue_final['n'].shift(5, fill_value=-1)
     issue_final['7before'] = issue_final['n'].shift(7, fill_value=-1)
     issue_final['14before'] = issue_final['n'].shift(14, fill_value=-1)
-    # issue_final['30before'] = issue_final['n'].shift(30, fill_value=-1)
     issue_final = issue_final.tail(-14)
 
     print('Ending shape:\t{}'.format(issue_final.shape))
@@ -369,6 +347,58 @@ def make_component_change(dataset):
                 WHERE issue_component.issue_id=changes.issue_id
             )
             GROUP BY date, component;
+        """
+
+    return pd.read_sql_query(query, conn)
+
+
+def aggregate_sen(dataset):
+    date = make_commit_dev_date(dataset)
+
+    dev = make_sen_dev(dataset)
+    dev['first'] = pd.to_datetime(dev['first'])
+    dev['today'] = pd.datetime.today()
+
+    dev['age'] = dev['today'] - dev['first']
+    dev['age'] = np.round(dev['age'].dt.total_seconds() / 60 / 60 / 24, 0)
+    dev['age'] = dev['age'].astype('int32')
+    dev['seniority'] = dev['age'] * dev['commit_count'] # TYPE1
+    # dev['seniority'] = dev['commit_count'] # TYPE2
+    # dev['seniority'] = dev['age'] # TYPE3
+    # dev['seniority'] = (0.6 * dev['age']) + (dev['commit_count'] * 0.4) # TYPE4
+    dev = dev.drop(['today', 'first'], axis=1)
+
+    df = pd.merge(date, dev, on=['author'])
+    df = df.drop(['author', 'commit_count', 'age'], axis=1)
+    df['date'] = pd.to_datetime(df['date'])
+    df['y'] = df['date'].dt.year
+    df['w'] = df['date'].dt.week
+    final = df.groupby(by=['w', 'y']).sum()
+
+    return final
+
+
+def make_commit_dev_date(dataset):
+    conn = sqlite3.connect('data/SQLITE3/' + dataset + '.sqlite3')
+
+    query = \
+        """
+            SELECT author, DATE(committed_date) as 'date'
+            FROM change_set;
+        """
+
+    return pd.read_sql_query(query, conn)
+
+
+def make_sen_dev(dataset):
+    conn = sqlite3.connect('data/SQLITE3/' + dataset + '.sqlite3')
+
+    query = \
+        """
+            SELECT author, MIN(DATE(committed_date)) as 'first', COUNT(commit_hash) as 'commit_count'
+            FROM change_set
+            GROUP BY author
+            ORDER BY COUNT(commit_hash) DESC;
         """
 
     return pd.read_sql_query(query, conn)
@@ -416,8 +446,8 @@ def make_issue_sum(df, root):
 
 def filter(df_init):
     df = df_init.copy()
-    df = df[((df['o_y'] >= 2012) & (df['o_y'] <= 2018) & (df['c_y'] >= 2012) & (df['c_y'] <= 2018)) | (df['c_y'].isna() == True & (df['o_y'] == 2017))]
     df = df[(df['type'] == 'Bug')]
+    df = df[((df['o_y'] >= 2012) & (df['o_y'] <= 2018) & (df['c_y'] >= 2012) & (df['c_y'] <= 2018)) | (df['c_y'].isna() == True & (df['o_y'] == 2017))]
     df = df[((df['status'] == 'Closed') & (df['resolution'] == 'Fixed')) | ((df['status'] == 'Resolved') & (df['resolution'] == 'Fixed')) | (df['status'] == 'Open')]
     return df
 
@@ -462,6 +492,7 @@ def remove_outliers(df, column):
 
     return df
 
+
 def extracted_calculation(issue_start, column):
     issue_final = issue_start.copy()
     issue_final['exp_avg'] = issue_final[column].expanding().mean()
@@ -479,11 +510,39 @@ def extracted_calculation(issue_start, column):
     return issue_final.tail(-4)
 
 
+def data_distribution(dataset):
+    conn = sqlite3.connect('data/SQLITE3/' + dataset + '.sqlite3')
+    df = pd.read_sql_query('SELECT DATE(created_date) as "date", COUNT(DISTINCT issue_id) as "c" FROM issue WHERE type="Bug" GROUP BY DATE(created_date);', conn)
+
+    df['date'] = pd.to_datetime(df['date'])
+    df['y'] = df['date'].dt.year
+    df['w'] = df['date'].dt.week
+    # df['n'] = df['c'].cumsum()
+    df['n'] = df['c']
+
+    plt.figure(figsize=(60, 20))
+    df['date'] = df[['y', 'w']].astype(str).apply('-'.join, axis=1)
+    sns.barplot(df['date'], df['n'], label='value', ci=None, color='green')
+    plt.xticks(rotation='60')
+    plt.legend()  # Graph labels
+    plt.xlabel('Date')
+    plt.ylabel('n')
+    # plt.minorticks_on()
+    plt.grid(axis='both')
+    plt.title('Data Distribution ' + dataset)
+    plt.savefig('DataDistribution-' + dataset + '.png', dpi=240)
+    plt.show()
+
+    print(df['y'].unique())
+
+
+
 def main(dataset):
     # merge(dataset)
     # issue_duration_forecast_file(dataset)
-    issue_count_mixed_forecast_file(dataset)
+    # issue_count_mixed_forecast_file(dataset)
     # issue_count_forecast_file(dataset)
+    data_distribution(dataset)
 
 
 if __name__ == "__main__":
