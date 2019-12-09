@@ -148,10 +148,11 @@ def issue_count_mixed_forecast_file(dataset):
     date_component_change = date_component_change[(date_component_change['y'] >= 2012) & (date_component_change['y'] <= 2018)]
     date_component_change = date_component_change.drop('date', axis=1)
 
-    vectorized = word_recognition(date_component_change['component'])
-    date_component_change = date_component_change.drop('component', axis=1)
-    date_wb_component = pd.concat([date_component_change, vectorized], axis=1)
-    week_commit = date_wb_component.groupby(by=['w', 'y']).sum()
+    # vectorized = word_recognition(date_component_change['component'])
+    # date_component_change = date_component_change.drop('component', axis=1)
+    # date_wb_component = pd.concat([date_component_change, vectorized], axis=1)
+    # week_commit = date_wb_component.groupby(by=['w', 'y']).sum()
+    week_commit = date_component_change.groupby(by=['w', 'y']).sum()
 
     # seniority = aggregate_sen(dataset)
     # week_commit_seniority = pd.merge(week_commit, seniority, on=['w', 'y'])
@@ -237,10 +238,10 @@ def issue_count_mixed_forecast_file(dataset):
         # COUNT
         issue_finalCx = issue_final.copy()
         issue_finalC = extracted_calculation(issue_finalCx, 'cumsum_issue')
-        issue_finalC[str(shift) + 'before'] = issue_finalC['cumsum_issue'].shift(-shift, fill_value=-1)
+        issue_finalC[str(shift) + 'future'] = issue_finalC['cumsum_issue'].shift(-shift, fill_value=-1)
         issue_finalC = issue_finalC.head(-shift)
         issue_finalC = issue_finalC.drop('cumsum_issue', axis=1)
-        issue_finalC = issue_finalC.rename(columns={str(shift) + "before": "n"})
+        issue_finalC = issue_finalC.rename(columns={str(shift) + "future": "n"})
         issue_finalC['n'] = np.round(issue_finalC['n'], 1)
 
         print('.', end='')
@@ -248,10 +249,10 @@ def issue_count_mixed_forecast_file(dataset):
         # PRIORITY
         issue_finalPx = issue_final.copy()
         issue_finalP = extracted_calculation(issue_finalPx, 'cumsum_severity')
-        issue_finalP[str(shift) + 'before'] = issue_finalP['cumsum_severity'].shift(-shift, fill_value=-1)
+        issue_finalP[str(shift) + 'future'] = issue_finalP['cumsum_severity'].shift(-shift, fill_value=-1)
         issue_finalP = issue_finalP.head(-shift)
         issue_finalP = issue_finalP.drop('cumsum_severity', axis=1)
-        issue_finalP = issue_finalP.rename(columns={str(shift) + "before": "n"})
+        issue_finalP = issue_finalP.rename(columns={str(shift) + "future": "n"})
         issue_finalP['n'] = np.round(issue_finalP['n'], 1)
 
         print('.', end='')
@@ -536,13 +537,135 @@ def data_distribution(dataset):
     print(df['y'].unique())
 
 
+# def ludwig_export(dataset):
+#     # Get all commit by WEEK and YEAR
+#     date_component_change = make_component_change(dataset)
+#     date_component_change['date'] = pd.to_datetime(date_component_change['date'])
+#     date_component_change['w'] = date_component_change['date'].dt.week
+#     date_component_change['y'] = date_component_change['date'].dt.year
+#     date_component_change = date_component_change[
+#         (date_component_change['y'] >= 2012) & (date_component_change['y'] <= 2018)]
+#     date_component_change = date_component_change.drop('date', axis=1)
+#
+#     week_commit = date_component_change.groupby(by=['w', 'y']).sum()
+#
+#     week_commit_seniority = week_commit
+#
+#     issue = open_sqlite(dataset, 'issue')
+#     print('Starting shape:\t{}'.format(issue.shape))
+#
+#     issue['open_dt'] = pd.to_datetime(issue['created_date'])
+#     issue['o_date'] = issue['open_dt'].dt.date
+#     issue['o_y'] = issue['open_dt'].dt.year
+#     issue['o_w'] = issue['open_dt'].dt.week
+#
+#     issue['close_dt'] = pd.to_datetime(issue['resolved_date'])
+#     issue['c_date'] = issue['close_dt'].dt.date
+#     issue['c_y'] = issue['close_dt'].dt.year
+#     issue['c_w'] = issue['close_dt'].dt.week
+#
+#     issue['time'] = issue['close_dt'] - issue['open_dt']
+#     issue['duration'] = np.round(issue['time'].dt.total_seconds() / 60 / 60, 0)
+#
+#     # FILTER
+#     issue = filter(issue)
+#
+#     # REMOVE OR UPDATE FEATURES
+#     issue = issue.drop(['open_dt', 'close_dt', 'time', 'duration'], axis=1)
+#     issue = issue.drop(['created_date', 'created_date_zoned', 'updated_date', 'updated_date_zoned', 'resolved_date',
+#                         'resolved_date_zoned'], axis=1)
+#     issue = issue.drop(['status', 'assignee', 'assignee_username', 'reporter', 'reporter_username'], axis=1)
+#     issue = issue.drop(['issue_id', 'summary', 'description', 'type'], axis=1)
+#     issue = issue.rename(columns={'priority': 'severity'})
+#
+#     prior = ['Critical', 'Major', 'Blocker', 'Minor', 'Trivial']
+#
+#     # ADDING EMPTY COLUMN
+#     issue['n'] = 0
+#
+#     # MAKE DF COPY TO COMPUTE OPEN ISSUE
+#     open_issue = issue.copy()
+#     open_issue.severity.replace(prior, [50.00, 10.00, 2.00, 1.00, 0.50], inplace=True)
+#     open_issue_count = make_issue_count(open_issue, 'o_')
+#     open_issue_sum = make_issue_sum(open_issue, 'o_')
+#
+#     # MAKE DF COPY TO COMPUTE CLOSED ISSUE
+#     close_issue = issue.copy()
+#     close_issue.severity.replace(prior, [-50.00, -10.00, -2.00, -1.00, -0.50], inplace=True)
+#     close_issue_count = make_issue_count(close_issue, 'c_')
+#     close_issue_sum = make_issue_sum(close_issue, 'c_')
+#
+#     # COMPUTE SUM OF SEVERITY
+#     issue_sum = pd.merge(open_issue_sum, close_issue_sum, on=['y', 'w'])
+#     issue_sum['severity_diff'] = issue_sum['open_severity_sum'] + issue_sum['close_severity_sum']
+#     issue_sum['cumsum_severity'] = issue_sum['severity_diff'].cumsum()
+#
+#     # COMPUTE COUNT OF ISSUE
+#     issue_count = pd.merge(open_issue_count, close_issue_count, on=['y', 'w'])
+#     issue_count['issue_diff'] = issue_count['open_issue_count'] + issue_count['close_issue_count']
+#     issue_count['cumsum_issue'] = issue_count['issue_diff'].cumsum()
+#
+#     # MERGE THE COUNT
+#     issue_cnt_sum = pd.merge(issue_sum, issue_count, on=['y', 'w'])
+#     issue_final = pd.merge(issue_cnt_sum, week_commit_seniority, on=['y', 'w'])
+#
+#     issue_final['line_change'] = issue_final['line_change'].astype('int32')
+#     issue_final['commit_count'] = issue_final['commit_count'].astype('int32')
+#
+#     # CAST
+#     for i in range(3, len(issue_final.columns)):
+#         issue_final[issue_final.columns[i]] = issue_final[issue_final.columns[i]].astype('int32')
+#
+#     print('Ending shape:\t{}'.format(issue_final.shape))
+#     print('Export:')
+#
+#     issue_finalC = issue_final.copy()
+#     issue_finalP = issue_final.copy()
+#
+#     horizons = [1, 2]
+#
+#     # EXPORT FOR DIFFERENT TIME HORIZONS
+#     for shift in horizons:
+#         print('Horizon: ' + str(shift) + '.', end='')
+#
+#         # COUNT
+#         issue_finalCx = issue_final.copy()
+#         issue_finalC = extracted_calculation(issue_finalCx, 'cumsum_issue')
+#         issue_finalC[str(shift) + 'before'] = issue_finalC['cumsum_issue'].shift(-shift, fill_value=-1)
+#         issue_finalC = issue_finalC.head(-shift)
+#         issue_finalC = issue_finalC.drop('cumsum_issue', axis=1)
+#         issue_finalC = issue_finalC.rename(columns={str(shift) + "before": "n"})
+#         issue_finalC['n'] = np.round(issue_finalC['n'], 1)
+#
+#         print('.', end='')
+#
+#         # PRIORITY
+#         issue_finalPx = issue_final.copy()
+#         issue_finalP = extracted_calculation(issue_finalPx, 'cumsum_severity')
+#         issue_finalP[str(shift) + 'before'] = issue_finalP['cumsum_severity'].shift(-shift, fill_value=-1)
+#         issue_finalP = issue_finalP.head(-shift)
+#         issue_finalP = issue_finalP.drop('cumsum_severity', axis=1)
+#         issue_finalP = issue_finalP.rename(columns={str(shift) + "before": "n"})
+#         issue_finalP['n'] = np.round(issue_finalP['n'], 1)
+#
+#         print('.', end='')
+#
+#         # EXPORT
+#         issue_finalC = issue_finalC.reset_index()
+#         issue_finalP = issue_finalP.reset_index()
+#         issue_finalC.to_csv('data/ludwig/' + dataset + '_ludwig_count' + str(shift) + '.csv', index=None)
+#         issue_finalP.to_csv('data/ludwig/' + dataset + '_ludwig_prior' + str(shift) + '.csv', index=None)
+#         print(' OK')
+#
+
 
 def main(dataset):
     # merge(dataset)
     # issue_duration_forecast_file(dataset)
-    # issue_count_mixed_forecast_file(dataset)
+    issue_count_mixed_forecast_file(dataset)
     # issue_count_forecast_file(dataset)
-    data_distribution(dataset)
+    # data_distribution(dataset)
+    # ludwig_export(dataset)
 
 
 if __name__ == "__main__":

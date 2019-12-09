@@ -82,7 +82,7 @@ def duration_model(file):
 
 def count_model(file):
     features_basic = pd.read_csv(file + '.csv')
-    plot_all(features_basic)
+    # plot_all(features_basic)
 
     infos(file, features_basic)
 
@@ -107,10 +107,13 @@ def count_model(file):
     ######################### MODEL DEFINITIONS ############################
 
     predictions = model.predict(test_features)
-    predictions = np.round(predictions, decimals=0)
+    all_predictions = model.predict(features)
+    predictions = np.round(predictions, decimals=1)
+    all_predictions = np.round(all_predictions, decimals=1)
 
-    plot(file + ' RF', test_labels, predictions)
-    # importances(model, feature_list)
+    plot_predict(file + '_RF_', test_labels, predictions)
+    plot_mixed(file + '_RF_', labels, all_predictions)
+    importances(model, feature_list)
     errors(test_labels, predictions, mean)
     return predictions
 
@@ -146,7 +149,8 @@ def count_model_keras_nn(file):
 
     predictions = estimator.predict(test_features)
     all_predictions = estimator.predict(features)
-    predictions = np.round(predictions, decimals=0)
+    predictions = np.round(predictions, decimals=1)
+    all_predictions = np.round(all_predictions, decimals=1)
 
     plot_predict(file + '_NN_', test_labels, predictions)
     plot_mixed(file + '_NN_', labels, all_predictions)
