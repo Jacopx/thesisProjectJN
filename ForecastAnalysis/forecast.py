@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy.random import seed
 
+# LUDWIG
+# from ludwig.api import LudwigModel
+
 # SKLEARN
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
@@ -39,13 +42,13 @@ warnings.filterwarnings("ignore")
 test_size = 0.25
 
 predictor = 600
-epochs_nn = 400
+epochs_nn = 300
 epochs_lstm = 500
 batch_size = 8
 
 random = 12
 n_jobs = 6
-verbose = 0
+verbose = 2
 
 def duration_model(file):
     features = pd.read_csv(file + '.csv')
@@ -80,9 +83,9 @@ def duration_model(file):
     errors(test_labels, predictions, mean)
 
 
-def count_model(file):
+def model_randomforest(file):
     features_basic = pd.read_csv(file + '.csv')
-    plot_all(features_basic)
+    # plot_all(features_basic)
 
     infos(file, features_basic)
 
@@ -98,6 +101,8 @@ def count_model(file):
     train_features, test_features, train_labels, test_labels = \
         train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=False)
 
+    print(train_labels.shape, test_labels.shape)
+
     ######################### MODEL DEFINITIONS ############################
 
     model = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=verbose, n_jobs=n_jobs)
@@ -107,15 +112,18 @@ def count_model(file):
     ######################### MODEL DEFINITIONS ############################
 
     predictions = model.predict(test_features)
-    predictions = np.round(predictions, decimals=0)
+    all_predictions = model.predict(features)
+    predictions = np.round(predictions, decimals=1)
+    all_predictions = np.round(all_predictions, decimals=1)
 
-    plot(file + ' RF', test_labels, predictions)
-    # importances(model, feature_list)
+    plot_predict(file + '_RF', test_labels, predictions)
+    plot_mixed(file + '_RF', labels, all_predictions)
+    importances(model, feature_list)
     errors(test_labels, predictions, mean)
     return predictions
 
 
-def count_model_keras_nn(file):
+def model_keras_nn(file):
     features_basic = pd.read_csv(file + '.csv')
     # plot_all(features_basic)
 
@@ -133,6 +141,8 @@ def count_model_keras_nn(file):
     train_features, test_features, train_labels, test_labels = \
         train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=False)
 
+    print(train_labels.shape, test_labels.shape)
+
     ######################### MODEL DEFINITIONS ############################
 
     estimator = KerasRegressor(build_fn=personal_model, shape=train_features.shape[1], epochs=epochs_nn, batch_size=batch_size, verbose=verbose)
@@ -146,11 +156,12 @@ def count_model_keras_nn(file):
 
     predictions = estimator.predict(test_features)
     all_predictions = estimator.predict(features)
-    predictions = np.round(predictions, decimals=0)
+    predictions = np.round(predictions, decimals=1)
+    all_predictions = np.round(all_predictions, decimals=1)
 
-    plot_predict(file + '_NN_', test_labels, predictions)
-    plot_mixed(file + '_NN_', labels, all_predictions)
-    # importances(model, feature_list)
+    plot_predict(file + '_NN', test_labels, predictions)
+    plot_mixed(file + '_NN', labels, all_predictions)
+    # weights(estimator, feature_list)
     errors(test_labels, predictions, mean)
 
 
@@ -166,7 +177,7 @@ def personal_model(shape):
     return model
 
 
-def count_model_keras_lstm(file):
+def model_keras_lstm(file):
     features_basic = pd.read_csv(file + '.csv')
     # plot_all(features_basic)
 
@@ -187,6 +198,8 @@ def count_model_keras_lstm(file):
     train_features = train_features.reshape((train_features.shape[0], 1, train_features.shape[1]))
     test_features = test_features.reshape((test_features.shape[0], 1, test_features.shape[1]))
 
+    print(train_labels.shape, test_labels.shape)
+
     ######################### MODEL DEFINITIONS ############################
 
     estimator = KerasRegressor(build_fn=lstm_model, shape=train_features.shape[2], epochs=epochs_lstm, batch_size=1, verbose=verbose)
@@ -202,9 +215,9 @@ def count_model_keras_lstm(file):
     all_predictions = estimator.predict(features)
     predictions = np.round(predictions, decimals=0)
 
-    plot_predict(file + '_NN_', test_labels, predictions)
-    plot_mixed(file + '_NN_', labels, all_predictions)
-    # importances(model, feature_list)
+    plot_predict(file + '_LSTM', test_labels, predictions)
+    plot_mixed(file + '_LSTM', labels, all_predictions)
+    # weights(estimator, feature_list)
     errors(test_labels, predictions, mean)
 
 
@@ -217,6 +230,38 @@ def lstm_model(shape):
     # model.summary()
 
     return model
+
+
+def model_ludwig(file):
+    features_basic = pd.read_csv(file + '.csv')
+
+    infos_nn(file, features_basic)
+
+    features = features_basic.copy()
+    features = features.dropna()
+
+    n = int(features.shape[0] * (1 - test_size))
+    train = features.head(n)
+    test = features.tail(features.shape[0] - n)
+
+    print(train.shape, test.shape)
+
+    ######################### MODEL DEFINITIONS ############################
+
+    model_definition = {...}
+    ludwig_model = LudwigModel(model_definition, model_definition_file='data/model_definition.yaml')
+    train_stats = ludwig_model.train(data_df=train)
+
+    ######################### MODEL DEFINITIONS ############################
+
+    predictions = ludwig_model.predict(data_df=test, )
+    all_predictions = ludwig_model.predict(data_df=features)
+    predictions = np.round(predictions.n_predictions.values, decimals=1)
+    all_predictions = np.round(all_predictions.n_predictions.values, decimals=1)
+
+    plot_predict(file + '_LUDWIG', np.array(test['n']), np.array(predictions))
+    plot_mixed(file + '_LUDWIG', np.array(features['n']), np.array(all_predictions))
+    errors(np.array(test['n']), np.array(predictions), np.mean(features.n))
 
 
 def infos(file, features_basic):
@@ -270,7 +315,7 @@ def plot_mixed(file, labels, predictions):
     plt.axvline(int(len(predictions) * (1 - test_size)), linestyle='--', label='split', c='red')
     plt.xticks(rotation='60')
     plt.legend()  # Graph labels
-    plt.xlabel('Issue')
+    plt.xlabel('Week')
     plt.ylabel('n')
     plt.minorticks_on()
     plt.grid(axis='both')
@@ -301,7 +346,7 @@ def plot_all(df_original):
     sns.pointplot(df['date'], df['n'], label='value', ci=None, markersize=0.01, color='green')
     plt.xticks(rotation='60')
     plt.legend()  # Graph labels
-    plt.xlabel('Date')
+    plt.xlabel('Week')
     plt.ylabel('n')
     plt.grid(axis='both')
     plt.title('Data Distribution')
@@ -319,6 +364,7 @@ def importances(model, feature_list):
     feature_importances = sorted(feature_importances, key=lambda x: x[1],
                                  reverse=True)
     [print('Variable: {:20} [{}]'.format(*pair)) for pair in feature_importances]
+
 
 def errors(test_labels, predictions, mean):
     print('#######################################')
@@ -345,3 +391,8 @@ def errors(test_labels, predictions, mean):
     # print('RSE:', round(RSE, 3))
     print('Relative:', np.round(np.mean(REL), 2), '%.')
     print('\nAccuracy:', np.round(100-np.mean(REL), 2), '%.')
+
+
+def weights(estimator, list):
+    for i, f in enumerate(list):
+        print('{} \t\t {}'.format(f, estimator.model.weights[0][i]))
