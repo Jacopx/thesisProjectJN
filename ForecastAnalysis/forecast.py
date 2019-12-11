@@ -313,7 +313,7 @@ def plot_mixed(file, labels, predictions, shift):
         n.append(i)
 
     plt.figure(figsize=(20, 11))
-    sns.lineplot(n, labels, label='Real', ci=None)
+    sns.lineplot(n[:-shift], labels[:-shift], label='Real', ci=None)
     sns.lineplot(n[:-shift], predictions[shift:], label='Predict', ci=None)
     plt.axvline(int(len(predictions) * (1 - test_size)), linestyle='--', label='Split', c='red')
     plt.xticks(rotation='60')
