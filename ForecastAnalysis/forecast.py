@@ -101,6 +101,8 @@ def model_randomforest(file):
     train_features, test_features, train_labels, test_labels = \
         train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=False)
 
+    print(train_labels.shape, test_labels.shape)
+
     ######################### MODEL DEFINITIONS ############################
 
     model = RandomForestRegressor(n_estimators=predictor, random_state=random, verbose=verbose, n_jobs=n_jobs)
@@ -130,8 +132,6 @@ def model_keras_nn(file):
     features = features_basic.copy()
     features = features.dropna()
 
-    print(features.dtypes)
-
     labels = np.array(features['n'])
     mean = np.mean(labels)
     features = features.drop('n', axis=1)  # Saving feature names for later use
@@ -140,6 +140,8 @@ def model_keras_nn(file):
 
     train_features, test_features, train_labels, test_labels = \
         train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=False)
+
+    print(train_labels.shape, test_labels.shape)
 
     ######################### MODEL DEFINITIONS ############################
 
@@ -157,8 +159,9 @@ def model_keras_nn(file):
     predictions = np.round(predictions, decimals=1)
     all_predictions = np.round(all_predictions, decimals=1)
 
-    # plot_predict(file + '_NN', test_labels, predictions)
+    plot_predict(file + '_NN', test_labels, predictions)
     plot_mixed(file + '_NN', labels, all_predictions)
+    # weights(estimator, feature_list)
     errors(test_labels, predictions, mean)
 
 
@@ -195,6 +198,8 @@ def model_keras_lstm(file):
     train_features = train_features.reshape((train_features.shape[0], 1, train_features.shape[1]))
     test_features = test_features.reshape((test_features.shape[0], 1, test_features.shape[1]))
 
+    print(train_labels.shape, test_labels.shape)
+
     ######################### MODEL DEFINITIONS ############################
 
     estimator = KerasRegressor(build_fn=lstm_model, shape=train_features.shape[2], epochs=epochs_lstm, batch_size=1, verbose=verbose)
@@ -212,6 +217,7 @@ def model_keras_lstm(file):
 
     plot_predict(file + '_LSTM', test_labels, predictions)
     plot_mixed(file + '_LSTM', labels, all_predictions)
+    # weights(estimator, feature_list)
     errors(test_labels, predictions, mean)
 
 
@@ -237,6 +243,8 @@ def model_ludwig(file):
     n = int(features.shape[0] * (1 - test_size))
     train = features.head(n)
     test = features.tail(features.shape[0] - n)
+
+    print(train.shape, test.shape)
 
     ######################### MODEL DEFINITIONS ############################
 
@@ -357,6 +365,7 @@ def importances(model, feature_list):
                                  reverse=True)
     [print('Variable: {:20} [{}]'.format(*pair)) for pair in feature_importances]
 
+
 def errors(test_labels, predictions, mean):
     print('#######################################')
     # The baseline predictions are the historical averages
@@ -382,3 +391,8 @@ def errors(test_labels, predictions, mean):
     # print('RSE:', round(RSE, 3))
     print('Relative:', np.round(np.mean(REL), 2), '%.')
     print('\nAccuracy:', np.round(100-np.mean(REL), 2), '%.')
+
+
+def weights(estimator, list):
+    for i, f in enumerate(list):
+        print('{} \t\t {}'.format(f, estimator.model.weights[0][i]))

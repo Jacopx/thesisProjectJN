@@ -509,6 +509,7 @@ def extracted_calculation(issue_start, column):
     issue_final['1before'] = issue_final[column].shift(1, fill_value=-1)
     issue_final['2before'] = issue_final[column].shift(2, fill_value=-1)
     issue_final['4before'] = issue_final[column].shift(4, fill_value=-1)
+
     return issue_final.tail(-4)
 
 
