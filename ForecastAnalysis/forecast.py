@@ -39,7 +39,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 warnings.filterwarnings("ignore")
 
-test_size = 0.25
+test_size = 0.30
 
 predictor = 600
 epochs_nn = 300
@@ -159,8 +159,10 @@ def model_keras_nn(file):
     predictions = np.round(predictions, decimals=1)
     all_predictions = np.round(all_predictions, decimals=1)
 
-    plot_predict(file + '_NN', test_labels, predictions)
-    plot_mixed(file + '_NN', labels, all_predictions)
+    shift = int(file.split('-')[1])
+
+    # plot_predict(file + '_NN', test_labels, predictions, shift)
+    plot_mixed(file + '_NN', labels, all_predictions, shift)
     # weights(estimator, feature_list)
     errors(test_labels, predictions, mean)
 
@@ -284,18 +286,19 @@ def infos_nn(file, features_basic):
     print('The shape of our features is:', features_basic.shape)
 
 
-def plot_predict(file, test_labels, predictions):
+def plot_predict(file, test_labels, predictions, shift):
+
     n=[]
     for i in range(0, len(predictions)):
         n.append(i)
 
-    plt.figure(figsize=(15, 8))
-    sns.lineplot(n, test_labels, label='real', ci=None)
-    sns.lineplot(n, predictions, label='predict', ci=None)
-    sns.lineplot(n, np.mean(test_labels), label='mean', ci=None)
+    plt.figure(figsize=(20, 11))
+    sns.lineplot(n, test_labels, label='Real', ci=None)
+    sns.lineplot(n[:-shift], predictions[shift:], label='Predict', ci=None)
+    sns.lineplot(n, np.mean(test_labels), label='Mean', ci=None)
     plt.xticks(rotation='60')
     plt.legend()  # Graph labels
-    plt.xlabel('Issue')
+    plt.xlabel('Week')
     plt.ylabel('n')
     plt.minorticks_on()
     plt.grid(axis='both')
@@ -304,15 +307,15 @@ def plot_predict(file, test_labels, predictions):
     plt.show()
 
 
-def plot_mixed(file, labels, predictions):
+def plot_mixed(file, labels, predictions, shift):
     n=[]
     for i in range(0, len(predictions)):
         n.append(i)
 
-    plt.figure(figsize=(15, 8))
-    sns.lineplot(n, labels, label='real', ci=None)
-    sns.lineplot(n, predictions, label='predict', ci=None)
-    plt.axvline(int(len(predictions) * (1 - test_size)), linestyle='--', label='split', c='red')
+    plt.figure(figsize=(20, 11))
+    sns.lineplot(n, labels, label='Real', ci=None)
+    sns.lineplot(n[:-shift], predictions[shift:], label='Predict', ci=None)
+    plt.axvline(int(len(predictions) * (1 - test_size)), linestyle='--', label='Split', c='red')
     plt.xticks(rotation='60')
     plt.legend()  # Graph labels
     plt.xlabel('Week')
