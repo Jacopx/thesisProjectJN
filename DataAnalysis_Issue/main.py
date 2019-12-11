@@ -231,7 +231,7 @@ def issue_count_mixed_forecast_file(dataset):
     issue_finalC = issue_final.copy()
     issue_finalP = issue_final.copy()
 
-    horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 40, 52]
+    horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 30, 40, 52]
     # horizons = [1, 2, 4, 8]
 
     # EXPORT FOR DIFFERENT TIME HORIZONS
@@ -263,8 +263,8 @@ def issue_count_mixed_forecast_file(dataset):
         # EXPORT
         issue_finalC = issue_finalC.reset_index()
         issue_finalP = issue_finalP.reset_index()
-        issue_finalC.to_csv('data/CSV/' + dataset + '_mixed_count' + str(shift) + '.csv', index=None)
-        issue_finalP.to_csv('data/CSV/' + dataset + '_mixed_prior' + str(shift) + '.csv', index=None)
+        issue_finalC.to_csv('data/CSV/' + dataset + '_mixed_count-' + str(shift) + '.csv', index=None)
+        issue_finalP.to_csv('data/CSV/' + dataset + '_mixed_prior-' + str(shift) + '.csv', index=None)
         print(' OK')
 
 
