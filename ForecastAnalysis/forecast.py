@@ -42,7 +42,7 @@ warnings.filterwarnings("ignore")
 test_size = 0.25
 
 predictor = 600
-epochs_nn = 400
+epochs_nn = 300
 epochs_lstm = 500
 batch_size = 8
 
