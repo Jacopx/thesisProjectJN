@@ -274,8 +274,8 @@ def issue_forecast_file(dataset):
             # EXPORT
             issue_finalC = issue_finalC.reset_index()
             issue_finalP = issue_finalP.reset_index()
-            issue_finalC.to_csv('data/CSV/' + dataset + '_' + st + '_count-' + str(shift) + '.csv', index=None)
-            issue_finalP.to_csv('data/CSV/' + dataset + '_' + st + '_prior-' + str(shift) + '.csv', index=None)
+            issue_finalC.to_csv('data/severity/' + dataset + '_' + st + '_count-' + str(shift) + '.csv', index=None)
+            issue_finalP.to_csv('data/severity/' + dataset + '_' + st + '_prior-' + str(shift) + '.csv', index=None)
             print(' OK')
 
 
@@ -357,6 +357,33 @@ def make_component_change(dataset):
                             GROUP BY change_set.commit_hash
                         ) as 'change'
                         WHERE issue.issue_id=change_set_link.issue_id AND change_set_link.commit_hash=change.commit_hash AND type='Bug'
+                        ORDER BY issue.issue_id
+                    ) as changes
+                WHERE issue_component.issue_id=changes.issue_id
+            )
+            GROUP BY date, component;
+        """
+
+    return pd.read_sql_query(query, conn)
+
+
+def make_component_change_clean(dataset):
+    conn = sqlite3.connect('data/SQLITE3/' + dataset + '.sqlite3')
+
+    query = \
+        """
+            SELECT date, component, COUNT(DISTINCT commit_hash) as 'commit_count', SUM(line_change) as 'line_change', resolution, status
+            FROM
+             (  SELECT changes.commit_hash, component, date, line_change, resolution, status
+                FROM issue_component,
+                    (   SELECT change_set_link.issue_id, change.commit_hash, date, line_change, resolution, status
+                        FROM issue, change_set_link,
+                         (  SELECT change_set.commit_hash, DATE(committed_date) as 'date', SUM(sum_added_lines)-SUM(sum_removed_lines) AS 'line_change'
+                            FROM code_change, change_set
+                            WHERE change_set.commit_hash=code_change.commit_hash
+                            GROUP BY change_set.commit_hash
+                        ) as 'change'
+                        WHERE issue.issue_id=change_set_link.issue_id AND change_set_link.commit_hash=change.commit_hash
                         ORDER BY issue.issue_id
                     ) as changes
                 WHERE issue_component.issue_id=changes.issue_id
@@ -702,7 +729,7 @@ def ludwig_export(dataset):
 def version_forecast_file(dataset):
     version = '2'
     # Get all commit by WEEK and YEAR
-    date_component_change = make_component_change(dataset)
+    date_component_change = make_component_change_clean(dataset)
     date_component_change['date'] = pd.to_datetime(date_component_change['date'])
     date_component_change['w'] = date_component_change['date'].dt.week
     date_component_change['y'] = date_component_change['date'].dt.year
@@ -821,15 +848,15 @@ def version_forecast_file(dataset):
         # EXPORT
         issue_finalC = issue_finalC.reset_index()
         issue_finalP = issue_finalP.reset_index()
-        issue_finalC.to_csv('data/CSV/' + dataset + '_version_' + version + '_count-' + str(shift) + '.csv', index=None)
-        issue_finalP.to_csv('data/CSV/' + dataset + '_version_' + version + '_prior-' + str(shift) + '.csv', index=None)
+        issue_finalC.to_csv('data/version/' + dataset + '_version_' + version + '_count-' + str(shift) + '.csv', index=None)
+        issue_finalP.to_csv('data/version/' + dataset + '_version_' + version + '_prior-' + str(shift) + '.csv', index=None)
         print(' OK')
 
 
 def main(dataset):
     # merge(dataset)
     # issue_duration_forecast_file(dataset)
-    # issue_forecast_file(dataset)
+    issue_forecast_file(dataset)
     # issue_count_forecast_file(dataset)
     # data_distribution(dataset)
     # ludwig_export(dataset)

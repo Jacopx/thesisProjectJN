@@ -116,8 +116,10 @@ def model_randomforest(file):
     predictions = np.round(predictions, decimals=1)
     all_predictions = np.round(all_predictions, decimals=1)
 
-    plot_predict(file + '_RF', test_labels, predictions)
-    plot_mixed(file + '_RF', labels, all_predictions)
+    shift = int(file.split('-')[1])
+
+    # plot_predict(file + '_RF', test_labels, predictions, shift)
+    plot_mixed(file + '_RF', labels, all_predictions, shift)
     importances(model, feature_list)
     errors(test_labels, predictions, mean)
     return predictions
