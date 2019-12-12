@@ -279,67 +279,6 @@ def issue_forecast_file(dataset):
             print(' OK')
 
 
-def issue_count_forecast_file(dataset):
-    issue = open_sqlite(dataset, 'issue')
-
-    print('Starting shape:\t{}'.format(issue.shape))
-
-    issue['open_dt'] = pd.to_datetime(issue['created_date'])
-    issue['date'] = issue['open_dt'].dt.date
-
-    issue = issue.drop('created_date', axis=1)
-    issue = issue.drop('created_date_zoned', axis=1)
-    issue = issue.drop('updated_date', axis=1)
-    issue = issue.drop('updated_date_zoned', axis=1)
-    issue = issue.drop('resolved_date', axis=1)
-    issue = issue.drop('resolved_date_zoned', axis=1)
-    issue = issue.drop('open_dt', axis=1)
-    issue = issue.drop('status', axis=1)
-    issue = issue.drop('assignee', axis=1)
-    issue = issue.drop('assignee_username', axis=1)
-    issue = issue.drop('reporter', axis=1)
-    issue = issue.drop('reporter_username', axis=1)
-    issue = issue.drop('issue_id', axis=1)
-    issue = issue.drop('summary', axis=1)
-    issue = issue.drop('description', axis=1)
-    issue = issue.drop('type', axis=1)
-    # convert(issue, 'type')
-    issue = issue.drop('priority', axis=1)
-    # convert(issue, 'priority')
-    issue = issue.drop('resolution', axis=1)
-    # convert(issue, 'resolution')
-
-    issue['n'] = 0
-
-    issue_final = issue.groupby(by=['date'], as_index=True).count()
-
-    issue_final = issue_final.fillna(0)
-    issue_final = issue_final.reset_index()
-
-    issue_final['date'] = pd.to_datetime(issue_final['date'])
-    issue_final['month'] = issue_final['date'].dt.month
-    issue_final['wday'] = issue_final['date'].dt.weekday
-    issue_final = issue_final.drop('date', axis=1)
-
-    issue_final['exp_avg'] = issue_final['n'].expanding().mean()
-    issue_final['mov_avg2'] = issue_final['n'].rolling(2).mean()
-    issue_final['mov_avg2'] = issue_final['mov_avg2'].shift(1, fill_value=-1)
-    issue_final = issue_final.tail(-2)
-
-    issue_final['avg'] = issue_final['n'].mean()
-
-    issue_final['7before'] = issue_final['n'].shift(7, fill_value=-1)
-    issue_final['14before'] = issue_final['n'].shift(14, fill_value=-1)
-    issue_final = issue_final.tail(-14)
-
-    print('Ending shape:\t{}'.format(issue_final.shape))
-    print('Export...', end='')
-    issue_final = issue_final.reset_index()
-    issue_final.to_csv('data/CSV/' + dataset + '_count.csv', index=None)
-    print(' OK')
-    return issue_final
-
-
 def make_component_change(dataset):
     conn = sqlite3.connect('data/SQLITE3/' + dataset + '.sqlite3')
 
@@ -857,10 +796,9 @@ def main(dataset):
     # merge(dataset)
     # issue_duration_forecast_file(dataset)
     issue_forecast_file(dataset)
-    # issue_count_forecast_file(dataset)
     # data_distribution(dataset)
     # ludwig_export(dataset)
-    version_forecast_file(dataset)
+    # version_forecast_file(dataset)
 
 
 if __name__ == "__main__":
