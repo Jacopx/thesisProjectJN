@@ -187,85 +187,98 @@ def issue_count_mixed_forecast_file(dataset):
     issue = issue.drop(['issue_id', 'summary', 'description', 'type'], axis=1)
     issue = issue.rename(columns={'priority': 'severity'})
 
-    prior = ['Critical', 'Major', 'Blocker', 'Minor', 'Trivial']
+    prior = {'Critical': 50.00, 'Major': 10.00, 'Blocker': 2.00, 'Minor': 1.00, 'Trivial': 0.50, 'Mixed': 0}
+    prior_list = {'Critical', 'Major', 'Blocker', 'Minor', 'Trivial'}
 
     # ADDING EMPTY COLUMN
     issue['n'] = 0
 
-    # MAKE DF COPY TO COMPUTE OPEN ISSUE
-    open_issue = issue.copy()
-    open_issue.severity.replace(prior, [50.00, 10.00, 2.00, 1.00, 0.50], inplace=True)
-    open_issue_count = make_issue_count(open_issue, 'o_')
-    open_issue_sum = make_issue_sum(open_issue, 'o_')
+    for st, sv in prior.items():
+        print('Type: ' + str(st) + ':')
+        dup_issue = issue.copy()
+        if st != 'Mixed':
+            dup_issue = dup_issue[(dup_issue['severity'] == st)]
 
-    # MAKE DF COPY TO COMPUTE CLOSED ISSUE
-    close_issue = issue.copy()
-    close_issue.severity.replace(prior, [-50.00, -10.00, -2.00, -1.00, -0.50], inplace=True)
-    close_issue_count = make_issue_count(close_issue, 'c_')
-    close_issue_sum = make_issue_sum(close_issue, 'c_')
+        # MAKE DF COPY TO COMPUTE OPEN ISSUE
+        open_issue = dup_issue.copy()
+        if st == 'Mixed':
+            open_issue.severity.replace(prior_list, [50.00, 10.00, 2.00, 1.00, 0.50], inplace=True)
+        else:
+            open_issue.severity.replace(st, sv, inplace=True)
+        open_issue_count = make_issue_count(open_issue, 'o_')
+        open_issue_sum = make_issue_sum(open_issue, 'o_')
 
-    # COMPUTE SUM OF SEVERITY
-    issue_sum = pd.merge(open_issue_sum, close_issue_sum, on=['y', 'w'])
-    issue_sum['severity_diff'] = issue_sum['open_severity_sum'] + issue_sum['close_severity_sum']
-    issue_sum['cumsum_severity'] = issue_sum['severity_diff'].cumsum()
+        # MAKE DF COPY TO COMPUTE CLOSED ISSUE
+        close_issue = dup_issue.copy()
+        if st == 'Mixed':
+            close_issue.severity.replace(prior_list, [-50.00, -10.00, -2.00, -1.00, -0.50], inplace=True)
+        else:
+            close_issue.severity.replace(st, -sv, inplace=True)
+        close_issue_count = make_issue_count(close_issue, 'c_')
+        close_issue_sum = make_issue_sum(close_issue, 'c_')
 
-    # COMPUTE COUNT OF ISSUE
-    issue_count = pd.merge(open_issue_count, close_issue_count, on=['y', 'w'])
-    issue_count['issue_diff'] = issue_count['open_issue_count'] + issue_count['close_issue_count']
-    issue_count['cumsum_issue'] = issue_count['issue_diff'].cumsum()
+        # COMPUTE SUM OF SEVERITY
+        issue_sum = pd.merge(open_issue_sum, close_issue_sum, on=['y', 'w'])
+        issue_sum['severity_diff'] = issue_sum['open_severity_sum'] + issue_sum['close_severity_sum']
+        issue_sum['cumsum_severity'] = issue_sum['severity_diff'].cumsum()
 
-    # MERGE THE COUNT
-    issue_cnt_sum = pd.merge(issue_sum, issue_count, on=['y', 'w'])
-    issue_final = pd.merge(issue_cnt_sum, week_commit_seniority, on=['y', 'w'])
+        # COMPUTE COUNT OF ISSUE
+        issue_count = pd.merge(open_issue_count, close_issue_count, on=['y', 'w'])
+        issue_count['issue_diff'] = issue_count['open_issue_count'] + issue_count['close_issue_count']
+        issue_count['cumsum_issue'] = issue_count['issue_diff'].cumsum()
 
-    issue_final['line_change'] = issue_final['line_change'].astype('int32')
-    issue_final['commit_count'] = issue_final['commit_count'].astype('int32')
+        # MERGE THE COUNT
+        issue_cnt_sum = pd.merge(issue_sum, issue_count, on=['y', 'w'])
+        issue_final = pd.merge(issue_cnt_sum, week_commit_seniority, on=['y', 'w'])
 
-    # CAST
-    for i in range(3, len(issue_final.columns)):
-        issue_final[issue_final.columns[i]] = issue_final[issue_final.columns[i]].astype('int32')
+        issue_final['line_change'] = issue_final['line_change'].astype('int32')
+        issue_final['commit_count'] = issue_final['commit_count'].astype('int32')
 
-    print('Ending shape:\t{}'.format(issue_final.shape))
-    print('Export:')
+        # CAST
+        for i in range(3, len(issue_final.columns)):
+            issue_final[issue_final.columns[i]] = issue_final[issue_final.columns[i]].astype('int32')
 
-    issue_finalC = issue_final.copy()
-    issue_finalP = issue_final.copy()
+        print('Ending shape:\t{}'.format(issue_final.shape))
+        print('Export:')
 
-    horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 30, 40, 52]
-    # horizons = [1, 2, 4, 8]
+        issue_finalC = issue_final.copy()
+        issue_finalP = issue_final.copy()
 
-    # EXPORT FOR DIFFERENT TIME HORIZONS
-    for shift in horizons:
-        print('Horizon: ' + str(shift) + '.', end='')
+        horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 30, 40, 52]
+        # horizons = [1, 4, 8]
 
-        # COUNT
-        issue_finalCx = issue_final.copy()
-        issue_finalC = extracted_calculation(issue_finalCx, 'cumsum_issue')
-        issue_finalC[str(shift) + 'future'] = issue_finalC['cumsum_issue'].shift(-shift, fill_value=-1)
-        issue_finalC = issue_finalC.head(-shift)
-        issue_finalC = issue_finalC.drop('cumsum_issue', axis=1)
-        issue_finalC = issue_finalC.rename(columns={str(shift) + "future": "n"})
-        issue_finalC['n'] = np.round(issue_finalC['n'], 1)
+        # EXPORT FOR DIFFERENT TIME HORIZONS
+        for shift in horizons:
+            print('Horizon: ' + str(shift) + '.', end='')
 
-        print('.', end='')
+            # COUNT
+            issue_finalCx = issue_final.copy()
+            issue_finalC = extracted_calculation(issue_finalCx, 'cumsum_issue')
+            issue_finalC[str(shift) + 'future'] = issue_finalC['cumsum_issue'].shift(-shift, fill_value=-1)
+            issue_finalC = issue_finalC.head(-shift)
+            issue_finalC = issue_finalC.drop('cumsum_issue', axis=1)
+            issue_finalC = issue_finalC.rename(columns={str(shift) + "future": "n"})
+            issue_finalC['n'] = np.round(issue_finalC['n'], 1)
 
-        # PRIORITY
-        issue_finalPx = issue_final.copy()
-        issue_finalP = extracted_calculation(issue_finalPx, 'cumsum_severity')
-        issue_finalP[str(shift) + 'future'] = issue_finalP['cumsum_severity'].shift(-shift, fill_value=-1)
-        issue_finalP = issue_finalP.head(-shift)
-        issue_finalP = issue_finalP.drop('cumsum_severity', axis=1)
-        issue_finalP = issue_finalP.rename(columns={str(shift) + "future": "n"})
-        issue_finalP['n'] = np.round(issue_finalP['n'], 1)
+            print('.', end='')
 
-        print('.', end='')
+            # PRIORITY
+            issue_finalPx = issue_final.copy()
+            issue_finalP = extracted_calculation(issue_finalPx, 'cumsum_severity')
+            issue_finalP[str(shift) + 'future'] = issue_finalP['cumsum_severity'].shift(-shift, fill_value=-1)
+            issue_finalP = issue_finalP.head(-shift)
+            issue_finalP = issue_finalP.drop('cumsum_severity', axis=1)
+            issue_finalP = issue_finalP.rename(columns={str(shift) + "future": "n"})
+            issue_finalP['n'] = np.round(issue_finalP['n'], 1)
 
-        # EXPORT
-        issue_finalC = issue_finalC.reset_index()
-        issue_finalP = issue_finalP.reset_index()
-        issue_finalC.to_csv('data/CSV/' + dataset + '_mixed_count-' + str(shift) + '.csv', index=None)
-        issue_finalP.to_csv('data/CSV/' + dataset + '_mixed_prior-' + str(shift) + '.csv', index=None)
-        print(' OK')
+            print('.', end='')
+
+            # EXPORT
+            issue_finalC = issue_finalC.reset_index()
+            issue_finalP = issue_finalP.reset_index()
+            issue_finalC.to_csv('data/CSV/' + dataset + '_' + st + '_count-' + str(shift) + '.csv', index=None)
+            issue_finalP.to_csv('data/CSV/' + dataset + '_' + st + '_prior-' + str(shift) + '.csv', index=None)
+            print(' OK')
 
 
 def issue_count_forecast_file(dataset):
