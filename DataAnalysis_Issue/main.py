@@ -216,12 +216,14 @@ def issue_forecast_file(dataset):
         close_issue_sum = make_issue_sum(close_issue, 'c_')
 
         # COMPUTE SUM OF SEVERITY
-        issue_sum = pd.merge(open_issue_sum, close_issue_sum, on=['y', 'w'])
+        issue_sum = pd.merge(open_issue_sum, close_issue_sum, on=['y', 'w'], how='outer')
+        issue_sum = issue_sum.fillna(0)
         issue_sum['severity_diff'] = issue_sum['open_severity_sum'] + issue_sum['close_severity_sum']
         issue_sum['cumsum_severity'] = issue_sum['severity_diff'].cumsum()
 
         # COMPUTE COUNT OF ISSUE
-        issue_count = pd.merge(open_issue_count, close_issue_count, on=['y', 'w'])
+        issue_count = pd.merge(open_issue_count, close_issue_count, on=['y', 'w'], how='outer')
+        issue_count = issue_count.fillna(0)
         issue_count['issue_diff'] = issue_count['open_issue_count'] + issue_count['close_issue_count']
         issue_count['cumsum_issue'] = issue_count['issue_diff'].cumsum()
 
@@ -251,7 +253,7 @@ def issue_forecast_file(dataset):
 
             # COUNT
             issue_finalCx = issue_final.copy()
-            issue_finalC = extracted_calculation(issue_finalCx, 'cumsum_issue')
+            issue_finalC = extracted_calculation2(issue_finalCx, 'cumsum_issue')
             issue_finalC[str(shift) + 'future'] = issue_finalC['cumsum_issue'].shift(-shift, fill_value=-1)
             issue_finalC = issue_finalC.head(-shift)
             issue_finalC = issue_finalC.drop('cumsum_issue', axis=1)
@@ -262,7 +264,7 @@ def issue_forecast_file(dataset):
 
             # PRIORITY
             issue_finalPx = issue_final.copy()
-            issue_finalP = extracted_calculation(issue_finalPx, 'cumsum_severity')
+            issue_finalP = extracted_calculation2(issue_finalPx, 'cumsum_severity')
             issue_finalP[str(shift) + 'future'] = issue_finalP['cumsum_severity'].shift(-shift, fill_value=-1)
             issue_finalP = issue_finalP.head(-shift)
             issue_finalP = issue_finalP.drop('cumsum_severity', axis=1)
@@ -436,7 +438,8 @@ def filter(df_init):
 def filter2(df_init):
     df = df_init.copy()
     df = df[(df['type'] == 'Bug')]
-    # df = df[((df['status'] == 'Closed') & (df['resolution'] == 'Fixed')) | ((df['status'] == 'Resolved') & (df['resolution'] == 'Fixed')) | (df['status'] == 'Open')]
+    df = df[((df['o_y'] >= 2012) & (df['o_y'] <= 2018) & (df['c_y'] >= 2012) & (df['c_y'] <= 2018))]
+    df = df[((df['status'] == 'Closed') & (df['resolution'] == 'Fixed')) | ((df['status'] == 'Resolved') & (df['resolution'] == 'Fixed')) | (df['status'] == 'Open')]
     return df
 
 
@@ -603,12 +606,14 @@ def ludwig_export(dataset):
     close_issue_sum = make_issue_sum(close_issue, 'c_')
 
     # COMPUTE SUM OF SEVERITY
-    issue_sum = pd.merge(open_issue_sum, close_issue_sum, on=['y', 'w'])
+    issue_sum = pd.merge(open_issue_sum, close_issue_sum, on=['y', 'w'], how='outer')
+    issue_sum = issue_sum.fillna(0)
     issue_sum['severity_diff'] = issue_sum['open_severity_sum'] + issue_sum['close_severity_sum']
     issue_sum['cumsum_severity'] = issue_sum['severity_diff'].cumsum()
 
     # COMPUTE COUNT OF ISSUE
-    issue_count = pd.merge(open_issue_count, close_issue_count, on=['y', 'w'])
+    issue_count = pd.merge(open_issue_count, close_issue_count, on=['y', 'w'], how='outer')
+    issue_count = issue_count.fillna(0)
     issue_count['issue_diff'] = issue_count['open_issue_count'] + issue_count['close_issue_count']
     issue_count['cumsum_issue'] = issue_count['issue_diff'].cumsum()
 
@@ -667,6 +672,7 @@ def ludwig_export(dataset):
 
 def version_forecast_file(dataset):
     version = '2'
+
     # Get all commit by WEEK and YEAR
     date_component_change = make_component_change_clean(dataset)
     date_component_change['date'] = pd.to_datetime(date_component_change['date'])
@@ -728,13 +734,19 @@ def version_forecast_file(dataset):
     close_issue_count = make_issue_count(close_issue, 'c_')
     close_issue_sum = make_issue_sum(close_issue, 'c_')
 
+    print('Opened: {}'.format(open_issue_sum.sum().values[0]))
+    print('Closed: {}\n'.format(close_issue_sum.sum().values[0]))
+    print('Difference: {}\n'.format(close_issue_sum.sum().values[0] + open_issue_sum.sum().values[0]))
+
     # COMPUTE SUM OF SEVERITY
-    issue_sum = pd.merge(open_issue_sum, close_issue_sum, on=['y', 'w'])
+    issue_sum = pd.merge(open_issue_sum, close_issue_sum, on=['y', 'w'], how='outer')
+    issue_sum = issue_sum.fillna(0)
     issue_sum['severity_diff'] = issue_sum['open_severity_sum'] + issue_sum['close_severity_sum']
     issue_sum['cumsum_severity'] = issue_sum['severity_diff'].cumsum()
 
     # COMPUTE COUNT OF ISSUE
-    issue_count = pd.merge(open_issue_count, close_issue_count, on=['y', 'w'])
+    issue_count = pd.merge(open_issue_count, close_issue_count, on=['y', 'w'], how='outer')
+    issue_count = issue_count.fillna(0)
     issue_count['issue_diff'] = issue_count['open_issue_count'] + issue_count['close_issue_count']
     issue_count['cumsum_issue'] = issue_count['issue_diff'].cumsum()
 
@@ -757,6 +769,7 @@ def version_forecast_file(dataset):
 
     horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 30, 40, 52]
     # horizons = [1, 4, 8]
+    # horizons = [1]
 
     # EXPORT FOR DIFFERENT TIME HORIZONS
     for shift in horizons:

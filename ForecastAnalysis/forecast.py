@@ -316,7 +316,9 @@ def plot_mixed(file, labels, predictions, shift):
 
     plt.figure(figsize=(20, 11))
     sns.lineplot(n[:-shift], labels[:-shift], label='Real', ci=None)
+    # sns.lineplot(n, labels, label='Real', ci=None)
     sns.lineplot(n[:-shift], predictions[shift:], label='Predict', ci=None)
+    # sns.lineplot(n, predictions, label='Predict', ci=None)
     plt.axvline(int(len(predictions) * (1 - test_size)), linestyle='--', label='Split', c='red')
     plt.xticks(rotation='60')
     plt.legend()  # Graph labels
@@ -384,14 +386,14 @@ def errors(test_labels, predictions, mean):
     EVS = explained_variance_score(test_labels, predictions)
     R2 = r2_score(test_labels, predictions)
     RSE = mean_squared_error(test_labels, predictions)
-    REL = 100 * (abs(test_labels - predictions) / test_labels)
+    REL = abs(100 * (abs(test_labels - predictions) / test_labels))
     MAX = max_error(test_labels, predictions)
     # MSLE = mean_squared_log_error(test_labels, predictions)
 
     print('Mean Absolute Error:', round(MAE, 2))
     # print('Max Error:', round(MAX, 2))
     # print('Exaplined Variance:', round(EVS, 3))
-    # print('R2 Scoring:', round(R2, 3))
+    print('R2 Scoring:', round(R2, 3))
     # print('MSLE Scoring:', round(MSLE, 5))
     # print('RSE:', round(RSE, 3))
     print('Relative:', np.round(np.mean(REL), 2), '%.')
