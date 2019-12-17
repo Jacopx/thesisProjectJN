@@ -127,7 +127,8 @@ def model_randomforest(file):
 
 def model_keras_nn(file):
     features_basic = pd.read_csv(file + '.csv')
-    # plot_all(features_basic)
+    plot_all(features_basic, file)
+    return 0
 
     infos_nn(file, features_basic)
 
@@ -304,8 +305,8 @@ def plot_predict(file, test_labels, predictions, shift):
     plt.ylabel('n')
     plt.minorticks_on()
     plt.grid(axis='both')
-    plt.title(file[5:] + '_predictions')
-    plt.savefig(file + '_predictions.png', dpi=240)
+    plt.title('plot/' + file[5:] + '_predictions')
+    plt.savefig('plot/' + file + '_predictions.png', dpi=240)
     plt.show()
 
 
@@ -326,8 +327,8 @@ def plot_mixed(file, labels, predictions, shift):
     plt.ylabel('n')
     plt.minorticks_on()
     plt.grid(axis='both')
-    plt.title(file[5:] + '_all_predictions')
-    plt.savefig(file + '_all_predictions.png', dpi=240)
+    plt.title('plot/' + file[5:] + '_all_predictions')
+    plt.savefig('plot/' + file + '_all_predictions.png', dpi=240)
     plt.show()
 
 
@@ -340,12 +341,12 @@ def plot_history(file, history, name, label):
     plt.ylabel('Error')
     plt.minorticks_on()
     plt.grid(axis='both')
-    plt.title(file[5:] + label + '_History')
-    plt.savefig(file[5:] + label + '_history.png', dpi=240)
+    plt.title('plot/' + file[5:] + label + '_History')
+    plt.savefig('plot/' + file[5:] + label + '_history.png', dpi=240)
     plt.show()
 
 
-def plot_all(df_original):
+def plot_all(df_original, file):
     plt.figure(figsize=(40, 18))
     df = df_original.copy()
     df['n'] = df['n'].astype('int32')
@@ -356,10 +357,9 @@ def plot_all(df_original):
     plt.xlabel('Week')
     plt.ylabel('n')
     plt.grid(axis='both')
-    plt.title('Data Distribution')
-    plt.savefig('DataDistribution.png', dpi=240)
+    plt.title('plot/Data Distribution: ' + file[5:])
+    plt.savefig('plot/DataDistribution-' + file[5:] + '.png', dpi=240)
     plt.show()
-    # exit(0)
 
 
 def importances(model, feature_list):
