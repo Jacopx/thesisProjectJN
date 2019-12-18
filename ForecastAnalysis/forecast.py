@@ -39,7 +39,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 warnings.filterwarnings("ignore")
 
-test_size = 0.30
+test_size = 0.25
 
 predictor = 600
 epochs_nn = 300
@@ -127,8 +127,8 @@ def model_randomforest(file):
 
 def model_keras_nn(file):
     features_basic = pd.read_csv(file + '.csv')
-    plot_all(features_basic, file)
-    return 0
+    # plot_all(features_basic, file)
+    # return 0
 
     infos_nn(file, features_basic)
 
@@ -162,7 +162,7 @@ def model_keras_nn(file):
     predictions = np.round(predictions, decimals=1)
     all_predictions = np.round(all_predictions, decimals=1)
 
-    shift = int(file.split('-')[1])
+    shift = int(file.split('-')[2])
 
     # plot_predict(file + '_NN', test_labels, predictions, shift)
     plot_mixed(file + '_NN', labels, all_predictions, shift)
@@ -328,7 +328,7 @@ def plot_mixed(file, labels, predictions, shift):
     plt.minorticks_on()
     plt.grid(axis='both')
     plt.title('plot/' + file[5:] + '_all_predictions')
-    plt.savefig('plot/' + file + '_all_predictions.png', dpi=240)
+    # plt.savefig('plot/' + file + '_all_predictions.png', dpi=240)
     plt.show()
 
 

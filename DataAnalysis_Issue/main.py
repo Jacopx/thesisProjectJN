@@ -482,7 +482,7 @@ def remove_outliers(df, column):
 
     return df
 
-# TODO: Check most correct extraction function
+
 def extracted_calculation(issue_start, column):
     issue_final = issue_start.copy()
     issue_final['exp_avg'] = issue_final[column].expanding().mean()
@@ -498,7 +498,7 @@ def extracted_calculation(issue_start, column):
 
     return issue_final.tail(-4)
 
-# TODO: Check most correct extraction function
+
 def extracted_calculation2(issue_start, column):
     issue_final = issue_start.copy()
     issue_final['exp_avg'] = issue_final[column].expanding().mean()
@@ -712,17 +712,28 @@ def version_forecast_file(dataset):
             # FILTER
             issue = filter2(issue)
 
+            min_date = issue['open_dt'].min().date()
+            max_date = issue['open_dt'].max().date()
+
             # REMOVE OR UPDATE FEATURES
             issue = issue.drop(['open_dt', 'close_dt', 'time', 'duration'], axis=1)
             issue = issue.drop(['created_date', 'created_date_zoned', 'updated_date', 'updated_date_zoned', 'resolved_date', 'resolved_date_zoned'], axis=1)
             issue = issue.drop(['status', 'assignee', 'assignee_username', 'reporter', 'reporter_username'], axis=1)
             issue = issue.drop(['issue_id', 'summary', 'description', 'type'], axis=1)
+            issue = issue.drop(['fix_version'], axis=1)
             issue = issue.rename(columns={'priority': 'severity'})
 
             prior_list = ['Critical', 'Major', 'Blocker', 'Minor', 'Trivial']
 
             # ADDING EMPTY COLUMN
             issue['n'] = 0
+
+            # GET ALL THE WEEK IN THE TIME SLICE
+            all_date = pd.date_range(start=min_date, end=max_date, freq='W')
+            all_date = pd.DataFrame(all_date)
+            all_date['y'] = all_date[0].dt.year
+            all_date['w'] = all_date[0].dt.week
+            all_date = all_date.drop([0], axis=1)
 
             # MAKE DF COPY TO COMPUTE OPEN ISSUE
             open_issue = issue.copy()
@@ -742,13 +753,15 @@ def version_forecast_file(dataset):
 
             # COMPUTE SUM OF SEVERITY
             issue_sum = pd.merge(open_issue_sum, close_issue_sum, on=['y', 'w'], how='outer')
-            issue_sum = issue_sum.fillna(0)
+            complete_sum = pd.merge(all_date, issue_sum, how='outer', on=['y', 'w'])
+            issue_sum = complete_sum.fillna(0)
             issue_sum['severity_diff'] = issue_sum['open_severity_sum'] + issue_sum['close_severity_sum']
             issue_sum['cumsum_severity'] = issue_sum['severity_diff'].cumsum()
 
             # COMPUTE COUNT OF ISSUE
             issue_count = pd.merge(open_issue_count, close_issue_count, on=['y', 'w'], how='outer')
-            issue_count = issue_count.fillna(0)
+            complete_count = pd.merge(all_date, issue_count, how='outer', on=['y', 'w'])
+            issue_count = complete_count.fillna(0)
             issue_count['issue_diff'] = issue_count['open_issue_count'] + issue_count['close_issue_count']
             issue_count['cumsum_issue'] = issue_count['issue_diff'].cumsum()
 
@@ -770,8 +783,8 @@ def version_forecast_file(dataset):
             issue_finalP = issue_final.copy()
 
             # horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 30, 40, 52]
-            # horizons = [1, 4, 8]
-            horizons = [1]
+            horizons = [1, 4, 8]
+            # horizons = [1]
 
             # EXPORT FOR DIFFERENT TIME HORIZONS
             for shift in horizons:
@@ -840,6 +853,9 @@ def export_visualization(dataset):
             # FILTER
             issue = filter2(issue)
 
+            min_date = issue['open_dt'].min().date()
+            max_date = issue['open_dt'].max().date()
+
             # REMOVE OR UPDATE FEATURES
             issue = issue.drop(['open_dt', 'close_dt'], axis=1)
             issue = issue.drop(['created_date', 'created_date_zoned', 'updated_date', 'updated_date_zoned', 'resolved_date', 'resolved_date_zoned'], axis=1)
@@ -851,6 +867,13 @@ def export_visualization(dataset):
 
             # ADDING EMPTY COLUMN
             issue['n'] = 0
+
+            # GET ALL THE WEEK IN THE TIME SLICE
+            all_date = pd.date_range(start=min_date, end=max_date, freq='W')
+            all_date = pd.DataFrame(all_date)
+            all_date['y'] = all_date[0].dt.year
+            all_date['w'] = all_date[0].dt.week
+            all_date = all_date.drop([0], axis=1)
 
             # MAKE DF COPY TO COMPUTE OPEN ISSUE
             open_issue = issue.copy()
@@ -870,13 +893,15 @@ def export_visualization(dataset):
 
             # COMPUTE SUM OF SEVERITY
             issue_sum = pd.merge(open_issue_sum, close_issue_sum, on=['y', 'w'], how='outer')
-            issue_sum = issue_sum.fillna(0)
+            complete_sum = pd.merge(all_date, issue_sum, how='outer', on=['y', 'w'])
+            issue_sum = complete_sum.fillna(0)
             issue_sum['severity_diff'] = issue_sum['open_severity_sum'] + issue_sum['close_severity_sum']
             issue_sum['cumsum_severity'] = issue_sum['severity_diff'].cumsum()
 
             # COMPUTE COUNT OF ISSUE
             issue_count = pd.merge(open_issue_count, close_issue_count, on=['y', 'w'], how='outer')
-            issue_count = issue_count.fillna(0)
+            complete_count = pd.merge(all_date, issue_count, how='outer', on=['y', 'w'])
+            issue_count = complete_count.fillna(0)
             issue_count['issue_diff'] = issue_count['open_issue_count'] + issue_count['close_issue_count']
             issue_count['cumsum_issue'] = issue_count['issue_diff'].cumsum()
 
@@ -906,7 +931,7 @@ def version_visualization(dataset):
     conn = sqlite3.connect('data/SQLITE3/' + dataset + '.sqlite3')
 
     query = """
-            SELECT fix_version as version, MIN(DATE(created_date)) as date
+            SELECT fix_version as version, MIN(DATE(created_date)) as date_s
             FROM issue, issue_fix_version
             WHERE issue.issue_id=issue_fix_version.issue_id
             GROUP BY fix_version
@@ -914,7 +939,15 @@ def version_visualization(dataset):
             """
 
     version = pd.read_sql_query(query, conn)
+    version['f_date'] = pd.to_datetime(version['date_s'])
+    version['date'] = version['f_date'].dt.date
+    version['y'] = version['f_date'].dt.year
+    version['w'] = version['f_date'].dt.week
+
+    version = version.drop(['f_date', 'date', 'date_s'], axis=1)
+
     version.to_csv('data/release/' + dataset + '.csv', index=None)
+
 
 def main(dataset):
     # merge(dataset)
@@ -922,10 +955,9 @@ def main(dataset):
     # issue_forecast_file(dataset)
     # data_distribution(dataset)
     # ludwig_export(dataset)
-    # version_forecast_file(dataset)
-    # export_visualization(dataset)
+    version_forecast_file(dataset)
+    export_visualization(dataset)
     version_visualization(dataset)
-
 
 
 if __name__ == "__main__":
