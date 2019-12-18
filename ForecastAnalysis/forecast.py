@@ -39,16 +39,16 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 warnings.filterwarnings("ignore")
 
-test_size = 0.25
+test_size = 0.30
 
 predictor = 600
-epochs_nn = 500
+epochs_nn = 300
 epochs_lstm = 500
 batch_size = 8
 
 random = 12
 n_jobs = 6
-verbose = 2
+verbose = 0
 
 def duration_model(file):
     features = pd.read_csv(file + '.csv')
@@ -126,8 +126,6 @@ def model_randomforest(file):
 
 def model_keras_nn(file):
     features_basic = pd.read_csv(file + '.csv')
-    plot_all(features_basic, file)
-    return 0
 
     infos_nn(file, features_basic)
 
