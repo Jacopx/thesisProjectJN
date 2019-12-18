@@ -902,6 +902,20 @@ def export_visualization(dataset):
             print(e)
 
 
+def version_visualization(dataset):
+    conn = sqlite3.connect('data/SQLITE3/' + dataset + '.sqlite3')
+
+    query = """
+            SELECT fix_version as version, MIN(DATE(created_date)) as date
+            FROM issue, issue_fix_version
+            WHERE issue.issue_id=issue_fix_version.issue_id
+            GROUP BY fix_version
+            ORDER BY MIN(DATE(created_date));
+            """
+
+    version = pd.read_sql_query(query, conn)
+    version.to_csv('data/release/' + dataset + '.csv', index=None)
+
 def main(dataset):
     # merge(dataset)
     # issue_duration_forecast_file(dataset)
@@ -909,7 +923,8 @@ def main(dataset):
     # data_distribution(dataset)
     # ludwig_export(dataset)
     # version_forecast_file(dataset)
-    export_visualization(dataset)
+    # export_visualization(dataset)
+    version_visualization(dataset)
 
 
 
