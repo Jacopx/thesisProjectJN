@@ -31,6 +31,8 @@ DataAnalysis_Issue/data/CSV/*.csv
 DataAnalysis_Issue/data/ludwig/*.csv
 DataAnalysis_Issue/data/version/*.csv
 DataAnalysis_Issue/data/severity/*.csv
+DataAnalysis_Issue/data/release/*.csv
+DataAnalysis_Issue/data/visual/*.csv
 
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and WebStorm
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
