@@ -48,7 +48,7 @@ batch_size = 8
 
 random = 12
 n_jobs = 6
-verbose = 2
+verbose = 0
 
 def duration_model(file):
     features = pd.read_csv(file + '.csv')
@@ -85,7 +85,6 @@ def duration_model(file):
 
 def model_randomforest(file):
     features_basic = pd.read_csv(file + '.csv')
-    # plot_all(features_basic)
 
     infos(file, features_basic)
 
@@ -116,8 +115,10 @@ def model_randomforest(file):
     predictions = np.round(predictions, decimals=1)
     all_predictions = np.round(all_predictions, decimals=1)
 
-    plot_predict(file + '_RF', test_labels, predictions)
-    plot_mixed(file + '_RF', labels, all_predictions)
+    shift = int(file.split('-')[1])
+
+    # plot_predict(file + '_RF', test_labels, predictions, shift)
+    plot_mixed(file + '_RF', labels, all_predictions, shift)
     importances(model, feature_list)
     errors(test_labels, predictions, mean)
     return predictions
@@ -125,7 +126,6 @@ def model_randomforest(file):
 
 def model_keras_nn(file):
     features_basic = pd.read_csv(file + '.csv')
-    # plot_all(features_basic)
 
     infos_nn(file, features_basic)
 
@@ -159,7 +159,7 @@ def model_keras_nn(file):
     predictions = np.round(predictions, decimals=1)
     all_predictions = np.round(all_predictions, decimals=1)
 
-    shift = int(file.split('-')[1])
+    shift = int(file.split('-')[2])
 
     # plot_predict(file + '_NN', test_labels, predictions, shift)
     plot_mixed(file + '_NN', labels, all_predictions, shift)
@@ -302,8 +302,8 @@ def plot_predict(file, test_labels, predictions, shift):
     plt.ylabel('n')
     plt.minorticks_on()
     plt.grid(axis='both')
-    plt.title(file[5:] + '_predictions')
-    plt.savefig(file + '_predictions.png', dpi=240)
+    plt.title('plot/' + file[5:] + '_predictions')
+    plt.savefig('plot/' + file + '_predictions.png', dpi=240)
     plt.show()
 
 
@@ -314,7 +314,9 @@ def plot_mixed(file, labels, predictions, shift):
 
     plt.figure(figsize=(20, 11))
     sns.lineplot(n[:-shift], labels[:-shift], label='Real', ci=None)
+    # sns.lineplot(n, labels, label='Real', ci=None)
     sns.lineplot(n[:-shift], predictions[shift:], label='Predict', ci=None)
+    # sns.lineplot(n, predictions, label='Predict', ci=None)
     plt.axvline(int(len(predictions) * (1 - test_size)), linestyle='--', label='Split', c='red')
     plt.xticks(rotation='60')
     plt.legend()  # Graph labels
@@ -322,8 +324,8 @@ def plot_mixed(file, labels, predictions, shift):
     plt.ylabel('n')
     plt.minorticks_on()
     plt.grid(axis='both')
-    plt.title(file[5:] + '_all_predictions')
-    plt.savefig(file + '_all_predictions.png', dpi=240)
+    plt.title('plot/' + file[5:] + '_all_predictions')
+    # plt.savefig('plot/' + file + '_all_predictions.png', dpi=240)
     plt.show()
 
 
@@ -336,12 +338,12 @@ def plot_history(file, history, name, label):
     plt.ylabel('Error')
     plt.minorticks_on()
     plt.grid(axis='both')
-    plt.title(file[5:] + label + '_History')
-    plt.savefig(file[5:] + label + '_history.png', dpi=240)
+    plt.title('plot/' + file[5:] + label + '_History')
+    plt.savefig('plot/' + file[5:] + label + '_history.png', dpi=240)
     plt.show()
 
 
-def plot_all(df_original):
+def plot_all(df_original, file):
     plt.figure(figsize=(40, 18))
     df = df_original.copy()
     df['n'] = df['n'].astype('int32')
@@ -352,10 +354,9 @@ def plot_all(df_original):
     plt.xlabel('Week')
     plt.ylabel('n')
     plt.grid(axis='both')
-    plt.title('Data Distribution')
-    plt.savefig('DataDistribution.png', dpi=240)
+    plt.title('plot/Data Distribution: ' + file[5:])
+    plt.savefig('plot/DataDistribution-' + file[5:] + '.png', dpi=240)
     plt.show()
-    # exit(0)
 
 
 def importances(model, feature_list):
@@ -382,14 +383,14 @@ def errors(test_labels, predictions, mean):
     EVS = explained_variance_score(test_labels, predictions)
     R2 = r2_score(test_labels, predictions)
     RSE = mean_squared_error(test_labels, predictions)
-    REL = 100 * (abs(test_labels - predictions) / test_labels)
+    REL = abs(100 * (abs(test_labels - predictions) / test_labels))
     MAX = max_error(test_labels, predictions)
     # MSLE = mean_squared_log_error(test_labels, predictions)
 
     print('Mean Absolute Error:', round(MAE, 2))
     # print('Max Error:', round(MAX, 2))
     # print('Exaplined Variance:', round(EVS, 3))
-    # print('R2 Scoring:', round(R2, 3))
+    print('R2 Scoring:', round(R2, 3))
     # print('MSLE Scoring:', round(MSLE, 5))
     # print('RSE:', round(RSE, 3))
     print('Relative:', np.round(np.mean(REL), 2), '%.')

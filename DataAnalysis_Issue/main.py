@@ -48,7 +48,7 @@ def merge(dataset):
     print(' OK')
 
     print('Export...', end='')
-    issue_commit.to_csv(dataset + '_merged.csv', index=None)
+    issue_commit.to_csv(dataset + '-merged.csv', index=None)
     print(' OK')
 
 
@@ -57,8 +57,6 @@ def issue_duration_forecast_file(dataset):
 
     starting_shape = issue.shape
     print('Starting shape:\t{}'.format(starting_shape))
-
-    # issue = issue[(issue['resolution'] == 'Fixed')]
 
     issue['open_dt'] = pd.to_datetime(issue['created_date_zoned'])
     # issue = issue.sort_values(by='created_date_zoned')
@@ -135,11 +133,11 @@ def issue_duration_forecast_file(dataset):
     print('\nData removed:\t{}%\n'.format(round((starting_shape[0] - issue_final.shape[0]) * 100 / starting_shape[0], 1)))
 
     print('Export...', end='')
-    issue_final.to_csv('data/CSV/' + dataset + '_duration.csv', index=None)
+    issue_final.to_csv('data/CSV/' + dataset + '-duration.csv', index=None)
     print(' OK')
 
 
-def issue_count_mixed_forecast_file(dataset):
+def issue_forecast_file(dataset):
     # Get all commit by WEEK and YEAR
     date_component_change = make_component_change(dataset)
     date_component_change['date'] = pd.to_datetime(date_component_change['date'])
@@ -218,12 +216,14 @@ def issue_count_mixed_forecast_file(dataset):
         close_issue_sum = make_issue_sum(close_issue, 'c_')
 
         # COMPUTE SUM OF SEVERITY
-        issue_sum = pd.merge(open_issue_sum, close_issue_sum, on=['y', 'w'])
+        issue_sum = pd.merge(open_issue_sum, close_issue_sum, on=['y', 'w'], how='outer')
+        issue_sum = issue_sum.fillna(0)
         issue_sum['severity_diff'] = issue_sum['open_severity_sum'] + issue_sum['close_severity_sum']
         issue_sum['cumsum_severity'] = issue_sum['severity_diff'].cumsum()
 
         # COMPUTE COUNT OF ISSUE
-        issue_count = pd.merge(open_issue_count, close_issue_count, on=['y', 'w'])
+        issue_count = pd.merge(open_issue_count, close_issue_count, on=['y', 'w'], how='outer')
+        issue_count = issue_count.fillna(0)
         issue_count['issue_diff'] = issue_count['open_issue_count'] + issue_count['close_issue_count']
         issue_count['cumsum_issue'] = issue_count['issue_diff'].cumsum()
 
@@ -253,7 +253,7 @@ def issue_count_mixed_forecast_file(dataset):
 
             # COUNT
             issue_finalCx = issue_final.copy()
-            issue_finalC = extracted_calculation(issue_finalCx, 'cumsum_issue')
+            issue_finalC = extracted_calculation2(issue_finalCx, 'cumsum_issue')
             issue_finalC[str(shift) + 'future'] = issue_finalC['cumsum_issue'].shift(-shift, fill_value=-1)
             issue_finalC = issue_finalC.head(-shift)
             issue_finalC = issue_finalC.drop('cumsum_issue', axis=1)
@@ -264,7 +264,7 @@ def issue_count_mixed_forecast_file(dataset):
 
             # PRIORITY
             issue_finalPx = issue_final.copy()
-            issue_finalP = extracted_calculation(issue_finalPx, 'cumsum_severity')
+            issue_finalP = extracted_calculation2(issue_finalPx, 'cumsum_severity')
             issue_finalP[str(shift) + 'future'] = issue_finalP['cumsum_severity'].shift(-shift, fill_value=-1)
             issue_finalP = issue_finalP.head(-shift)
             issue_finalP = issue_finalP.drop('cumsum_severity', axis=1)
@@ -276,70 +276,9 @@ def issue_count_mixed_forecast_file(dataset):
             # EXPORT
             issue_finalC = issue_finalC.reset_index()
             issue_finalP = issue_finalP.reset_index()
-            issue_finalC.to_csv('data/CSV/' + dataset + '_' + st + '_count-' + str(shift) + '.csv', index=None)
-            issue_finalP.to_csv('data/CSV/' + dataset + '_' + st + '_prior-' + str(shift) + '.csv', index=None)
+            issue_finalC.to_csv('data/severity/' + dataset + '-' + st + '_count-' + str(shift) + '.csv', index=None)
+            issue_finalP.to_csv('data/severity/' + dataset + '-' + st + '_prior-' + str(shift) + '.csv', index=None)
             print(' OK')
-
-
-def issue_count_forecast_file(dataset):
-    issue = open_sqlite(dataset, 'issue')
-
-    print('Starting shape:\t{}'.format(issue.shape))
-
-    issue['open_dt'] = pd.to_datetime(issue['created_date'])
-    issue['date'] = issue['open_dt'].dt.date
-
-    issue = issue.drop('created_date', axis=1)
-    issue = issue.drop('created_date_zoned', axis=1)
-    issue = issue.drop('updated_date', axis=1)
-    issue = issue.drop('updated_date_zoned', axis=1)
-    issue = issue.drop('resolved_date', axis=1)
-    issue = issue.drop('resolved_date_zoned', axis=1)
-    issue = issue.drop('open_dt', axis=1)
-    issue = issue.drop('status', axis=1)
-    issue = issue.drop('assignee', axis=1)
-    issue = issue.drop('assignee_username', axis=1)
-    issue = issue.drop('reporter', axis=1)
-    issue = issue.drop('reporter_username', axis=1)
-    issue = issue.drop('issue_id', axis=1)
-    issue = issue.drop('summary', axis=1)
-    issue = issue.drop('description', axis=1)
-    issue = issue.drop('type', axis=1)
-    # convert(issue, 'type')
-    issue = issue.drop('priority', axis=1)
-    # convert(issue, 'priority')
-    issue = issue.drop('resolution', axis=1)
-    # convert(issue, 'resolution')
-
-    issue['n'] = 0
-
-    issue_final = issue.groupby(by=['date'], as_index=True).count()
-
-    issue_final = issue_final.fillna(0)
-    issue_final = issue_final.reset_index()
-
-    issue_final['date'] = pd.to_datetime(issue_final['date'])
-    issue_final['month'] = issue_final['date'].dt.month
-    issue_final['wday'] = issue_final['date'].dt.weekday
-    issue_final = issue_final.drop('date', axis=1)
-
-    issue_final['exp_avg'] = issue_final['n'].expanding().mean()
-    issue_final['mov_avg2'] = issue_final['n'].rolling(2).mean()
-    issue_final['mov_avg2'] = issue_final['mov_avg2'].shift(1, fill_value=-1)
-    issue_final = issue_final.tail(-2)
-
-    issue_final['avg'] = issue_final['n'].mean()
-
-    issue_final['7before'] = issue_final['n'].shift(7, fill_value=-1)
-    issue_final['14before'] = issue_final['n'].shift(14, fill_value=-1)
-    issue_final = issue_final.tail(-14)
-
-    print('Ending shape:\t{}'.format(issue_final.shape))
-    print('Export...', end='')
-    issue_final = issue_final.reset_index()
-    issue_final.to_csv('data/CSV/' + dataset + '_count.csv', index=None)
-    print(' OK')
-    return issue_final
 
 
 def make_component_change(dataset):
@@ -359,6 +298,33 @@ def make_component_change(dataset):
                             GROUP BY change_set.commit_hash
                         ) as 'change'
                         WHERE issue.issue_id=change_set_link.issue_id AND change_set_link.commit_hash=change.commit_hash AND type='Bug'
+                        ORDER BY issue.issue_id
+                    ) as changes
+                WHERE issue_component.issue_id=changes.issue_id
+            )
+            GROUP BY date, component;
+        """
+
+    return pd.read_sql_query(query, conn)
+
+
+def make_component_change_clean(dataset):
+    conn = sqlite3.connect('data/SQLITE3/' + dataset + '.sqlite3')
+
+    query = \
+        """
+            SELECT date, component, COUNT(DISTINCT commit_hash) as 'commit_count', SUM(line_change) as 'line_change', resolution, status
+            FROM
+             (  SELECT changes.commit_hash, component, date, line_change, resolution, status
+                FROM issue_component,
+                    (   SELECT change_set_link.issue_id, change.commit_hash, date, line_change, resolution, status
+                        FROM issue, change_set_link,
+                         (  SELECT change_set.commit_hash, DATE(committed_date) as 'date', SUM(sum_added_lines)-SUM(sum_removed_lines) AS 'line_change'
+                            FROM code_change, change_set
+                            WHERE change_set.commit_hash=code_change.commit_hash
+                            GROUP BY change_set.commit_hash
+                        ) as 'change'
+                        WHERE issue.issue_id=change_set_link.issue_id AND change_set_link.commit_hash=change.commit_hash
                         ORDER BY issue.issue_id
                     ) as changes
                 WHERE issue_component.issue_id=changes.issue_id
@@ -422,40 +388,28 @@ def make_sen_dev(dataset):
 
 
 def make_issue_count(df, root):
-    df = df.rename(columns={root + 'y': 'y', root + 'w': 'w'})
-    df = df.groupby(by=['y', 'w'], as_index=True).count()
+    df = df.rename(columns={root + 'w': 'w'})
+    df = df.groupby(by=['w'], as_index=True).count()
     df = df.drop('severity', axis=1)
     df = df.drop('resolution', axis=1)
 
     if root in 'o_':
-        df = df.drop('o_date', axis=1)
-        df = df.drop('c_date', axis=1)
-        df = df.drop('c_y', axis=1)
-        df = df.drop('c_w', axis=1)
         df = df.rename(columns={'n': 'open_issue_count'})
     else:
         df['n'] = -df['n']
-        df = df.drop('o_date', axis=1)
-        df = df.drop('c_date', axis=1)
-        df = df.drop('o_y', axis=1)
-        df = df.drop('o_w', axis=1)
         df = df.rename(columns={'n': 'close_issue_count'})
 
     return df
 
 
 def make_issue_sum(df, root):
-    df = df.rename(columns={root + 'y': 'y', root + 'w': 'w'})
-    df = df.groupby(by=['y', 'w'], as_index=True).sum()
+    df = df.rename(columns={root + 'w': 'w'})
+    df = df.groupby(by=['w'], as_index=True).sum()
     df = df.drop('n', axis=1)
 
     if root in 'o_':
-        df = df.drop('c_y', axis=1)
-        df = df.drop('c_w', axis=1)
         df = df.rename(columns={'severity': 'open_severity_sum'})
     else:
-        df = df.drop('o_y', axis=1)
-        df = df.drop('o_w', axis=1)
         df = df.rename(columns={'severity': 'close_severity_sum'})
 
     return df
@@ -464,8 +418,16 @@ def make_issue_sum(df, root):
 def filter(df_init):
     df = df_init.copy()
     df = df[(df['type'] == 'Bug')]
-    df = df[((df['o_y'] >= 2012) & (df['o_y'] <= 2018) & (df['c_y'] >= 2012) & (df['c_y'] <= 2018)) | (df['c_y'].isna() == True & (df['o_y'] == 2017))]
+    df = df[((df['o_y'] >= 2012) & (df['o_y'] <= 2018) & (df['c_y'] >= 2012) & (df['c_y'] <= 2018)) | ((df['c_y'].isna() == True) & (df['o_y'] == 2017))]
     df = df[((df['status'] == 'Closed') & (df['resolution'] == 'Fixed')) | ((df['status'] == 'Resolved') & (df['resolution'] == 'Fixed')) | (df['status'] == 'Open')]
+    return df
+
+
+def filter2(df_init):
+    df = df_init.copy()
+    df = df[(df['type'] == 'Bug')]
+    df = df[(df['close_dt'].isna() == False)]
+    df = df[((df['status'] == 'Closed') & (df['resolution'] == 'Fixed')) | ((df['status'] == 'Resolved') & (df['resolution'] == 'Fixed'))]
     return df
 
 
@@ -526,9 +488,31 @@ def extracted_calculation(issue_start, column):
     return issue_final.tail(-4)
 
 
+def extracted_calculation2(issue_start, column):
+    issue_final = issue_start.copy()
+    issue_final['exp_avg'] = issue_final[column].expanding().mean()
+    issue_final['mov_avg2'] = issue_final[column].rolling(2).mean()
+    issue_final['mov_avg2'] = issue_final['mov_avg2'].shift(1, fill_value=0)
+    issue_final['mov_avg4'] = issue_final[column].rolling(4).mean()
+    issue_final['mov_avg4'] = issue_final['mov_avg4'].shift(1, fill_value=0)
+
+    issue_final['1before'] = issue_final[column].shift(1, fill_value=0)
+    issue_final['2before'] = issue_final[column].shift(2, fill_value=0)
+    issue_final['4before'] = issue_final[column].shift(4, fill_value=0)
+
+    return issue_final
+
+
 def data_distribution(dataset):
     conn = sqlite3.connect('data/SQLITE3/' + dataset + '.sqlite3')
-    df = pd.read_sql_query('SELECT DATE(created_date) as "date", COUNT(DISTINCT issue_id) as "c" FROM issue WHERE type="Bug" GROUP BY DATE(created_date);', conn)
+    # query = 'SELECT DATE(created_date) as "date", COUNT(DISTINCT issue_id) as "c" FROM issue WHERE type="Bug" GROUP BY DATE(created_date);'
+    query = """
+            SELECT DATE(created_date) as "date", COUNT(DISTINCT issue.issue_id) as "c"
+            FROM issue, issue_fix_version
+            WHERE type="Bug" AND issue.issue_id=issue_fix_version.issue_id AND fix_version like '2.%'
+            GROUP BY DATE(created_date);
+            """
+    df = pd.read_sql_query(query, conn)
 
     df['date'] = pd.to_datetime(df['date'])
     df['y'] = df['date'].dt.year
@@ -610,12 +594,14 @@ def ludwig_export(dataset):
     close_issue_sum = make_issue_sum(close_issue, 'c_')
 
     # COMPUTE SUM OF SEVERITY
-    issue_sum = pd.merge(open_issue_sum, close_issue_sum, on=['y', 'w'])
+    issue_sum = pd.merge(open_issue_sum, close_issue_sum, on=['y', 'w'], how='outer')
+    issue_sum = issue_sum.fillna(0)
     issue_sum['severity_diff'] = issue_sum['open_severity_sum'] + issue_sum['close_severity_sum']
     issue_sum['cumsum_severity'] = issue_sum['severity_diff'].cumsum()
 
     # COMPUTE COUNT OF ISSUE
-    issue_count = pd.merge(open_issue_count, close_issue_count, on=['y', 'w'])
+    issue_count = pd.merge(open_issue_count, close_issue_count, on=['y', 'w'], how='outer')
+    issue_count = issue_count.fillna(0)
     issue_count['issue_diff'] = issue_count['open_issue_count'] + issue_count['close_issue_count']
     issue_count['cumsum_issue'] = issue_count['issue_diff'].cumsum()
 
@@ -667,18 +653,320 @@ def ludwig_export(dataset):
         # EXPORT
         issue_finalC = issue_finalC.reset_index()
         issue_finalP = issue_finalP.reset_index()
-        issue_finalC.to_csv('data/ludwig/' + dataset + '_count' + str(shift) + '.csv', index=None)
-        issue_finalP.to_csv('data/ludwig/' + dataset + '_prior' + str(shift) + '.csv', index=None)
+        issue_finalC.to_csv('data/ludwig/' + dataset + '-count' + str(shift) + '.csv', index=None)
+        issue_finalP.to_csv('data/ludwig/' + dataset + '-prior' + str(shift) + '.csv', index=None)
         print(' OK')
+
+
+def version_forecast_file(dataset):
+    versions = ['0', '1', '2', '3', '4', '5', '6']
+
+    for version in versions:
+        try:
+
+            # Get all commit by WEEK and YEAR
+            date_component_change = make_component_change_clean(dataset)
+            date_component_change['date'] = pd.to_datetime(date_component_change['date'])
+            date_component_change['w'] = date_component_change['date'].dt.strftime('%Y') + '-' + date_component_change['date'].dt.strftime('%W')
+            date_component_change = date_component_change.drop('date', axis=1)
+
+            week_commit = date_component_change.groupby(by=['w']).sum()
+
+            conn = sqlite3.connect('data/SQLITE3/' + dataset + '.sqlite3')
+
+            query = """
+                    SELECT * 
+                    FROM issue, issue_fix_version
+                    WHERE issue.issue_id=issue_fix_version.issue_id AND fix_version like '{}%' 
+                    """.format(version)
+
+            issue = pd.read_sql_query(query, conn)
+
+            print('Starting shape:\t{}'.format(issue.shape))
+
+            issue['open_dt'] = pd.to_datetime(issue['created_date_zoned'])
+            issue['o_w'] = issue['open_dt'].dt.strftime('%Y') + '-' + issue['open_dt'].dt.strftime('%W')
+
+            issue['close_dt'] = pd.to_datetime(issue['resolved_date_zoned'])
+            issue['c_w'] = issue['close_dt'].dt.strftime('%Y') + '-' + issue['close_dt'].dt.strftime('%W')
+
+            issue['time'] = issue['close_dt'] - issue['open_dt']
+            issue['duration'] = np.round(issue['time'].dt.total_seconds() / 60 / 60, 0)
+
+            # FILTER
+            issue = filter2(issue)
+
+            min_date = issue['open_dt'].min().date()
+            max_date = issue['close_dt'].max().date()
+
+            # REMOVE OR UPDATE FEATURES
+            issue = issue.drop(['open_dt', 'close_dt', 'time', 'duration'], axis=1)
+            issue = issue.drop(['created_date', 'created_date_zoned', 'updated_date', 'updated_date_zoned', 'resolved_date', 'resolved_date_zoned'], axis=1)
+            issue = issue.drop(['status', 'assignee', 'assignee_username', 'reporter', 'reporter_username'], axis=1)
+            issue = issue.drop(['issue_id', 'summary', 'description', 'type'], axis=1)
+            issue = issue.drop(['fix_version'], axis=1)
+            issue = issue.rename(columns={'priority': 'severity'})
+
+            prior_list = ['Critical', 'Major', 'Blocker', 'Minor', 'Trivial']
+
+            # ADDING EMPTY COLUMN
+            issue['n'] = 0
+
+            # GET ALL THE WEEK IN THE TIME SLICE
+            all_date = pd.date_range(start=min_date, end=max_date, freq='D')
+            all_date = pd.DataFrame(all_date)
+            all_date['w'] = all_date[0].dt.strftime('%Y') + '-' + all_date[0].dt.strftime('%W')
+            all_date = all_date.drop([0], axis=1)
+            all_date = all_date.drop_duplicates(keep='last')
+
+            # MAKE DF COPY TO COMPUTE OPEN ISSUE
+            open_issue = issue.copy()
+            open_issue.severity.replace(prior_list, [50.00, 10.00, 2.00, 1.00, 0.50], inplace=True)
+            open_issue_count = make_issue_count(open_issue, 'o_')
+            open_issue_sum = make_issue_sum(open_issue, 'o_')
+
+            # MAKE DF COPY TO COMPUTE CLOSED ISSUE
+            close_issue = issue.copy()
+            close_issue.severity.replace(prior_list, [-50.00, -10.00, -2.00, -1.00, -0.50], inplace=True)
+            close_issue_count = make_issue_count(close_issue, 'c_')
+            close_issue_sum = make_issue_sum(close_issue, 'c_')
+
+            print('Opened: {}'.format(open_issue_sum.sum().values[0]))
+            print('Closed: {}\n'.format(close_issue_sum.sum().values[0]))
+            print('Difference: {}\n'.format(close_issue_sum.sum().values[0] + open_issue_sum.sum().values[0]))
+
+            # COMPUTE SUM OF SEVERITY
+            issue_sum = pd.merge(open_issue_sum, close_issue_sum, on=['w'], how='outer')
+            complete_sum = pd.merge(all_date, issue_sum, how='outer', on=['w'])
+            issue_sum = complete_sum.fillna(0)
+            issue_sum['severity_diff'] = issue_sum['open_severity_sum'] + issue_sum['close_severity_sum']
+            issue_sum['cumsum_severity'] = issue_sum['severity_diff'].cumsum()
+
+            # COMPUTE COUNT OF ISSUE
+            issue_count = pd.merge(open_issue_count, close_issue_count, on=['w'], how='outer')
+            complete_count = pd.merge(all_date, issue_count, how='outer', on=['w'])
+            issue_count = complete_count.fillna(0)
+            issue_count['issue_diff'] = issue_count['open_issue_count'] + issue_count['close_issue_count']
+            issue_count['cumsum_issue'] = issue_count['issue_diff'].cumsum()
+
+            # MERGE THE COUNT
+            issue_cnt_sum = pd.merge(issue_sum, issue_count, on=['w'])
+            issue_final = pd.merge(issue_cnt_sum, week_commit, on=['w'], how='outer')
+            issue_final = issue_final.fillna(0)
+
+            issue_final['line_change'] = issue_final['line_change'].astype('int32')
+            issue_final['commit_count'] = issue_final['commit_count'].astype('int32')
+
+            # CAST
+            for i in range(3, len(issue_final.columns)):
+                issue_final[issue_final.columns[i]] = issue_final[issue_final.columns[i]].astype('int32')
+
+            print('Ending shape:\t{}'.format(issue_final.shape))
+            print('Export:')
+
+            issue_finalC = issue_final.copy()
+            issue_finalP = issue_final.copy()
+
+            horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 30, 40, 52]
+            # horizons = [1, 4, 8]
+            # horizons = [1]
+
+            # EXPORT FOR DIFFERENT TIME HORIZONS
+            for shift in horizons:
+                print('Horizon: ' + str(shift) + '.', end='')
+
+                # COUNT
+                issue_finalCx = issue_final.copy()
+                issue_finalC = extracted_calculation2(issue_finalCx, 'cumsum_issue')
+                issue_finalC[str(shift) + 'future'] = issue_finalC['cumsum_issue'].shift(-shift, fill_value=-1)
+                issue_finalC = issue_finalC.head(-shift)
+                issue_finalC = issue_finalC.drop('cumsum_issue', axis=1)
+                issue_finalC = issue_finalC.drop('w', axis=1)
+                issue_finalC = issue_finalC.rename(columns={str(shift) + "future": "n"})
+                # issue_finalC['y'] = issue_finalC['w'].str.split('-', n = 0, expand=True)[0]
+                # issue_finalC['w'] = issue_finalC['w'].str.split('-', n = 0, expand=True)[1]
+                issue_finalC['n'] = np.round(issue_finalC['n'], 1)
+
+                print('.', end='')
+
+                # PRIORITY
+                issue_finalPx = issue_final.copy()
+                issue_finalP = extracted_calculation2(issue_finalPx, 'cumsum_severity')
+                issue_finalP[str(shift) + 'future'] = issue_finalP['cumsum_severity'].shift(-shift, fill_value=-1)
+                issue_finalP = issue_finalP.head(-shift)
+                issue_finalP = issue_finalP.drop('cumsum_severity', axis=1)
+                issue_finalP = issue_finalP.drop('w', axis=1)
+                issue_finalP = issue_finalP.rename(columns={str(shift) + "future": "n"})
+                # issue_finalP['y'] = issue_finalP['w'].str.split('-', n = 0, expand=True)[0]
+                # issue_finalP['w'] = issue_finalP['w'].str.split('-', n = 0, expand=True)[1]
+                issue_finalP['n'] = np.round(issue_finalP['n'], 1)
+
+                print('.', end='')
+
+                # EXPORT
+                issue_finalC = issue_finalC.reset_index()
+                issue_finalC = issue_finalC.drop('index', axis=1)
+                issue_finalP = issue_finalP.reset_index()
+                issue_finalP = issue_finalP.drop('index', axis=1)
+                issue_finalC.to_csv('data/version/' + dataset + '-version_' + version + '_count-' + str(shift) + '.csv', index=None)
+                issue_finalP.to_csv('data/version/' + dataset + '-version_' + version + '_prior-' + str(shift) + '.csv', index=None)
+                print(' OK')
+        except:
+            e = sys.exc_info()[0]
+            print(e)
+
+
+def export_visualization(dataset):
+    versions = ['0', '1', '2', '3', '4', '5', '6']
+
+    for version in versions:
+        try:
+            conn = sqlite3.connect('data/SQLITE3/' + dataset + '.sqlite3')
+
+            query = """
+                    SELECT *
+                    FROM issue, issue_fix_version
+                    WHERE issue.issue_id=issue_fix_version.issue_id AND fix_version like '{}%' 
+                    """.format(version)
+
+            issue = pd.read_sql_query(query, conn)
+
+            print('Starting shape:\t{}'.format(issue.shape))
+
+            issue['open_dt'] = pd.to_datetime(issue['created_date_zoned'])
+            issue['o_w'] = issue['open_dt'].dt.strftime('%Y') + '-' + issue['open_dt'].dt.strftime('%W')
+
+            issue['close_dt'] = pd.to_datetime(issue['resolved_date_zoned'])
+            issue['c_w'] = issue['close_dt'].dt.strftime('%Y') + '-' + issue['close_dt'].dt.strftime('%W')
+
+            # FILTER
+            issue = filter2(issue)
+
+            min_date = issue['open_dt'].min().date()
+            max_date = issue['close_dt'].max().date()
+
+            # REMOVE OR UPDATE FEATURES
+            issue = issue.drop(['open_dt', 'close_dt'], axis=1)
+            issue = issue.drop(['created_date', 'created_date_zoned', 'updated_date', 'updated_date_zoned', 'resolved_date', 'resolved_date_zoned'], axis=1)
+            issue = issue.drop(['status', 'assignee', 'assignee_username', 'reporter', 'reporter_username'], axis=1)
+            issue = issue.drop(['issue_id', 'summary', 'description', 'type', 'fix_version'], axis=1)
+            issue = issue.rename(columns={'priority': 'severity'})
+
+            prior_list = ['Critical', 'Major', 'Blocker', 'Minor', 'Trivial']
+
+            # ADDING EMPTY COLUMN
+            issue['n'] = 0
+
+            # GET ALL THE WEEK IN THE TIME SLICE
+            all_date = pd.date_range(start=min_date, end=max_date, freq='D')
+            all_date = pd.DataFrame(all_date)
+            all_date['w'] = all_date[0].dt.strftime('%Y') + '-' + all_date[0].dt.strftime('%W')
+            all_date = all_date.drop([0], axis=1)
+            all_date = all_date.drop_duplicates(keep='last')
+
+            # MAKE DF COPY TO COMPUTE OPEN ISSUE
+            open_issue = issue.copy()
+            open_issue.severity.replace(prior_list, [50.00, 10.00, 2.00, 1.00, 0.50], inplace=True)
+            open_issue_count = make_issue_count(open_issue, 'o_')
+            open_issue_sum = make_issue_sum(open_issue, 'o_')
+
+            # MAKE DF COPY TO COMPUTE CLOSED ISSUE
+            close_issue = issue.copy()
+            close_issue.severity.replace(prior_list, [-50.00, -10.00, -2.00, -1.00, -0.50], inplace=True)
+            close_issue_count = make_issue_count(close_issue, 'c_')
+            close_issue_sum = make_issue_sum(close_issue, 'c_')
+
+            print('Opened: {}'.format(open_issue_sum.sum().values[0]))
+            print('Closed: {}\n'.format(close_issue_sum.sum().values[0]))
+            print('Difference: {}'.format(close_issue_sum.sum().values[0] + open_issue_sum.sum().values[0]))
+
+            # COMPUTE SUM OF SEVERITY
+            issue_sum = pd.merge(open_issue_sum, close_issue_sum, on=['w'], how='outer')
+            complete_sum = pd.merge(all_date, issue_sum, how='outer', on=['w'])
+            issue_sum = complete_sum.fillna(0)
+            issue_sum['severity_diff'] = issue_sum['open_severity_sum'] + issue_sum['close_severity_sum']
+            issue_sum['cumsum_severity'] = issue_sum['severity_diff'].cumsum()
+            issue_sum = issue_sum.drop(['severity_diff', 'open_severity_sum', 'close_severity_sum'], axis=1)
+
+            # COMPUTE COUNT OF ISSUE
+            issue_count = pd.merge(open_issue_count, close_issue_count, on=['w'], how='outer')
+            complete_count = pd.merge(all_date, issue_count, how='outer', on=['w'])
+            issue_count = complete_count.fillna(0)
+            issue_count['issue_diff'] = issue_count['open_issue_count'] + issue_count['close_issue_count']
+            issue_count['cumsum_issue'] = issue_count['issue_diff'].cumsum()
+            issue_count = issue_count.drop(['issue_diff', 'open_issue_count', 'close_issue_count'], axis=1)
+
+            # MERGE THE COUNT
+            issue_cnt_sum = pd.merge(issue_sum, issue_count, on=['w'])
+
+            print('Ending shape:\t{}\n'.format(issue_cnt_sum.shape))
+
+            issue_finalP = issue_cnt_sum.copy()
+            issue_finalP = issue_finalP.rename(columns={"cumsum_severity": "n"})
+            print('LATEST: {}'.format(issue_finalP['n'].tail(1).values[0]))
+            issue_finalP = issue_finalP.reset_index()
+            issue_finalP = issue_finalP.drop('index', axis=1)
+            issue_finalP.to_csv('data/visual/' + dataset + '-version_' + version + '_prior-visual.csv', index=None)
+
+            issue_finalC = issue_cnt_sum.copy()
+            issue_finalC = issue_finalC.rename(columns={"cumsum_issue": "n"})
+            print('LATEST: {}'.format(issue_finalC['n'].tail(1).values[0]))
+            issue_finalC = issue_finalC.reset_index()
+            issue_finalC = issue_finalC.drop('index', axis=1)
+            issue_finalC.to_csv('data/visual/' + dataset + '-version_' + version + '_count-visual.csv', index=None)
+
+        except:
+            e = sys.exc_info()
+            print(e)
+
+
+def version_visualization(dataset):
+    conn = sqlite3.connect('data/SQLITE3/' + dataset + '.sqlite3')
+
+    query = """
+            SELECT fix_version as version, MIN(DATE(created_date)) as date_s
+            FROM issue, issue_fix_version
+            WHERE issue.issue_id=issue_fix_version.issue_id
+            GROUP BY fix_version
+            ORDER BY MIN(DATE(created_date));
+            """
+
+    version = pd.read_sql_query(query, conn)
+    version['f_date'] = pd.to_datetime(version['date_s'])
+    version['date'] = version['f_date'].dt.date
+    version['y'] = version['f_date'].dt.year
+    version['w'] = version['f_date'].dt.week
+
+    version = version.drop(['f_date', 'date', 'date_s'], axis=1)
+
+    version.to_csv('data/release/' + dataset + '.csv', index=None)
+
+
+def plot_all(df_original, file):
+    plt.figure(figsize=(40, 18))
+    df = df_original.copy()
+    df['n'] = df['n'].astype('int32')
+    df['date'] = df[['y', 'w']].astype(str).apply('-'.join, axis=1)
+    sns.pointplot(df['date'], df['n'], label='value', ci=None, markersize=0.01, color='green')
+    plt.xticks(rotation='60')
+    plt.legend()  # Graph labels
+    plt.xlabel('Week')
+    plt.ylabel('n')
+    plt.grid(axis='both')
+    plt.title('Data Distribution: ' + file[5:])
+    plt.savefig('DataDistribution-' + file[5:] + '.png', dpi=240)
+    plt.show()
 
 
 def main(dataset):
     # merge(dataset)
     # issue_duration_forecast_file(dataset)
-    issue_count_mixed_forecast_file(dataset)
-    # issue_count_forecast_file(dataset)
+    # issue_forecast_file(dataset)
     # data_distribution(dataset)
     # ludwig_export(dataset)
+    version_forecast_file(dataset)
+    # export_visualization(dataset)
+    # version_visualization(dataset)
 
 
 if __name__ == "__main__":
