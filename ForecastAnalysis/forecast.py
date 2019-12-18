@@ -42,7 +42,7 @@ warnings.filterwarnings("ignore")
 test_size = 0.25
 
 predictor = 600
-epochs_nn = 300
+epochs_nn = 500
 epochs_lstm = 500
 batch_size = 8
 
@@ -85,7 +85,6 @@ def duration_model(file):
 
 def model_randomforest(file):
     features_basic = pd.read_csv(file + '.csv')
-    # plot_all(features_basic)
 
     infos(file, features_basic)
 
@@ -127,8 +126,8 @@ def model_randomforest(file):
 
 def model_keras_nn(file):
     features_basic = pd.read_csv(file + '.csv')
-    # plot_all(features_basic, file)
-    # return 0
+    plot_all(features_basic, file)
+    return 0
 
     infos_nn(file, features_basic)
 

@@ -388,40 +388,28 @@ def make_sen_dev(dataset):
 
 
 def make_issue_count(df, root):
-    df = df.rename(columns={root + 'y': 'y', root + 'w': 'w'})
-    df = df.groupby(by=['y', 'w'], as_index=True).count()
+    df = df.rename(columns={root + 'w': 'w'})
+    df = df.groupby(by=['w'], as_index=True).count()
     df = df.drop('severity', axis=1)
     df = df.drop('resolution', axis=1)
 
     if root in 'o_':
-        df = df.drop('o_date', axis=1)
-        df = df.drop('c_date', axis=1)
-        df = df.drop('c_y', axis=1)
-        df = df.drop('c_w', axis=1)
         df = df.rename(columns={'n': 'open_issue_count'})
     else:
         df['n'] = -df['n']
-        df = df.drop('o_date', axis=1)
-        df = df.drop('c_date', axis=1)
-        df = df.drop('o_y', axis=1)
-        df = df.drop('o_w', axis=1)
         df = df.rename(columns={'n': 'close_issue_count'})
 
     return df
 
 
 def make_issue_sum(df, root):
-    df = df.rename(columns={root + 'y': 'y', root + 'w': 'w'})
-    df = df.groupby(by=['y', 'w'], as_index=True).sum()
+    df = df.rename(columns={root + 'w': 'w'})
+    df = df.groupby(by=['w'], as_index=True).sum()
     df = df.drop('n', axis=1)
 
     if root in 'o_':
-        df = df.drop('c_y', axis=1)
-        df = df.drop('c_w', axis=1)
         df = df.rename(columns={'severity': 'open_severity_sum'})
     else:
-        df = df.drop('o_y', axis=1)
-        df = df.drop('o_w', axis=1)
         df = df.rename(columns={'severity': 'close_severity_sum'})
 
     return df
@@ -438,7 +426,8 @@ def filter(df_init):
 def filter2(df_init):
     df = df_init.copy()
     df = df[(df['type'] == 'Bug')]
-    df = df[((df['status'] == 'Closed') & (df['resolution'] == 'Fixed')) | ((df['status'] == 'Resolved') & (df['resolution'] == 'Fixed')) | (df['status'] == 'Open')]
+    df = df[(df['close_dt'].isna() == False)]
+    df = df[((df['status'] == 'Closed') & (df['resolution'] == 'Fixed')) | ((df['status'] == 'Resolved') & (df['resolution'] == 'Fixed'))]
     return df
 
 
@@ -840,27 +829,23 @@ def export_visualization(dataset):
 
             print('Starting shape:\t{}'.format(issue.shape))
 
-            issue['open_dt'] = pd.to_datetime(issue['created_date'])
-            issue['o_date'] = issue['open_dt'].dt.date
-            issue['o_y'] = issue['open_dt'].dt.year
-            issue['o_w'] = issue['open_dt'].dt.week
+            issue['open_dt'] = pd.to_datetime(issue['created_date_zoned'])
+            issue['o_w'] = issue['open_dt'].dt.strftime('%Y') + '-' + issue['open_dt'].dt.strftime('%W')
 
-            issue['close_dt'] = pd.to_datetime(issue['resolved_date'])
-            issue['c_date'] = issue['close_dt'].dt.date
-            issue['c_y'] = issue['close_dt'].dt.year
-            issue['c_w'] = issue['close_dt'].dt.week
+            issue['close_dt'] = pd.to_datetime(issue['resolved_date_zoned'])
+            issue['c_w'] = issue['close_dt'].dt.strftime('%Y') + '-' + issue['close_dt'].dt.strftime('%W')
 
             # FILTER
             issue = filter2(issue)
 
             min_date = issue['open_dt'].min().date()
-            max_date = issue['open_dt'].max().date()
+            max_date = issue['close_dt'].max().date()
 
             # REMOVE OR UPDATE FEATURES
             issue = issue.drop(['open_dt', 'close_dt'], axis=1)
             issue = issue.drop(['created_date', 'created_date_zoned', 'updated_date', 'updated_date_zoned', 'resolved_date', 'resolved_date_zoned'], axis=1)
             issue = issue.drop(['status', 'assignee', 'assignee_username', 'reporter', 'reporter_username'], axis=1)
-            issue = issue.drop(['issue_id', 'summary', 'description', 'type'], axis=1)
+            issue = issue.drop(['issue_id', 'summary', 'description', 'type', 'fix_version'], axis=1)
             issue = issue.rename(columns={'priority': 'severity'})
 
             prior_list = ['Critical', 'Major', 'Blocker', 'Minor', 'Trivial']
@@ -869,11 +854,14 @@ def export_visualization(dataset):
             issue['n'] = 0
 
             # GET ALL THE WEEK IN THE TIME SLICE
-            all_date = pd.date_range(start=min_date, end=max_date, freq='W')
+            all_date = pd.date_range(start=min_date, end=max_date, freq='D')
             all_date = pd.DataFrame(all_date)
-            all_date['y'] = all_date[0].dt.year
-            all_date['w'] = all_date[0].dt.week
+            all_date['w'] = all_date[0].dt.strftime('%Y') + '-' + all_date[0].dt.strftime('%W')
             all_date = all_date.drop([0], axis=1)
+            all_date = all_date.drop_duplicates(keep='last')
+
+            nans = lambda df: df[df.isnull().any(axis=1)]
+            nan = nans(issue)
 
             # MAKE DF COPY TO COMPUTE OPEN ISSUE
             open_issue = issue.copy()
@@ -889,41 +877,44 @@ def export_visualization(dataset):
 
             print('Opened: {}'.format(open_issue_sum.sum().values[0]))
             print('Closed: {}\n'.format(close_issue_sum.sum().values[0]))
-            print('Difference: {}\n'.format(close_issue_sum.sum().values[0] + open_issue_sum.sum().values[0]))
+            print('Difference: {}'.format(close_issue_sum.sum().values[0] + open_issue_sum.sum().values[0]))
 
             # COMPUTE SUM OF SEVERITY
-            issue_sum = pd.merge(open_issue_sum, close_issue_sum, on=['y', 'w'], how='outer')
-            complete_sum = pd.merge(all_date, issue_sum, how='outer', on=['y', 'w'])
+            issue_sum = pd.merge(open_issue_sum, close_issue_sum, on=['w'], how='outer')
+            complete_sum = pd.merge(all_date, issue_sum, how='outer', on=['w'])
             issue_sum = complete_sum.fillna(0)
             issue_sum['severity_diff'] = issue_sum['open_severity_sum'] + issue_sum['close_severity_sum']
             issue_sum['cumsum_severity'] = issue_sum['severity_diff'].cumsum()
+            # issue_sum = issue_sum.drop(['severity_diff', 'open_severity_sum', 'close_severity_sum'], axis=1)
 
             # COMPUTE COUNT OF ISSUE
-            issue_count = pd.merge(open_issue_count, close_issue_count, on=['y', 'w'], how='outer')
-            complete_count = pd.merge(all_date, issue_count, how='outer', on=['y', 'w'])
+            issue_count = pd.merge(open_issue_count, close_issue_count, on=['w'], how='outer')
+            complete_count = pd.merge(all_date, issue_count, how='outer', on=['w'])
             issue_count = complete_count.fillna(0)
             issue_count['issue_diff'] = issue_count['open_issue_count'] + issue_count['close_issue_count']
             issue_count['cumsum_issue'] = issue_count['issue_diff'].cumsum()
+            # issue_count = issue_count.drop(['issue_diff', 'open_issue_count', 'close_issue_count'], axis=1)
 
             # MERGE THE COUNT
-            issue_cnt_sum = pd.merge(issue_sum, issue_count, on=['y', 'w'])
+            issue_cnt_sum = pd.merge(issue_sum, issue_count, on=['w'])
 
-            print('Ending shape:\t{}'.format(issue_cnt_sum.shape))
-            print('Export:')
-
-            # issue_finalC = issue_cnt_sum.copy()
-            # issue_finalC = issue_finalC.rename(columns={"cumsum_severity": "n"})
-            # issue_finalC = issue_finalC.reset_index()
-            # issue_finalC.to_csv('data/visual/' + dataset + '-version_' + version + '_count.csv', index=None)
+            print('Ending shape:\t{}\n'.format(issue_cnt_sum.shape))
 
             issue_finalP = issue_cnt_sum.copy()
-            issue_finalP = issue_finalP.rename(columns={"cumsum_issue": "n"})
+            issue_finalP = issue_finalP.rename(columns={"cumsum_severity": "n"})
+            print('LATEST: {}'.format(issue_finalP['n'].tail(1).values[0]))
             issue_finalP = issue_finalP.reset_index()
-            issue_finalP.to_csv('data/visual/' + dataset + '-version_' + version + '_prior.csv', index=None)
-            print(' OK')
+            issue_finalP = issue_finalP.drop('index', axis=1)
+            issue_finalP.to_csv('data/visual/' + dataset + '-version_' + version + '_prior-visual.csv', index=None)
+
+            # issue_finalC = issue_cnt_sum.copy()
+            # issue_finalC = issue_finalC.rename(columns={"cumsum_issue": "n"})
+            # issue_finalC = issue_finalC.reset_index()
+            # issue_finalC.to_csv('data/visual/' + dataset + '-version_' + version + '_count-visual.csv', index=None)
+            # plot_all(issue_finalP, 'v_' + version + '_prior-visual')
 
         except:
-            e = sys.exc_info()[0]
+            e = sys.exc_info()
             print(e)
 
 
@@ -949,15 +940,31 @@ def version_visualization(dataset):
     version.to_csv('data/release/' + dataset + '.csv', index=None)
 
 
+def plot_all(df_original, file):
+    plt.figure(figsize=(40, 18))
+    df = df_original.copy()
+    df['n'] = df['n'].astype('int32')
+    df['date'] = df[['y', 'w']].astype(str).apply('-'.join, axis=1)
+    sns.pointplot(df['date'], df['n'], label='value', ci=None, markersize=0.01, color='green')
+    plt.xticks(rotation='60')
+    plt.legend()  # Graph labels
+    plt.xlabel('Week')
+    plt.ylabel('n')
+    plt.grid(axis='both')
+    plt.title('Data Distribution: ' + file[5:])
+    plt.savefig('DataDistribution-' + file[5:] + '.png', dpi=240)
+    plt.show()
+
+
 def main(dataset):
     # merge(dataset)
     # issue_duration_forecast_file(dataset)
     # issue_forecast_file(dataset)
     # data_distribution(dataset)
     # ludwig_export(dataset)
-    version_forecast_file(dataset)
+    # version_forecast_file(dataset)
     export_visualization(dataset)
-    version_visualization(dataset)
+    # version_visualization(dataset)
 
 
 if __name__ == "__main__":
