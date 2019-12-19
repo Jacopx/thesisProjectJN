@@ -8,6 +8,8 @@ import numpy as np
 import sys
 import sqlite3
 import glob
+import requests
+
 
 # Environment commands
 max_features = 2000
@@ -995,7 +997,91 @@ def all_version_plot(dataset):
     plt.show()
 
 
-def main(dataset):
+def get_releases(dataset, repos):
+    dict = {}
+
+    for i in range(1, 100):
+        resp = requests.get('https://api.github.com/repos/' + repos + '/tags?page={}'.format(i))
+        if resp.status_code != 200:
+            # This means something went wrong.
+            raise ApiError('GET /tags/ {}'.format(resp.status_code))
+        else:
+            if resp.json() != []:
+                for tags in resp.json():
+                    c_resp = requests.get(tags['commit']['url'])
+                    if c_resp.status_code != 200:
+                        # This means something went wrong.
+                        raise ApiError('GET /commit/ {}'.format(c_resp.status_code))
+                    else:
+                        commit = c_resp.json()
+                        dict[tags['name']] = commit['commit']['author']['date']
+                        print('{} == {}'.format(tags['name'], commit['commit']['author']['date']))
+            else:
+                break
+
+        print('{} =================='.format(i))
+
+    with open('data/release/' + dataset + '.csv', 'w') as f:
+        print('release,date', file=f)
+        for i,v in dict.items():
+            print(i, v, sep=',', file=f)
+
+
+def all_version_plot_release(dataset, repos):
+    # export_visualization(dataset)
+    # get_releases(dataset, repos)
+
+    m = pd.DataFrame(columns=['w'])
+    vers = []
+    for f in glob.glob('data/visual/' + dataset + '-version_*_prior-visual.csv'):
+        vers.append('v' + f.split('_')[1])
+        v = pd.read_csv(f)
+        m = pd.merge(m, v, how='outer', on='w')
+
+    m = m.fillna(0)
+
+    m = m.sort_values('w')
+    vers.append('w')
+    vers.sort()
+    f = m[vers]
+
+    r = pd.read_csv('data/release/' + dataset + '.csv')
+    r['date_p'] = pd.to_datetime(r['date'])
+    r['w'] = r['date_p'].dt.strftime('%Y') + '-' + r['date_p'].dt.strftime('%W')
+    r = r.drop_duplicates(subset=['release'])
+    r = r.drop(['date_p', 'date'], axis=1)
+
+    rf = r[(r['w'] >= f['w'].min()) & (r['w'] <= f['w'].max())]
+
+    x = pd.merge(f, rf, how='left', on=['w'])
+    x['count'] = 1
+    x = x.sort_values('w')
+    x['count'] = x['count'].cumsum()
+
+    s = x[['release', 'count']]
+    s = s.dropna()
+    x = x.drop(['release', 'count'], axis=1)
+    x = x.drop_duplicates()
+
+    fig = f.plot(figsize=(22, 10), x='w')
+    for index, row in s.iterrows():
+        fig.axvline(row['count'], linestyle='-.', label=row['release'], c='red')
+    plt.legend()  # Graph labels
+    plt.xlabel('Week')
+    plt.ylabel('Severity')
+    plt.grid(axis='both')
+    plt.title('Data Distribution: ' + dataset)
+    plt.savefig('DataDistributionMerged-' + dataset + '.png', dpi=240)
+    plt.show()
+
+    # f.plot(figsize=(20, 13), title=('Data Distribution: ' + dataset), subplots=True, x='w', sharex=True, grid=True)
+    # plt.legend()  # Graph labels
+    # plt.xlabel('Week')
+    # plt.ylabel('Severity')
+    # plt.savefig('DataDistributionSplitted-' + dataset + '.png', dpi=240)
+    # plt.show()
+
+def main(dataset, repos):
     # merge(dataset)
     # issue_duration_forecast_file(dataset)
     # issue_forecast_file(dataset)
@@ -1004,8 +1090,9 @@ def main(dataset):
     # version_forecast_file(dataset)
     # export_visualization(dataset)
     # version_visualization(dataset)
-    all_version_plot(dataset)
+    all_version_plot_release(dataset, repos)
+    # get_releases(dataset, repos)
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    main(sys.argv[1], sys.argv[2])
