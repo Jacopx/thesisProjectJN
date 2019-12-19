@@ -9,6 +9,7 @@ import sys
 import sqlite3
 import glob
 import requests
+import re
 
 
 # Environment commands
@@ -1031,6 +1032,7 @@ def all_version_plot_release(dataset, repos):
     # export_visualization(dataset)
     # get_releases(dataset, repos)
 
+    # Join file from different version
     m = pd.DataFrame(columns=['w'])
     vers = []
     for f in glob.glob('data/visual/' + dataset + '-version_*_prior-visual.csv'):
@@ -1038,28 +1040,35 @@ def all_version_plot_release(dataset, repos):
         v = pd.read_csv(f)
         m = pd.merge(m, v, how='outer', on='w')
 
+    # Fill the Nan with zero
     m = m.fillna(0)
 
+    # Sort value by date and reorder version
     m = m.sort_values('w')
     vers.append('w')
     vers.sort()
     f = m[vers]
 
+    # Get data for release
     r = pd.read_csv('data/release/' + dataset + '.csv')
     r['date_p'] = pd.to_datetime(r['date'])
     r['w'] = r['date_p'].dt.strftime('%Y') + '-' + r['date_p'].dt.strftime('%W')
     r = r.drop_duplicates(subset=['release'])
     r = r.drop(['date_p', 'date'], axis=1)
 
-    rf = r[(r['w'] >= f['w'].min()) & (r['w'] <= f['w'].max())]
+    # Subset the data respect date and release name format
+    r = r[(r['w'] >= f['w'].min()) & (r['w'] <= f['w'].max())]
+    p = re.compile('[rel/]*release-[0-9].[0-9].0$')
+    r = r[(r['release'].str.match(p))]
 
-    x = pd.merge(f, rf, how='left', on=['w'])
+    x = pd.merge(f, r, how='left', on=['w'])
     x['count'] = 1
     x = x.sort_values('w')
     x['count'] = x['count'].cumsum()
 
     s = x[['release', 'count']]
     s = s.dropna()
+
     x = x.drop(['release', 'count'], axis=1)
     x = x.drop_duplicates()
 
@@ -1074,12 +1083,6 @@ def all_version_plot_release(dataset, repos):
     plt.savefig('DataDistributionMerged-' + dataset + '.png', dpi=240)
     plt.show()
 
-    # f.plot(figsize=(20, 13), title=('Data Distribution: ' + dataset), subplots=True, x='w', sharex=True, grid=True)
-    # plt.legend()  # Graph labels
-    # plt.xlabel('Week')
-    # plt.ylabel('Severity')
-    # plt.savefig('DataDistributionSplitted-' + dataset + '.png', dpi=240)
-    # plt.show()
 
 def main(dataset, repos):
     # merge(dataset)
