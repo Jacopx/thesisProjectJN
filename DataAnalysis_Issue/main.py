@@ -1058,7 +1058,25 @@ def all_version_plot_release(dataset, repos):
 
     # Subset the data respect date and release name format
     r = r[(r['w'] >= f['w'].min()) & (r['w'] <= f['w'].max())]
-    p = re.compile('[rel/]*release-[0-9].[0-9].0$')
+    if dataset == 'hadoop':
+        regex_pattern = '[rel/]*release-[0-9].[0-9].0$'
+
+    elif dataset == 'hbase':
+        regex_pattern = '[0-9].[0-9][0]*.0$'
+
+    elif dataset == 'cassandra':
+        regex_pattern = 'cassandra-[0-9].[0-9].0$'
+
+    elif dataset == 'hive':
+        regex_pattern = '[rel/]*[storage-]*release-[0-9].[0-9].0$'
+
+    elif dataset == 'maven':
+        regex_pattern = 'maven-[0-9].[0-9].0$'
+
+    elif dataset == 'lucene':
+        regex_pattern = '[release/]*([lucene[-solr]*/]| [solr/])/[0-9].[0-9][.0]*$'
+
+    p = re.compile(regex_pattern)
     r = r[(r['release'].str.match(p))]
 
     colors = {0:'steelblue', 1:'darkorange', 2: 'green', 3:'darkred', 4:'dodgerblue', 5:'lime', 6:'acquamarine'}
@@ -1077,7 +1095,7 @@ def all_version_plot_release(dataset, repos):
     fig = f.plot(figsize=(22, 10), x='w')
     for index, row in s.iterrows():
         # if(row['release'])
-        fig.axvline(row['count'], linestyle='-.', label=row['release'], c=colors[int((row['release'].split('.')[0]).split('-')[1])])
+        fig.axvline(row['count'], linestyle='-.', label=row['release'], c=colors[get_color(dataset, row['release'])])
     plt.legend()  # Graph labels
     plt.xlabel('Week')
     plt.ylabel('Severity')
@@ -1086,6 +1104,28 @@ def all_version_plot_release(dataset, repos):
     plt.savefig('DataDistributionMerged-' + dataset + '.png', dpi=240)
     plt.show()
 
+
+def get_color(dataset, string):
+    if dataset == 'hadoop':
+        return int((string.split('.')[0]).split('-')[1])
+
+    elif dataset == 'hbase':
+        return int((string.split('.')[0]))
+
+    elif dataset == 'cassandra':
+        return int((string.split('.')[0]).split('-')[1])
+
+    elif dataset == 'hive':
+        if 'storage' in string:
+            return int((string.split('.')[0]).split('-')[2])
+        else:
+            return int((string.split('.')[0]).split('-')[1])
+
+    elif dataset == 'maven':
+        return int((string.split('.')[0]).split('-')[1])
+
+    elif dataset == 'lucene':
+        return int((string.split('.')[0]).split('/')[1])
 
 def main(dataset, repos):
     # merge(dataset)
