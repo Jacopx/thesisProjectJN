@@ -1061,6 +1061,8 @@ def all_version_plot_release(dataset, repos):
     p = re.compile('[rel/]*release-[0-9].[0-9].0$')
     r = r[(r['release'].str.match(p))]
 
+    colors = {0:'steelblue', 1:'darkorange', 2: 'green', 3:'darkred', 4:'dodgerblue', 5:'lime', 6:'acquamarine'}
+
     x = pd.merge(f, r, how='left', on=['w'])
     x['count'] = 1
     x = x.sort_values('w')
@@ -1074,7 +1076,8 @@ def all_version_plot_release(dataset, repos):
 
     fig = f.plot(figsize=(22, 10), x='w')
     for index, row in s.iterrows():
-        fig.axvline(row['count'], linestyle='-.', label=row['release'], c='red')
+        # if(row['release'])
+        fig.axvline(row['count'], linestyle='-.', label=row['release'], c=colors[int((row['release'].split('.')[0]).split('-')[1])])
     plt.legend()  # Graph labels
     plt.xlabel('Week')
     plt.ylabel('Severity')
