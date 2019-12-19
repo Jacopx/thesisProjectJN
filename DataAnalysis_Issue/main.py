@@ -1,11 +1,13 @@
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction import text
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import seaborn as sns
 import pandas as pd
 import numpy as np
 import sys
 import sqlite3
+import glob
 
 # Environment commands
 max_features = 2000
@@ -894,7 +896,7 @@ def export_visualization(dataset):
             issue_count = complete_count.fillna(0)
             issue_count['issue_diff'] = issue_count['open_issue_count'] + issue_count['close_issue_count']
             issue_count['cumsum_issue'] = issue_count['issue_diff'].cumsum()
-            issue_count = issue_count.drop(['issue_diff', 'open_issue_count', 'close_issue_count'], axis=1)
+            issue_count = issue_count.drop(['issue_diff', 'open_issue_count', 'close_issue_count', 'c_w', 'o_w'], axis=1)
 
             # MERGE THE COUNT
             issue_cnt_sum = pd.merge(issue_sum, issue_count, on=['w'])
@@ -902,15 +904,17 @@ def export_visualization(dataset):
             print('Ending shape:\t{}\n'.format(issue_cnt_sum.shape))
 
             issue_finalP = issue_cnt_sum.copy()
-            issue_finalP = issue_finalP.rename(columns={"cumsum_severity": "n"})
-            print('LATEST: {}'.format(issue_finalP['n'].tail(1).values[0]))
+            issue_finalP = issue_finalP.rename(columns={'cumsum_severity': 'v{}'.format(version)})
+            issue_finalP = issue_finalP.drop('cumsum_issue', axis=1)
+            print('LATEST: {}'.format(issue_finalP['v{}'.format(version)].tail(1).values[0]))
             issue_finalP = issue_finalP.reset_index()
             issue_finalP = issue_finalP.drop('index', axis=1)
             issue_finalP.to_csv('data/visual/' + dataset + '-version_' + version + '_prior-visual.csv', index=None)
 
             issue_finalC = issue_cnt_sum.copy()
-            issue_finalC = issue_finalC.rename(columns={"cumsum_issue": "n"})
-            print('LATEST: {}'.format(issue_finalC['n'].tail(1).values[0]))
+            issue_finalC = issue_finalC.rename(columns={'cumsum_issue': 'v{}'.format(version)})
+            issue_finalC = issue_finalC.drop('cumsum_severity', axis=1)
+            print('LATEST: {}'.format(issue_finalC['v{}'.format(version)].tail(1).values[0]))
             issue_finalC = issue_finalC.reset_index()
             issue_finalC = issue_finalC.drop('index', axis=1)
             issue_finalC.to_csv('data/visual/' + dataset + '-version_' + version + '_count-visual.csv', index=None)
@@ -958,15 +962,49 @@ def plot_all(df_original, file):
     plt.show()
 
 
+def all_version_plot(dataset):
+    export_visualization(dataset)
+    m = pd.DataFrame(columns=['w'])
+    vers = []
+    for f in glob.glob('data/visual/' + dataset + '-version_*_prior-visual.csv'):
+        vers.append('v' + f.split('_')[1])
+        v = pd.read_csv(f)
+        m = pd.merge(m, v, how='outer', on='w')
+
+    m = m.fillna(0)
+
+    m = m.sort_values('w')
+    vers.append('w')
+    vers.sort()
+    f = m[vers]
+
+    f.plot(figsize=(22, 10), x='w')
+    plt.legend()  # Graph labels
+    plt.xlabel('Week')
+    plt.ylabel('Severity')
+    plt.grid(axis='both')
+    plt.title('Data Distribution: ' + dataset)
+    plt.savefig('DataDistributionMerged-' + dataset + '.png', dpi=240)
+    plt.show()
+
+    f.plot(figsize=(20, 13), title=('Data Distribution: ' + dataset), subplots=True, x='w', sharex=True, grid=True)
+    plt.legend()  # Graph labels
+    plt.xlabel('Week')
+    plt.ylabel('Severity')
+    plt.savefig('DataDistributionSplitted-' + dataset + '.png', dpi=240)
+    plt.show()
+
+
 def main(dataset):
     # merge(dataset)
     # issue_duration_forecast_file(dataset)
     # issue_forecast_file(dataset)
     # data_distribution(dataset)
     # ludwig_export(dataset)
-    version_forecast_file(dataset)
+    # version_forecast_file(dataset)
     # export_visualization(dataset)
     # version_visualization(dataset)
+    all_version_plot(dataset)
 
 
 if __name__ == "__main__":
