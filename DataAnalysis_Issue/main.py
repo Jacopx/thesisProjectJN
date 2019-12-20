@@ -1058,26 +1058,10 @@ def all_version_plot_release(dataset, repos):
 
     # Subset the data respect date and release name format
     r = r[(r['w'] >= f['w'].min()) & (r['w'] <= f['w'].max())]
-    if dataset == 'hadoop':
-        regex_pattern = '[rel/]*release-[0-9].[0-9].0$'
 
-    elif dataset == 'hbase':
-        regex_pattern = '[0-9].[0-9][0]*.0$'
+    pattern = regex_pattern(dataset)
 
-    elif dataset == 'cassandra':
-        regex_pattern = 'cassandra-[0-9].[0-9].0$'
-
-    elif dataset == 'hive':
-        regex_pattern = '[rel/]*[storage-]*release-[0-9].[0-9].0$'
-
-    elif dataset == 'maven':
-        regex_pattern = 'maven-[0-9].[0-9].0$'
-
-    elif dataset == 'lucene':
-        # regex_pattern = 'releases/lucene[-solr]*/[0-9].[0-9][.0]*$'
-        regex_pattern = 'releases/lucene[-solr]*/[0-9].0[.0]*$'
-
-    p = re.compile(regex_pattern)
+    p = re.compile(pattern)
     r = r[(r['release'].str.match(p))]
 
     colors = {0:'steelblue', 1:'darkorange', 2: 'green', 3:'darkred', 4:'dodgerblue', 5:'gray', 6:'aquamarine', 7:'violet'}
@@ -1103,7 +1087,7 @@ def all_version_plot_release(dataset, repos):
     for index, row in s.iterrows():
         # if(row['release'])
         c = get_color(dataset, row['release'], base)
-        fig.axvline(row['count'], linestyle='-.', label=row['release'], c=colors[c])
+        fig.axvline(row['count'], linestyle='-.', label=row['release'], c=colors[c], linewidth=1.0)
     plt.legend()  # Graph labels
     plt.xlabel('Week')
     plt.ylabel('Severity')
@@ -1111,6 +1095,29 @@ def all_version_plot_release(dataset, repos):
     plt.title('Data Distribution: ' + dataset)
     plt.savefig('DataDistributionMerged-' + dataset + '.png', dpi=240)
     plt.show()
+
+
+def regex_pattern(dataset):
+    if dataset == 'hadoop':
+        regex_pattern = '[rel/]*release-[0-9].[0-9].0$'
+
+    elif dataset == 'hbase':
+        regex_pattern = '[0-9].[0-9][0]*.0$'
+
+    elif dataset == 'cassandra':
+        regex_pattern = 'cassandra-[0-9].[0-9].0$'
+
+    elif dataset == 'hive':
+        regex_pattern = '[rel/]*[storage-]*release-[0-9].[0-9].0$'
+
+    elif dataset == 'maven':
+        regex_pattern = 'maven-[0-9].[0-9].0$'
+
+    elif dataset == 'lucene':
+        # regex_pattern = 'releases/lucene[-solr]*/[0-9].[0-9][.0]*$'
+        regex_pattern = 'releases/lucene[-solr]*/[0-9].0[.0]*$'
+
+    return regex_pattern
 
 
 def get_color(dataset, string, base=-1):
