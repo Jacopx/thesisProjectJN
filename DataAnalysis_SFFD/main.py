@@ -502,6 +502,53 @@ def op_unit(df_op):
     print(' OK')
 
 
+def daily_operation_duration(df):
+    df['onscene_dt'] = pd.to_datetime(df['onscene_dt'])
+    df['end_dt'] = pd.to_datetime(df['end_dt'])
+
+    df = df[df['year'] == 2018]
+    x = df[['onscene_dt', 'end_dt']]
+    x = x.dropna()
+
+    x['start_h'] = x['onscene_dt'].dt.hour
+    x['start_m'] = x['onscene_dt'].dt.minute
+    x['stop_h'] = x['end_dt'].dt.hour
+    x['stop_m'] = x['end_dt'].dt.minute
+
+    t = []
+    for i in range(0, 1440):
+        t.append(0)
+
+    for i, r in x.iterrows():
+        start = r['start_h'] * 60 + r['start_m'] - 1
+
+        if r['stop_h'] < r['start_h']:
+            stop = r['stop_h'] * 60 + r['stop_m'] + 1439
+        else:
+            stop = r['stop_h'] * 60 + r['stop_m'] - 1
+
+        for tx in range(start, stop):
+            t[tx % 1440] += 1
+
+    val = pd.DataFrame(t)
+
+    val.plot(figsize=(22, 10))
+    plt.legend()  # Graph labels
+    plt.xlabel('Minute')
+    plt.ylabel('Operations')
+    plt.grid(axis='both')
+    plt.title('Data Distribution')
+    plt.savefig('DataDistribution.png', dpi=240)
+    plt.show()
+
+    # time = pd.date_range(start='2019-01-01 00:00', end='2019-01-01 23:59', freq='T')
+    # time = pd.DataFrame(time)
+    # time['n'] = 1
+    # time['n'] = time['n'].cumsum()
+
+    print('hello')
+
+
 def main(path):
     t0 = time.time()
     print("Starting Analysis...")
@@ -543,12 +590,14 @@ def main(path):
         # year_calendar(df)
         # op_over_month_station(df)
         # hier_clust(df)
-        year_month(df)
+        # year_month(df)
         # op_unit(df)
         # station_unit(df)
+        daily_operation_duration(df)
 
         # REQUIRE SEABORN 0.9.0
         # operations_map(df)
+
 
     print("\nTotal Time [{} s]".format(round(time.time() - t0, 2)))
 
