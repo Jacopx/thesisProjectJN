@@ -37,19 +37,19 @@ def main(dataset):
         # forecast.model_keras_lstm('data/hadoop-version_2_prior-1')
         # forecast.model_ludwig('data/hadoop-version_2_prior-1')
 
-        forecast.model_keras_nn('data/hadoop-version_0_prior-1')
+        # forecast.model_keras_nn('data/hadoop-version_0_prior-1')
         # forecast.model_keras_nn('data/hadoop-version_0_prior-4')
         # forecast.model_keras_nn('data/hadoop-version_0_prior-8')
 
-        forecast.model_keras_nn('data/hadoop-version_1_prior-1')
+        # forecast.model_keras_nn('data/hadoop-version_1_prior-1')
         # forecast.model_keras_nn('data/hadoop-version_1_prior-4')
         # forecast.model_keras_nn('data/hadoop-version_1_prior-8')
 
-        forecast.model_keras_nn('data/hadoop-version_2_prior-1')
+        forecast.model_keras_nn('data/hadoop-version_2_prior-20')
         # forecast.model_keras_nn('data/hadoop-version_2_prior-4')
         # forecast.model_keras_nn('data/hadoop-version_2_prior-8')
 
-        forecast.model_keras_nn('data/hadoop-version_3_prior-1')
+        # forecast.model_keras_nn('data/hadoop-version_3_prior-1')
         # forecast.model_keras_nn('data/hadoop-version_3_prior-4')
         # forecast.model_keras_nn('data/hadoop-version_3_prior-8')
 

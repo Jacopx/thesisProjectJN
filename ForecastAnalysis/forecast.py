@@ -48,7 +48,7 @@ batch_size = 8
 
 random = 12
 n_jobs = 6
-verbose = 0
+verbose = 2
 
 def duration_model(file):
     features = pd.read_csv(file + '.csv')

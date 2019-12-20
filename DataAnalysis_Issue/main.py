@@ -990,7 +990,7 @@ def all_version_plot(dataset):
     plt.savefig('DataDistributionMerged-' + dataset + '.png', dpi=240)
     plt.show()
 
-    f.plot(figsize=(20, 13), title=('Data Distribution: ' + dataset), subplots=True, x='w', sharex=True, grid=True)
+    f.plot(figsize=(20, 13), title=('Data Distribution: ' + dataset), subplots=True, x='w', sharex=True, grid=True, sharey=True)
     plt.legend()  # Graph labels
     plt.xlabel('Week')
     plt.ylabel('Severity')
@@ -1157,7 +1157,8 @@ def main(dataset, repos):
     # version_forecast_file(dataset)
     # export_visualization(dataset)
     # version_visualization(dataset)
-    all_version_plot_release(dataset, repos)
+    all_version_plot(dataset)
+    # all_version_plot_release(dataset, repos)
     # get_releases(dataset, repos)
 
 
