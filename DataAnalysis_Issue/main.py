@@ -771,7 +771,8 @@ def version_forecast_file(dataset):
             print('Ending shape:\t{}'.format(issue_final.shape))
             print('Export:')
 
-            issue_final = pd.merge(issue_final, total, on=['w'], how='inner')
+            # Add feature about whole project and not specific for each version
+            # issue_final = pd.merge(issue_final, total, on=['w'], how='inner')
 
             issue_finalC = issue_final.copy()
             issue_finalP = issue_final.copy()
