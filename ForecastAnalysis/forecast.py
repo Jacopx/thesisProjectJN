@@ -48,10 +48,10 @@ batch_size = 8
 
 random = 12
 n_jobs = 6
-verbose = 2
+verbose = 0
 
 def duration_model(file):
-    features = pd.read_csv(file + '.csv')
+    features = pd.read_csv(file)
 
     infos(file, features)
 
@@ -84,7 +84,7 @@ def duration_model(file):
 
 
 def model_randomforest(file):
-    features_basic = pd.read_csv(file + '.csv')
+    features_basic = pd.read_csv(file)
 
     infos(file, features_basic)
 
@@ -125,7 +125,7 @@ def model_randomforest(file):
 
 
 def model_keras_nn(file):
-    features_basic = pd.read_csv(file + '.csv')
+    features_basic = pd.read_csv(file)
 
     infos_nn(file, features_basic)
 
@@ -180,7 +180,7 @@ def personal_model(shape):
 
 
 def model_keras_lstm(file):
-    features_basic = pd.read_csv(file + '.csv')
+    features_basic = pd.read_csv(file)
     # plot_all(features_basic)
 
     infos_nn(file, features_basic)
@@ -235,7 +235,7 @@ def lstm_model(shape):
 
 
 def model_ludwig(file):
-    features_basic = pd.read_csv(file + '.csv')
+    features_basic = pd.read_csv(file)
 
     infos_nn(file, features_basic)
 
@@ -264,6 +264,57 @@ def model_ludwig(file):
     plot_predict(file + '_LUDWIG', np.array(test['n']), np.array(predictions))
     plot_mixed(file + '_LUDWIG', np.array(features['n']), np.array(all_predictions))
     errors(np.array(test['n']), np.array(predictions), np.mean(features.n))
+
+
+def model_cross_version(v1, v2):
+    fb1 = pd.read_csv(v1)
+    ver1 = v1.split('_')[1]
+
+    fb2 = pd.read_csv(v2)
+    ver2 = v2.split('_')[1]
+
+    infos_nn(v1, fb1)
+
+    f1 = fb1.copy()
+    f1 = f1.dropna()
+
+    l1 = np.array(f1['n'])
+    mean = np.mean(l1)
+    f1 = f1.drop('n', axis=1)  # Saving feature names for later use
+    fl1 = list(f1.columns)  # Convert to numpy array
+    f1 = np.array(f1)
+
+    infos_nn(v2, fb2)
+
+    f2 = fb2.copy()
+    f2 = f2.dropna()
+
+    l2 = np.array(f2['n'])
+    mean = np.mean(l2)
+    f2 = f2.drop('n', axis=1)  # Saving feature names for later use
+    fl2 = list(f2.columns)  # Convert to numpy array
+    f2 = np.array(f2)
+
+    ######################### MODEL DEFINITIONS ############################
+
+    estimator = KerasRegressor(build_fn=personal_model, shape=f1.shape[1], epochs=epochs_nn, batch_size=batch_size, verbose=verbose)
+    history = estimator.fit(f1, l1)
+
+    ######################### MODEL DEFINITIONS ############################
+
+    # plot_history(file + '_NN_', history, 'loss', 'MAE')
+    # plot_history(file + '_NN_', history, 'msle', 'MSLE')
+    # plot_history(file + '_NN_', history, 'mse', 'MSE')
+
+    all_predictions = estimator.predict(f2)
+    all_predictions = np.round(all_predictions, decimals=1)
+
+    shift = int((v2.split('.')[0]).split('-')[2])
+
+    # plot_predict(file + '_NN', test_labels, predictions, shift)
+    plot_mixed2('train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
+    # weights(estimator, feature_list)
+    errors(l2, all_predictions, mean)
 
 
 def infos(file, features_basic):
@@ -325,6 +376,25 @@ def plot_mixed(file, labels, predictions, shift):
     plt.minorticks_on()
     plt.grid(axis='both')
     plt.title('plot/' + file[5:] + '_all_predictions')
+    # plt.savefig('plot/' + file + '_all_predictions.png', dpi=240)
+    plt.show()
+
+
+def plot_mixed2(name, labels, predictions, shift):
+    n=[]
+    for i in range(0, len(predictions)):
+        n.append(i)
+
+    plt.figure(figsize=(20, 11))
+    sns.lineplot(n[:-shift], labels[:-shift], label='Real', ci=None)
+    sns.lineplot(n[:-shift], predictions[shift:], label='Predict', ci=None)
+    plt.xticks(rotation='60')
+    plt.legend()  # Graph labels
+    plt.xlabel('Week')
+    plt.ylabel('n')
+    plt.minorticks_on()
+    plt.grid(axis='both')
+    plt.title(name)
     # plt.savefig('plot/' + file + '_all_predictions.png', dpi=240)
     plt.show()
 
