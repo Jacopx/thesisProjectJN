@@ -771,6 +771,8 @@ def version_forecast_file(dataset):
             print('Ending shape:\t{}'.format(issue_final.shape))
             print('Export:')
 
+            issue_final = pd.merge(issue_final, total, on=['w'], how='inner')
+
             issue_finalC = issue_final.copy()
             issue_finalP = issue_final.copy()
 
@@ -1224,14 +1226,14 @@ def total_severity(dataset):
     complete_sum = pd.merge(all_date, issue_sum, how='outer', on=['w'])
     issue_sum = complete_sum.fillna(0)
     issue_sum['severity_diff'] = issue_sum['open_severity_sum'] + issue_sum['close_severity_sum']
-    issue_sum['cumsum_severity'] = issue_sum['severity_diff'].cumsum()
+    issue_sum['total_sev'] = issue_sum['severity_diff'].cumsum()
 
     # COMPUTE COUNT OF ISSUE
     issue_count = pd.merge(open_issue_count, close_issue_count, on=['w'], how='outer')
     complete_count = pd.merge(all_date, issue_count, how='outer', on=['w'])
     issue_count = complete_count.fillna(0)
     issue_count['issue_diff'] = issue_count['open_issue_count'] + issue_count['close_issue_count']
-    issue_count['cumsum_issue'] = issue_count['issue_diff'].cumsum()
+    issue_count['total_count'] = issue_count['issue_diff'].cumsum()
 
     # MERGE THE COUNT
     issue_cnt_sum = pd.merge(issue_sum, issue_count, on=['w'])
@@ -1249,7 +1251,11 @@ def total_severity(dataset):
     print('return DataFrame')
 
     issue_final = issue_final.drop(['open_severity_sum', 'close_severity_sum', 'c_w', 'open_issue_count', 'o_w', 'close_issue_count'], axis=1)
-    issue_final = issue_final.drop(['commit_count', 'line_change'], axis=1)
+    issue_final = issue_final.drop(['commit_count', 'line_change', 'severity_diff', 'issue_diff'], axis=1)
+
+    issue_final = issue_final.drop(['total_count'], axis=1)
+    # issue_final = issue_final.drop(['total_sev'], axis=1)
+
     return issue_final
 
 
