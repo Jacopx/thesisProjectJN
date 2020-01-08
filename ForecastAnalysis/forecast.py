@@ -42,7 +42,7 @@ warnings.filterwarnings("ignore")
 test_size = 0.30
 
 predictor = 600
-epochs_nn = 300
+epochs_nn = 1000
 epochs_lstm = 500
 batch_size = 8
 
@@ -159,7 +159,7 @@ def model_keras_nn(file):
     predictions = np.round(predictions, decimals=1)
     all_predictions = np.round(all_predictions, decimals=1)
 
-    shift = int(file.split('-')[2])
+    shift = int((file.split('.')[0]).split('-')[2])
 
     # plot_predict(file + '_NN', test_labels, predictions, shift)
     plot_mixed(file + '_NN', labels, all_predictions, shift)
@@ -445,6 +445,15 @@ def errors(test_labels, predictions, mean):
     # The baseline predictions are the historical averages
     baseline_errors = abs(mean - test_labels)
     # print('Average baseline error: ', round(np.mean(baseline_errors), 2))
+
+    index = []
+    for i in range(0, len(test_labels)):
+        if test_labels[i] == 0:
+            index.append(i)
+
+    test_labels = np.delete(test_labels, index)
+    predictions = np.delete(predictions, index)
+
 
     errors = abs(predictions - test_labels)
     test_labels = test_labels[0:len(predictions)]
