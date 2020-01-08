@@ -42,7 +42,7 @@ warnings.filterwarnings("ignore")
 test_size = 0.30
 
 predictor = 600
-epochs_nn = 1000
+epochs_nn = 300
 epochs_lstm = 500
 batch_size = 8
 
@@ -315,6 +315,51 @@ def model_cross_version(v1, v2):
     plot_mixed2('train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
     # weights(estimator, feature_list)
     errors(l2, all_predictions, mean)
+
+
+def model_recurrent(file):
+    features_basic = pd.read_csv(file)
+
+    infos_nn(file, features_basic)
+
+    features = features_basic.copy()
+    features = features.dropna()
+
+    labels = np.array(features['n'])
+    mean = np.mean(labels)
+    features = features.drop('n', axis=1)  # Saving feature names for later use
+    feature_list = list(features.columns)  # Convert to numpy array
+    features = np.array(features)
+
+    train_features, test_features, train_labels, test_labels = \
+        train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=False)
+
+    print(train_labels.shape, test_labels.shape)
+
+    ######################### MODEL DEFINITIONS ############################
+
+    estimator = KerasRegressor(build_fn=personal_model, shape=train_features.shape[1], epochs=epochs_nn, batch_size=batch_size, verbose=verbose)
+    history = estimator.fit(train_features, train_labels)
+
+    ######################### MODEL DEFINITIONS ############################
+
+    # plot_history(file + '_NN_', history, 'loss', 'MAE')
+    # plot_history(file + '_NN_', history, 'msle', 'MSLE')
+    # plot_history(file + '_NN_', history, 'mse', 'MSE')
+
+    # TODO: Implement prediction and new data calculation
+
+    predictions = estimator.predict(test_features)
+    all_predictions = estimator.predict(features)
+    predictions = np.round(predictions, decimals=1)
+    all_predictions = np.round(all_predictions, decimals=1)
+
+    shift = int((file.split('.')[0]).split('-')[2])
+
+    # plot_predict(file + '_NN', test_labels, predictions, shift)
+    plot_mixed(file + '_NN', labels, all_predictions, shift)
+    # weights(estimator, feature_list)
+    errors(test_labels, predictions, mean)
 
 
 def infos(file, features_basic):

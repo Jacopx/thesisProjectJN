@@ -712,7 +712,6 @@ def version_forecast_file(dataset):
             issue = issue.drop(['status', 'assignee', 'assignee_username', 'reporter', 'reporter_username'], axis=1)
             issue = issue.drop(['issue_id', 'summary', 'description', 'type'], axis=1)
             issue = issue.drop(['fix_version'], axis=1)
-
             issue = issue.rename(columns={'priority': 'severity'})
 
             prior_list = ['Critical', 'Major', 'Blocker', 'Minor', 'Trivial']
