@@ -712,6 +712,7 @@ def version_forecast_file(dataset):
             issue = issue.drop(['status', 'assignee', 'assignee_username', 'reporter', 'reporter_username'], axis=1)
             issue = issue.drop(['issue_id', 'summary', 'description', 'type'], axis=1)
             issue = issue.drop(['fix_version'], axis=1)
+
             issue = issue.rename(columns={'priority': 'severity'})
 
             prior_list = ['Critical', 'Major', 'Blocker', 'Minor', 'Trivial']
@@ -774,12 +775,17 @@ def version_forecast_file(dataset):
             # Add feature about whole project and not specific for each version
             # issue_final = pd.merge(issue_final, total, on=['w'], how='inner')
 
+            # Un comment to export the reduced version used in RNN
+            issue_final = issue_final.drop(['line_change', 'commit_count'], axis=1)
+
+            issue_final = issue_final.drop(['o_w', 'c_w'], axis=1)
+
             issue_finalC = issue_final.copy()
             issue_finalP = issue_final.copy()
 
-            horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 30, 40, 52]
+            # horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 30, 40, 52]
             # horizons = [1, 4, 8]
-            # horizons = [1]
+            horizons = [1]
 
             # EXPORT FOR DIFFERENT TIME HORIZONS
             for shift in horizons:
@@ -791,10 +797,10 @@ def version_forecast_file(dataset):
                 issue_finalC[str(shift) + 'future'] = issue_finalC['cumsum_issue'].shift(-shift, fill_value=-1)
                 issue_finalC = issue_finalC.head(-shift)
                 issue_finalC = issue_finalC.drop('cumsum_issue', axis=1)
-                issue_finalC = issue_finalC.drop('w', axis=1)
                 issue_finalC = issue_finalC.rename(columns={str(shift) + "future": "n"})
                 # issue_finalC['y'] = issue_finalC['w'].str.split('-', n = 0, expand=True)[0]
                 # issue_finalC['w'] = issue_finalC['w'].str.split('-', n = 0, expand=True)[1]
+                issue_finalC = issue_finalC.drop('w', axis=1)
                 issue_finalC['n'] = np.round(issue_finalC['n'], 1)
 
                 print('.', end='')
@@ -805,10 +811,10 @@ def version_forecast_file(dataset):
                 issue_finalP[str(shift) + 'future'] = issue_finalP['cumsum_severity'].shift(-shift, fill_value=-1)
                 issue_finalP = issue_finalP.head(-shift)
                 issue_finalP = issue_finalP.drop('cumsum_severity', axis=1)
-                issue_finalP = issue_finalP.drop('w', axis=1)
                 issue_finalP = issue_finalP.rename(columns={str(shift) + "future": "n"})
                 # issue_finalP['y'] = issue_finalP['w'].str.split('-', n = 0, expand=True)[0]
                 # issue_finalP['w'] = issue_finalP['w'].str.split('-', n = 0, expand=True)[1]
+                issue_finalP = issue_finalP.drop('w', axis=1)
                 issue_finalP['n'] = np.round(issue_finalP['n'], 1)
 
                 print('.', end='')
