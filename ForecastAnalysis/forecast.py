@@ -10,6 +10,7 @@ from numpy.random import seed
 # from ludwig.api import LudwigModel
 
 # SKLEARN
+from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.ensemble import GradientBoostingRegressor
@@ -42,7 +43,7 @@ warnings.filterwarnings("ignore")
 test_size = 0.30
 
 predictor = 600
-epochs_nn = 100
+epochs_nn = 250
 epochs_lstm = 200
 batch_size = 8
 
@@ -169,9 +170,10 @@ def model_keras_nn(file):
 
 def personal_model(shape):
     model = Sequential()
-    model.add(Dense(shape, input_dim=shape, kernel_initializer='normal', activation='relu'))
-    model.add(Dense(int(shape/2), activation='relu'))
-    model.add(Dense(int(shape/4), activation='relu'))
+    model.add(Dense(512, input_dim=shape, kernel_initializer='normal', activation='relu'))
+    model.add(layers.SimpleRNN(128))
+    model.add(Dense(256, activation='relu'))
+    model.add(Dense(64, activation='relu'))
     model.add(Dense(1, activation='linear'))
     model.compile(loss='mae', optimizer='adam', metrics=['msle', 'mse'])
     # model.summary()
@@ -317,47 +319,72 @@ def model_cross_version(v1, v2):
     errors(l2, all_predictions, mean)
 
 
-def model_recurrent(file):
-    features_basic = pd.read_csv(file)
+def model_recurrent(vlist, v2):
 
-    infos_nn(file, features_basic)
 
-    features = features_basic.copy()
-    features = features.dropna()
+    i = 0
+    for v1 in vlist:
+        fb1 = pd.read_csv(v1)
+        ver1 = v1.split('_')[1]
 
-    labels = np.array(features['n'])
-    mean = np.mean(labels)
-    features = features.drop('n', axis=1)  # Saving feature names for later use
-    feature_list = list(features.columns)  # Convert to numpy array
-    features = np.array(features)
+        infos_nn(v1, fb1)
 
-    train_features, test_features, train_labels, test_labels = \
-        train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=False)
+        f1 = fb1.copy()
+        f1 = f1.dropna()
 
-    # train_features = train_features.reshape((train_features.shape[0], 1, train_features.shape[1]))
-    # test_features = test_features.reshape((test_features.shape[0], 1, test_features.shape[1]))
+        fl1 = list(f1.columns)
 
-    print(train_labels.shape, test_labels.shape)
+        col = ['severity_diff', 'n', 'mov_avg2', 'mov_avg4', '1before', '2before', '4before']
 
-    ######################### MODEL DEFINITIONS ############################
+        for c in col:
+            x = f1[c].values.reshape(-1, 1)
+            min_max_scaler = preprocessing.MinMaxScaler()
+            x_scaled = min_max_scaler.fit_transform(x)
+            f1[c] = pd.DataFrame(x_scaled)
 
-    estimator = KerasRegressor(build_fn=personal_model, shape=train_features.shape[1], epochs=epochs_nn, batch_size=batch_size, verbose=verbose)
-    # estimator = KerasRegressor(build_fn=lstm_model, shape=train_features.shape[2], epochs=epochs_lstm, batch_size=1, verbose=verbose)
-    history = estimator.fit(train_features, train_labels)
+        l1 = np.array(f1['n'])
+        mean = np.mean(l1)
+        f1 = f1.drop('n', axis=1)
+        f1 = np.array(f1)
 
-    ######################### MODEL DEFINITIONS ############################
+        ######################### MODEL DEFINITIONS ############################
+        if i==0:
+            estimator = KerasRegressor(build_fn=personal_model, shape=f1.shape[1], epochs=epochs_nn, batch_size=batch_size, verbose=verbose)
+        history = estimator.fit(f1, l1)
 
-    # plot_history(file + '_NN_', history, 'loss', 'MAE')
-    # plot_history(file + '_NN_', history, 'msle', 'MSLE')
-    # plot_history(file + '_NN_', history, 'mse', 'MSE')
+        ######################### MODEL DEFINITIONS ############################
+        i += 1
 
-    lastf = np.append(train_features[-3:], [test_features[0]], axis = 0)
-    lastl = np.append(train_labels[-3:], [test_labels[0]], axis = 0)
+    fb2 = pd.read_csv(v2)
+    ver2 = v2.split('_')[1]
 
-    for i in range(0, len(test_labels)):
+    infos_nn(v2, fb2)
+
+    f2 = fb2.copy()
+    f2 = f2.dropna()
+    fl2 = list(f2.columns)
+
+    col = ['severity_diff', 'n', 'mov_avg2', 'mov_avg4', '1before', '2before', '4before']
+
+    for c in col:
+        x = f2[c].values.reshape(-1, 1)
+        min_max_scaler = preprocessing.MinMaxScaler()
+        x_scaled = min_max_scaler.fit_transform(x)
+        f2[c] = pd.DataFrame(x_scaled)
+
+    l2 = np.array(f2['n'])
+    mean = np.mean(l2)
+    f2 = f2.drop('n', axis=1)
+    f2 = np.array(f2)
+
+    offset = 100
+
+    lastf = f2[offset:offset+4]
+    lastl = l2[offset:offset+4]
+
+    for i in range(0, len(l2)):
         p = estimator.predict(lastf[-1].reshape(1,lastf[-1].shape[0]))
-        # p = estimator.predict(lastf[-1].reshape(lastf.shape[0], 1, lastf[-1].shape[1]))
-        p = np.round(p, 0)
+        print(p)
 
         # CALCULATE NEW FEATURE FOR RECURRENT MODEL
         if lastf[-1][0] >= 52:
@@ -378,40 +405,11 @@ def model_recurrent(file):
         lastf = np.append(lastf, [new_feature], axis=0)
         lastl = np.append(lastl, p, axis=0)
 
-    predictions = lastl[4:]
-    plot_predict2(file + '_RNN', test_labels, predictions)
-
-    # lastf = features[:4]
-    # lastl = labels[:4]
-    # for i in range(0, len(labels)):
-    #     p = estimator.predict(lastf[-1].reshape(1,lastf[-1].shape[0]))
-    #     p = np.round(p, 0)
-    #
-    #     # CALCULATE NEW FEATURE FOR RECURRENT MODEL
-    #     if lastf[-1][0] >= 52:
-    #         w = 1
-    #     else:
-    #         w = lastf[-1][0] + 1
-    #
-    #     diff = p - lastl[-1]
-    #     mov2 = (lastl[-1] + lastl[-2]) / 2
-    #     mov4 = (lastl[-1] + lastl[-2] + lastl[-3] + lastl[-4]) / 4
-    #     b1 = lastl[-1]
-    #     b2 = lastl[-2]
-    #     b4 = lastl[-4]
-    #     y = lastf[-1][7] + 1
-    #
-    #     new_feature = np.array([w, int(diff), mov2, mov4, b1, b2, b4, y])
-    #
-    #     lastf = np.append(lastf, [new_feature], axis=0)
-    #     lastl = np.append(lastl, p, axis=0)
-    #
-    # all_predictions = lastl[4:]
-    #
-    # plot_mixed3(file + '_NN', labels, all_predictions)
+    predictions = lastl[offset:]
+    plot_predict2('train: v{} - predict: v{}'.format(ver1, ver2), l2[offset:], predictions[4:])
 
     # weights(estimator, feature_list)
-    errors(test_labels, predictions, mean)
+    # errors(l2[50:], predictions, mean)
 
 
 def infos(file, features_basic):
@@ -435,7 +433,6 @@ def infos_nn(file, features_basic):
 
 
 def plot_predict(file, test_labels, predictions, shift):
-
     n=[]
     for i in range(0, len(predictions)):
         n.append(i)
@@ -456,7 +453,6 @@ def plot_predict(file, test_labels, predictions, shift):
 
 
 def plot_predict2(file, test_labels, predictions):
-
     n=[]
     for i in range(0, len(predictions)):
         n.append(i)
