@@ -42,13 +42,13 @@ warnings.filterwarnings("ignore")
 test_size = 0.30
 
 predictor = 600
-epochs_nn = 300
-epochs_lstm = 500
+epochs_nn = 100
+epochs_lstm = 200
 batch_size = 8
 
 random = 12
 n_jobs = 6
-verbose = 0
+verbose = 2
 
 def duration_model(file):
     features = pd.read_csv(file)
@@ -280,8 +280,8 @@ def model_cross_version(v1, v2):
 
     l1 = np.array(f1['n'])
     mean = np.mean(l1)
-    f1 = f1.drop('n', axis=1)  # Saving feature names for later use
-    fl1 = list(f1.columns)  # Convert to numpy array
+    f1 = f1.drop('n', axis=1)
+    fl1 = list(f1.columns)
     f1 = np.array(f1)
 
     infos_nn(v2, fb2)
@@ -291,8 +291,8 @@ def model_cross_version(v1, v2):
 
     l2 = np.array(f2['n'])
     mean = np.mean(l2)
-    f2 = f2.drop('n', axis=1)  # Saving feature names for later use
-    fl2 = list(f2.columns)  # Convert to numpy array
+    f2 = f2.drop('n', axis=1)
+    fl2 = list(f2.columns)
     f2 = np.array(f2)
 
     ######################### MODEL DEFINITIONS ############################
@@ -334,11 +334,15 @@ def model_recurrent(file):
     train_features, test_features, train_labels, test_labels = \
         train_test_split(features, labels, test_size=test_size, random_state=random, shuffle=False)
 
+    # train_features = train_features.reshape((train_features.shape[0], 1, train_features.shape[1]))
+    # test_features = test_features.reshape((test_features.shape[0], 1, test_features.shape[1]))
+
     print(train_labels.shape, test_labels.shape)
 
     ######################### MODEL DEFINITIONS ############################
 
     estimator = KerasRegressor(build_fn=personal_model, shape=train_features.shape[1], epochs=epochs_nn, batch_size=batch_size, verbose=verbose)
+    # estimator = KerasRegressor(build_fn=lstm_model, shape=train_features.shape[2], epochs=epochs_lstm, batch_size=1, verbose=verbose)
     history = estimator.fit(train_features, train_labels)
 
     ######################### MODEL DEFINITIONS ############################
@@ -347,17 +351,65 @@ def model_recurrent(file):
     # plot_history(file + '_NN_', history, 'msle', 'MSLE')
     # plot_history(file + '_NN_', history, 'mse', 'MSE')
 
-    # TODO: Implement prediction and new data calculation
+    lastf = np.append(train_features[-3:], [test_features[0]], axis = 0)
+    lastl = np.append(train_labels[-3:], [test_labels[0]], axis = 0)
 
-    predictions = estimator.predict(test_features)
-    all_predictions = estimator.predict(features)
-    predictions = np.round(predictions, decimals=1)
-    all_predictions = np.round(all_predictions, decimals=1)
+    for i in range(0, len(test_labels)):
+        p = estimator.predict(lastf[-1].reshape(1,lastf[-1].shape[0]))
+        # p = estimator.predict(lastf[-1].reshape(lastf.shape[0], 1, lastf[-1].shape[1]))
+        p = np.round(p, 0)
 
-    shift = int((file.split('.')[0]).split('-')[2])
+        # CALCULATE NEW FEATURE FOR RECURRENT MODEL
+        if lastf[-1][0] >= 52:
+            w = 1
+        else:
+            w = lastf[-1][0] + 1
 
-    # plot_predict(file + '_NN', test_labels, predictions, shift)
-    plot_mixed(file + '_NN', labels, all_predictions, shift)
+        diff = p - lastl[-1]
+        mov2 = (lastl[-1] + lastl[-2]) / 2
+        mov4 = (lastl[-1] + lastl[-2] + lastl[-3] + lastl[-4]) / 4
+        b1 = lastl[-1]
+        b2 = lastl[-2]
+        b4 = lastl[-4]
+        y = lastf[-1][7] + 1
+
+        new_feature = np.array([w, int(diff), mov2, mov4, b1, b2, b4, y])
+
+        lastf = np.append(lastf, [new_feature], axis=0)
+        lastl = np.append(lastl, p, axis=0)
+
+    predictions = lastl[4:]
+    plot_predict2(file + '_RNN', test_labels, predictions)
+
+    # lastf = features[:4]
+    # lastl = labels[:4]
+    # for i in range(0, len(labels)):
+    #     p = estimator.predict(lastf[-1].reshape(1,lastf[-1].shape[0]))
+    #     p = np.round(p, 0)
+    #
+    #     # CALCULATE NEW FEATURE FOR RECURRENT MODEL
+    #     if lastf[-1][0] >= 52:
+    #         w = 1
+    #     else:
+    #         w = lastf[-1][0] + 1
+    #
+    #     diff = p - lastl[-1]
+    #     mov2 = (lastl[-1] + lastl[-2]) / 2
+    #     mov4 = (lastl[-1] + lastl[-2] + lastl[-3] + lastl[-4]) / 4
+    #     b1 = lastl[-1]
+    #     b2 = lastl[-2]
+    #     b4 = lastl[-4]
+    #     y = lastf[-1][7] + 1
+    #
+    #     new_feature = np.array([w, int(diff), mov2, mov4, b1, b2, b4, y])
+    #
+    #     lastf = np.append(lastf, [new_feature], axis=0)
+    #     lastl = np.append(lastl, p, axis=0)
+    #
+    # all_predictions = lastl[4:]
+    #
+    # plot_mixed3(file + '_NN', labels, all_predictions)
+
     # weights(estimator, feature_list)
     errors(test_labels, predictions, mean)
 
@@ -403,6 +455,27 @@ def plot_predict(file, test_labels, predictions, shift):
     plt.show()
 
 
+def plot_predict2(file, test_labels, predictions):
+
+    n=[]
+    for i in range(0, len(predictions)):
+        n.append(i)
+
+    plt.figure(figsize=(20, 11))
+    sns.lineplot(n, test_labels, label='Real', ci=None)
+    sns.lineplot(n, predictions, label='Predict', ci=None)
+    sns.lineplot(n, np.mean(test_labels), label='Mean', ci=None)
+    plt.xticks(rotation='60')
+    plt.legend()  # Graph labels
+    plt.xlabel('Week')
+    plt.ylabel('n')
+    plt.minorticks_on()
+    plt.grid(axis='both')
+    plt.title('plot/' + file[5:] + '_predictions')
+    # plt.savefig('plot/' + file + '_predictions.png', dpi=240)
+    plt.show()
+
+
 def plot_mixed(file, labels, predictions, shift):
     n=[]
     for i in range(0, len(predictions)):
@@ -440,6 +513,28 @@ def plot_mixed2(name, labels, predictions, shift):
     plt.minorticks_on()
     plt.grid(axis='both')
     plt.title(name)
+    # plt.savefig('plot/' + file + '_all_predictions.png', dpi=240)
+    plt.show()
+
+
+def plot_mixed3(file, labels, predictions):
+    n=[]
+    for i in range(0, len(predictions)):
+        n.append(i)
+
+    plt.figure(figsize=(20, 11))
+    sns.lineplot(n, labels, label='Real', ci=None)
+    # sns.lineplot(n, labels, label='Real', ci=None)
+    sns.lineplot(n, predictions, label='Predict', ci=None)
+    # sns.lineplot(n, predictions, label='Predict', ci=None)
+    plt.axvline(int(len(predictions) * (1 - test_size)), linestyle='--', label='Split', c='red')
+    plt.xticks(rotation='60')
+    plt.legend()  # Graph labels
+    plt.xlabel('Week')
+    plt.ylabel('n')
+    plt.minorticks_on()
+    plt.grid(axis='both')
+    plt.title('plot/' + file[5:] + '_all_predictions')
     # plt.savefig('plot/' + file + '_all_predictions.png', dpi=240)
     plt.show()
 

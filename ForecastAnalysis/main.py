@@ -33,7 +33,7 @@ def main(dataset):
         forecast.count_model('data/satur')
     elif dataset in 'ISSUE':
         # FORECAST
-        forecast.model_recurrent('data/hadoop-version_2_prior-1-reduced.csv')
+        forecast.model_recurrent('data/hadoop-version_2_prior-reduced.csv')
         # forecast.model_cross_version('data/hadoop-version_2_prior-1.csv', 'data/hadoop-version_3_prior-1.csv')
         # forecast.model_cross_version('data/hadoop-version_0_prior-2.csv', 'data/hadoop-version_1_prior-2.csv')
         # forecast.model_cross_version('data/hadoop-version_1_prior-2.csv', 'data/hadoop-version_2_prior-2.csv')
@@ -64,6 +64,8 @@ def main(dataset):
         # forecast.model_randomforest('data/hadoop-version_2_prior-1')
         # forecast.model_keras_lstm('data/hadoop-version_2_prior-1')
         # forecast.model_ludwig('data/hadoop-version_2_prior-1')
+
+        # forecast.model_keras_nn('data/hadoop-version_2_prior-reduced.csv')
 
         # forecast.model_keras_nn('data/hadoop-version_0_prior-1')
         # forecast.model_keras_nn('data/hadoop-version_0_prior-4')

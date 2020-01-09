@@ -508,6 +508,21 @@ def extracted_calculation2(issue_start, column):
     return issue_final
 
 
+def extracted_calculation3(issue_start, column):
+    issue_final = issue_start.copy()
+    issue_final['exp_avg'] = issue_final[column].expanding().mean()
+    issue_final['mov_avg2'] = issue_final[column].rolling(2).mean()
+    issue_final['mov_avg2'] = issue_final['mov_avg2'].shift(1, fill_value=0)
+    issue_final['mov_avg4'] = issue_final[column].rolling(4).mean()
+    issue_final['mov_avg4'] = issue_final['mov_avg4'].shift(1, fill_value=0)
+
+    issue_final['1before'] = issue_final[column].shift(1, fill_value=0)
+    issue_final['2before'] = issue_final[column].shift(2, fill_value=0)
+    issue_final['4before'] = issue_final[column].shift(4, fill_value=0)
+
+    return issue_final.tail(-4)
+
+
 def data_distribution(dataset):
     conn = sqlite3.connect('data/SQLITE3/' + dataset + '.sqlite3')
     # query = 'SELECT DATE(created_date) as "date", COUNT(DISTINCT issue_id) as "c" FROM issue WHERE type="Bug" GROUP BY DATE(created_date);'
@@ -935,7 +950,7 @@ def reduced_version_export(dataset):
 
             # COUNT
             issue_finalCx = issue_final.copy()
-            issue_finalC = extracted_calculation2(issue_finalCx, 'cumsum_issue')
+            issue_finalC = extracted_calculation3(issue_finalCx, 'cumsum_issue')
             issue_finalC = issue_finalC.rename(columns={'cumsum_issue': 'n'})
             issue_finalC['y'] = issue_finalC['w'].str.split('-', n = 0, expand=True)[0]
             issue_finalC['w'] = issue_finalC['w'].str.split('-', n = 0, expand=True)[1]
@@ -946,7 +961,7 @@ def reduced_version_export(dataset):
 
             # PRIORITY
             issue_finalPx = issue_final.copy()
-            issue_finalP = extracted_calculation2(issue_finalPx, 'cumsum_severity')
+            issue_finalP = extracted_calculation3(issue_finalPx, 'cumsum_severity')
             issue_finalP = issue_finalP.rename(columns={'cumsum_severity': 'n'})
             issue_finalP['y'] = issue_finalP['w'].str.split('-', n = 0, expand=True)[0]
             issue_finalP['w'] = issue_finalP['w'].str.split('-', n = 0, expand=True)[1]
