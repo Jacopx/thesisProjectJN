@@ -7,7 +7,7 @@ import numpy as np
 from numpy.random import seed
 
 # LUDWIG
-# from ludwig.api import LudwigModel
+from ludwig.api import LudwigModel
 
 # SKLEARN
 from sklearn import preprocessing
@@ -44,7 +44,7 @@ test_size = 0.30
 
 predictor = 600
 epochs_nn = 250
-epochs_lstm = 200
+epochs_lstm = 350
 batch_size = 8
 
 random = 12
@@ -171,7 +171,6 @@ def model_keras_nn(file):
 def personal_model(shape):
     model = Sequential()
     model.add(Dense(512, input_dim=shape, kernel_initializer='normal', activation='relu'))
-    model.add(layers.SimpleRNN(128))
     model.add(Dense(256, activation='relu'))
     model.add(Dense(64, activation='relu'))
     model.add(Dense(1, activation='linear'))
@@ -227,8 +226,10 @@ def model_keras_lstm(file):
 
 def lstm_model(shape):
     model = Sequential()
-    model.add(LSTM(shape, input_shape=(1, shape)))
-    model.add(Dense(64, activation='relu'))
+    # model.add(LSTM(shape, input_shape=(1, shape)))
+    model.add(LSTM(256, input_shape=(shape, 1), activation='tanh', recurrent_activation='sigmoid'))
+    model.add(Dense(256, activation='relu'))
+    model.add(Dense(128, activation='relu'))
     model.add(Dense(1, activation='linear'))
     model.compile(loss='mae', optimizer='adam',  metrics=['mse', 'msle'])
     # model.summary()
@@ -263,8 +264,10 @@ def model_ludwig(file):
     predictions = np.round(predictions.n_predictions.values, decimals=1)
     all_predictions = np.round(all_predictions.n_predictions.values, decimals=1)
 
-    plot_predict(file + '_LUDWIG', np.array(test['n']), np.array(predictions))
-    plot_mixed(file + '_LUDWIG', np.array(features['n']), np.array(all_predictions))
+    shift = int((file.split('.')[0]).split('-')[2])
+
+    plot_predict(file + '_LUDWIG', np.array(test['n']), np.array(predictions), shift)
+    plot_mixed(file + '_LUDWIG', np.array(features['n']), np.array(all_predictions), shift)
     errors(np.array(test['n']), np.array(predictions), np.mean(features.n))
 
 
@@ -336,20 +339,22 @@ def model_recurrent(vlist, v2):
 
         col = ['severity_diff', 'n', 'mov_avg2', 'mov_avg4', '1before', '2before', '4before']
 
-        for c in col:
-            x = f1[c].values.reshape(-1, 1)
-            min_max_scaler = preprocessing.MinMaxScaler()
-            x_scaled = min_max_scaler.fit_transform(x)
-            f1[c] = pd.DataFrame(x_scaled)
+        # for c in col:
+        #     x = f1[c].values.reshape(-1, 1)
+        #     min_max_scaler = preprocessing.MinMaxScaler()
+        #     x_scaled = min_max_scaler.fit_transform(x)
+        #     f1[c] = pd.DataFrame(x_scaled)
 
         l1 = np.array(f1['n'])
         mean = np.mean(l1)
         f1 = f1.drop('n', axis=1)
         f1 = np.array(f1)
 
+        f1 = f1.reshape((f1.shape[0], f1.shape[1], 1))
+
         ######################### MODEL DEFINITIONS ############################
         if i==0:
-            estimator = KerasRegressor(build_fn=personal_model, shape=f1.shape[1], epochs=epochs_nn, batch_size=batch_size, verbose=verbose)
+            estimator = KerasRegressor(build_fn=lstm_model, shape=f1.shape[1], epochs=epochs_lstm, batch_size=batch_size, verbose=verbose)
         history = estimator.fit(f1, l1)
 
         ######################### MODEL DEFINITIONS ############################
@@ -366,25 +371,28 @@ def model_recurrent(vlist, v2):
 
     col = ['severity_diff', 'n', 'mov_avg2', 'mov_avg4', '1before', '2before', '4before']
 
-    for c in col:
-        x = f2[c].values.reshape(-1, 1)
-        min_max_scaler = preprocessing.MinMaxScaler()
-        x_scaled = min_max_scaler.fit_transform(x)
-        f2[c] = pd.DataFrame(x_scaled)
+    # for c in col:
+    #     x = f2[c].values.reshape(-1, 1)
+    #     min_max_scaler = preprocessing.MinMaxScaler()
+    #     x_scaled = min_max_scaler.fit_transform(x)
+    #     f2[c] = pd.DataFrame(x_scaled)
 
     l2 = np.array(f2['n'])
     mean = np.mean(l2)
     f2 = f2.drop('n', axis=1)
     f2 = np.array(f2)
 
-    offset = 100
+    f2 = f2.reshape((f2.shape[0], f2.shape[1], 1))
+
+    offset = 255
 
     lastf = f2[offset:offset+4]
     lastl = l2[offset:offset+4]
 
     for i in range(0, len(l2)):
-        p = estimator.predict(lastf[-1].reshape(1,lastf[-1].shape[0]))
-        print(p)
+        # p = estimator.predict(lastf[-1].reshape(1,lastf[-1].shape[0]))
+        p = estimator.predict(lastf[-1].reshape(1, lastf[-1].shape[0], 1))
+        # print(p)
 
         # CALCULATE NEW FEATURE FOR RECURRENT MODEL
         if lastf[-1][0] >= 52:
@@ -400,9 +408,9 @@ def model_recurrent(vlist, v2):
         b4 = lastl[-4]
         y = lastf[-1][7] + 1
 
-        new_feature = np.array([w, int(diff), mov2, mov4, b1, b2, b4, y])
+        new_feature = np.array([int(w), int(diff), mov2, mov4, b1, b2, b4, int(y)])
 
-        lastf = np.append(lastf, [new_feature], axis=0)
+        lastf = np.append(lastf, new_feature.reshape(1, new_feature.shape[0], 1), axis=0)
         lastl = np.append(lastl, p, axis=0)
 
     predictions = lastl[offset:]
@@ -448,7 +456,7 @@ def plot_predict(file, test_labels, predictions, shift):
     plt.minorticks_on()
     plt.grid(axis='both')
     plt.title('plot/' + file[5:] + '_predictions')
-    plt.savefig('plot/' + file + '_predictions.png', dpi=240)
+    # plt.savefig('plot/' + file + '_predictions.png', dpi=240)
     plt.show()
 
 
