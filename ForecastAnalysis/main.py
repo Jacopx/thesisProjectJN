@@ -36,7 +36,8 @@ def main(dataset):
         # forecast.model_recurrent(['data/hadoop-version_0_prior-reduced.csv', 'data/hadoop-version_1_prior-reduced.csv', 'data/hadoop-version_2_prior-reduced.csv'], 'data/hadoop-version_3_prior-reduced.csv')
         # forecast.model_recurrent(['data/hadoop-version_2_prior-reduced.csv'], 'data/hadoop-version_3_prior-reduced.csv')
 
-        # forecast.model_cross_version('data/hadoop-version_2_prior-1.csv', 'data/hadoop-version_3_prior-1.csv')
+        forecast.model_cross_version('data/hadoop-version_2_prior-2.csv', 'data/hadoop-version_3_prior-2.csv')
+        forecast.model_cross_version('data/hadoop-version_2_prior-20.csv', 'data/hadoop-version_3_prior-20.csv')
         # forecast.model_cross_version('data/hadoop-version_0_prior-2.csv', 'data/hadoop-version_1_prior-2.csv')
         # forecast.model_cross_version('data/hadoop-version_1_prior-2.csv', 'data/hadoop-version_2_prior-2.csv')
 
@@ -65,7 +66,8 @@ def main(dataset):
 
         # forecast.model_randomforest('data/hadoop-version_2_prior-1')
         # forecast.model_keras_lstm('data/hadoop-version_2_prior-1')
-        forecast.model_ludwig('data/hadoop-version_2_prior-20.csv')
+        forecast.model_ludwig('data/hadoop-version_2_prior-2.csv', 'data/hadoop-version_3_prior-2.csv')
+        forecast.model_ludwig('data/hadoop-version_2_prior-20.csv', 'data/hadoop-version_3_prior-20.csv')
 
         # forecast.model_keras_nn('data/hadoop-version_2_prior-reduced.csv')
 

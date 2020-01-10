@@ -170,8 +170,8 @@ def model_keras_nn(file):
 
 def personal_model(shape):
     model = Sequential()
-    model.add(Dense(512, input_dim=shape, kernel_initializer='normal', activation='relu'))
-    model.add(Dense(256, activation='relu'))
+    model.add(Dense(shape*2, input_dim=shape, kernel_initializer='normal', activation='relu'))
+    model.add(Dense(64, activation='relu'))
     model.add(Dense(64, activation='relu'))
     model.add(Dense(1, activation='linear'))
     model.compile(loss='mae', optimizer='adam', metrics=['msle', 'mse'])
@@ -237,38 +237,44 @@ def lstm_model(shape):
     return model
 
 
-def model_ludwig(file):
-    features_basic = pd.read_csv(file)
+def model_ludwig(v1, v2):
+    fb1 = pd.read_csv(v1)
+    ver1 = v1.split('_')[1]
 
-    infos_nn(file, features_basic)
+    fb2 = pd.read_csv(v2)
+    ver2 = v2.split('_')[1]
 
-    features = features_basic.copy()
-    features = features.dropna()
+    infos_nn(v1, fb1)
+    infos_nn(v2, fb2)
 
-    n = int(features.shape[0] * (1 - test_size))
-    train = features.head(n)
-    test = features.tail(features.shape[0] - n)
+    f1 = fb1.copy()
+    f1 = f1.dropna()
 
-    print(train.shape, test.shape)
+    f2 = fb2.copy()
+    f2 = f2.dropna()
+
+    l2 = np.array(f2['n'])
+    mean = np.mean(l2)
+
+    print(f1.shape, f2.shape)
 
     ######################### MODEL DEFINITIONS ############################
 
     model_definition = {...}
     ludwig_model = LudwigModel(model_definition, model_definition_file='data/model_definition.yaml')
-    train_stats = ludwig_model.train(data_df=train)
+    train_stats = ludwig_model.train(data_df=f1)
 
     ######################### MODEL DEFINITIONS ############################
 
-    predictions = ludwig_model.predict(data_df=test, )
-    all_predictions = ludwig_model.predict(data_df=features)
-    predictions = np.round(predictions.n_predictions.values, decimals=1)
-    all_predictions = np.round(all_predictions.n_predictions.values, decimals=1)
+    all_predictions = ludwig_model.predict(data_df=f2)
+    all_predictions = np.round(all_predictions, decimals=1)
 
-    shift = int((file.split('.')[0]).split('-')[2])
+    shift = int((v2.split('.')[0]).split('-')[2])
 
-    plot_predict(file + '_LUDWIG', np.array(test['n']), np.array(predictions), shift)
-    plot_mixed(file + '_LUDWIG', np.array(features['n']), np.array(all_predictions), shift)
-    errors(np.array(test['n']), np.array(predictions), np.mean(features.n))
+    # plot_predict(file + '_NN', test_labels, predictions, shift)
+    plot_mixed2('LUDWIG train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions.values.reshape(all_predictions.shape[0]), shift)
+    # weights(estimator, feature_list)
+    errors(l2, all_predictions.values.reshape(all_predictions.shape[0]), mean)
 
 
 def model_cross_version(v1, v2):
@@ -317,13 +323,12 @@ def model_cross_version(v1, v2):
     shift = int((v2.split('.')[0]).split('-')[2])
 
     # plot_predict(file + '_NN', test_labels, predictions, shift)
-    plot_mixed2('train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
+    plot_mixed2('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
     # weights(estimator, feature_list)
     errors(l2, all_predictions, mean)
 
 
 def model_recurrent(vlist, v2):
-
 
     i = 0
     for v1 in vlist:
