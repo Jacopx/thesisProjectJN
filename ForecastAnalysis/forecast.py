@@ -10,6 +10,7 @@ from numpy.random import seed
 # from ludwig.api import LudwigModel
 
 # SKLEARN
+from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.ensemble import GradientBoostingRegressor
@@ -42,13 +43,13 @@ warnings.filterwarnings("ignore")
 test_size = 0.30
 
 predictor = 600
-epochs_nn = 1000
-epochs_lstm = 500
+epochs_nn = 300
+epochs_lstm = 350
 batch_size = 8
 
 random = 12
 n_jobs = 6
-verbose = 0
+verbose = 2
 
 def duration_model(file):
     features = pd.read_csv(file)
@@ -169,9 +170,9 @@ def model_keras_nn(file):
 
 def personal_model(shape):
     model = Sequential()
-    model.add(Dense(shape, input_dim=shape, kernel_initializer='normal', activation='relu'))
-    model.add(Dense(int(shape/2), activation='relu'))
-    model.add(Dense(int(shape/4), activation='relu'))
+    model.add(Dense(shape*2, input_dim=shape, kernel_initializer='normal', activation='relu'))
+    model.add(Dense(64, activation='relu'))
+    model.add(Dense(64, activation='relu'))
     model.add(Dense(1, activation='linear'))
     model.compile(loss='mae', optimizer='adam', metrics=['msle', 'mse'])
     # model.summary()
@@ -225,8 +226,10 @@ def model_keras_lstm(file):
 
 def lstm_model(shape):
     model = Sequential()
-    model.add(LSTM(shape, input_shape=(1, shape)))
-    model.add(Dense(64, activation='relu'))
+    # model.add(LSTM(shape, input_shape=(1, shape)))
+    model.add(LSTM(256, input_shape=(shape, 1), activation='tanh', recurrent_activation='sigmoid'))
+    model.add(Dense(256, activation='relu'))
+    model.add(Dense(128, activation='relu'))
     model.add(Dense(1, activation='linear'))
     model.compile(loss='mae', optimizer='adam',  metrics=['mse', 'msle'])
     # model.summary()
@@ -234,36 +237,44 @@ def lstm_model(shape):
     return model
 
 
-def model_ludwig(file):
-    features_basic = pd.read_csv(file)
+def model_ludwig(v1, v2):
+    fb1 = pd.read_csv(v1)
+    ver1 = v1.split('_')[1]
 
-    infos_nn(file, features_basic)
+    fb2 = pd.read_csv(v2)
+    ver2 = v2.split('_')[1]
 
-    features = features_basic.copy()
-    features = features.dropna()
+    infos_nn(v1, fb1)
+    infos_nn(v2, fb2)
 
-    n = int(features.shape[0] * (1 - test_size))
-    train = features.head(n)
-    test = features.tail(features.shape[0] - n)
+    f1 = fb1.copy()
+    f1 = f1.dropna()
 
-    print(train.shape, test.shape)
+    f2 = fb2.copy()
+    f2 = f2.dropna()
+
+    l2 = np.array(f2['n'])
+    mean = np.mean(l2)
+
+    print(f1.shape, f2.shape)
 
     ######################### MODEL DEFINITIONS ############################
 
     model_definition = {...}
     ludwig_model = LudwigModel(model_definition, model_definition_file='data/model_definition.yaml')
-    train_stats = ludwig_model.train(data_df=train)
+    train_stats = ludwig_model.train(data_df=f1)
 
     ######################### MODEL DEFINITIONS ############################
 
-    predictions = ludwig_model.predict(data_df=test, )
-    all_predictions = ludwig_model.predict(data_df=features)
-    predictions = np.round(predictions.n_predictions.values, decimals=1)
-    all_predictions = np.round(all_predictions.n_predictions.values, decimals=1)
+    all_predictions = ludwig_model.predict(data_df=f2)
+    all_predictions = np.round(all_predictions, decimals=1)
 
-    plot_predict(file + '_LUDWIG', np.array(test['n']), np.array(predictions))
-    plot_mixed(file + '_LUDWIG', np.array(features['n']), np.array(all_predictions))
-    errors(np.array(test['n']), np.array(predictions), np.mean(features.n))
+    shift = int((v2.split('.')[0]).split('-')[2])
+
+    # plot_predict(file + '_NN', test_labels, predictions, shift)
+    plot_mixed2('LUDWIG train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions.values.reshape(all_predictions.shape[0]), shift)
+    # weights(estimator, feature_list)
+    errors(l2, all_predictions.values.reshape(all_predictions.shape[0]), mean)
 
 
 def model_cross_version(v1, v2):
@@ -280,8 +291,8 @@ def model_cross_version(v1, v2):
 
     l1 = np.array(f1['n'])
     mean = np.mean(l1)
-    f1 = f1.drop('n', axis=1)  # Saving feature names for later use
-    fl1 = list(f1.columns)  # Convert to numpy array
+    f1 = f1.drop('n', axis=1)
+    fl1 = list(f1.columns)
     f1 = np.array(f1)
 
     infos_nn(v2, fb2)
@@ -291,8 +302,8 @@ def model_cross_version(v1, v2):
 
     l2 = np.array(f2['n'])
     mean = np.mean(l2)
-    f2 = f2.drop('n', axis=1)  # Saving feature names for later use
-    fl2 = list(f2.columns)  # Convert to numpy array
+    f2 = f2.drop('n', axis=1)
+    fl2 = list(f2.columns)
     f2 = np.array(f2)
 
     ######################### MODEL DEFINITIONS ############################
@@ -312,9 +323,107 @@ def model_cross_version(v1, v2):
     shift = int((v2.split('.')[0]).split('-')[2])
 
     # plot_predict(file + '_NN', test_labels, predictions, shift)
-    plot_mixed2('train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
+    plot_mixed2('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
+    plot_mixed3('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
     # weights(estimator, feature_list)
     errors(l2, all_predictions, mean)
+
+
+def model_recurrent(vlist, v2):
+
+    i = 0
+    for v1 in vlist:
+        fb1 = pd.read_csv(v1)
+        ver1 = v1.split('_')[1]
+
+        infos_nn(v1, fb1)
+
+        f1 = fb1.copy()
+        f1 = f1.dropna()
+
+        fl1 = list(f1.columns)
+
+        col = ['severity_diff', 'n', 'mov_avg2', 'mov_avg4', '1before', '2before', '4before']
+
+        # for c in col:
+        #     x = f1[c].values.reshape(-1, 1)
+        #     min_max_scaler = preprocessing.MinMaxScaler()
+        #     x_scaled = min_max_scaler.fit_transform(x)
+        #     f1[c] = pd.DataFrame(x_scaled)
+
+        l1 = np.array(f1['n'])
+        mean = np.mean(l1)
+        f1 = f1.drop('n', axis=1)
+        f1 = np.array(f1)
+
+        f1 = f1.reshape((f1.shape[0], f1.shape[1], 1))
+
+        ######################### MODEL DEFINITIONS ############################
+        if i==0:
+            estimator = KerasRegressor(build_fn=lstm_model, shape=f1.shape[1], epochs=epochs_lstm, batch_size=batch_size, verbose=verbose)
+        history = estimator.fit(f1, l1)
+
+        ######################### MODEL DEFINITIONS ############################
+        i += 1
+
+    fb2 = pd.read_csv(v2)
+    ver2 = v2.split('_')[1]
+
+    infos_nn(v2, fb2)
+
+    f2 = fb2.copy()
+    f2 = f2.dropna()
+    fl2 = list(f2.columns)
+
+    col = ['severity_diff', 'n', 'mov_avg2', 'mov_avg4', '1before', '2before', '4before']
+
+    # for c in col:
+    #     x = f2[c].values.reshape(-1, 1)
+    #     min_max_scaler = preprocessing.MinMaxScaler()
+    #     x_scaled = min_max_scaler.fit_transform(x)
+    #     f2[c] = pd.DataFrame(x_scaled)
+
+    l2 = np.array(f2['n'])
+    mean = np.mean(l2)
+    f2 = f2.drop('n', axis=1)
+    f2 = np.array(f2)
+
+    f2 = f2.reshape((f2.shape[0], f2.shape[1], 1))
+
+    offset = 255
+
+    lastf = f2[offset:offset+4]
+    lastl = l2[offset:offset+4]
+
+    for i in range(0, len(l2)):
+        # p = estimator.predict(lastf[-1].reshape(1,lastf[-1].shape[0]))
+        p = estimator.predict(lastf[-1].reshape(1, lastf[-1].shape[0], 1))
+        # print(p)
+
+        # CALCULATE NEW FEATURE FOR RECURRENT MODEL
+        if lastf[-1][0] >= 52:
+            w = 1
+        else:
+            w = lastf[-1][0] + 1
+
+        diff = p - lastl[-1]
+        mov2 = (lastl[-1] + lastl[-2]) / 2
+        mov4 = (lastl[-1] + lastl[-2] + lastl[-3] + lastl[-4]) / 4
+        b1 = lastl[-1]
+        b2 = lastl[-2]
+        b4 = lastl[-4]
+        y = lastf[-1][7] + 1
+
+        new_feature = np.array([int(w), int(diff), mov2, mov4, b1, b2, b4, int(y)])
+
+        lastf = np.append(lastf, new_feature.reshape(1, new_feature.shape[0], 1), axis=0)
+        lastl = np.append(lastl, p, axis=0)
+
+    predictions = lastl[offset:]
+    plot_predict2('train: v{} - predict: v{}'.format(ver1, ver2), l2[offset:], predictions[4:])
+
+    # weights(estimator, feature_list)
+    # errors(l2[50:], predictions, mean)
 
 
 def infos(file, features_basic):
@@ -338,7 +447,6 @@ def infos_nn(file, features_basic):
 
 
 def plot_predict(file, test_labels, predictions, shift):
-
     n=[]
     for i in range(0, len(predictions)):
         n.append(i)
@@ -354,7 +462,27 @@ def plot_predict(file, test_labels, predictions, shift):
     plt.minorticks_on()
     plt.grid(axis='both')
     plt.title('plot/' + file[5:] + '_predictions')
-    plt.savefig('plot/' + file + '_predictions.png', dpi=240)
+    # plt.savefig('plot/' + file + '_predictions.png', dpi=240)
+    plt.show()
+
+
+def plot_predict2(file, test_labels, predictions):
+    n=[]
+    for i in range(0, len(predictions)):
+        n.append(i)
+
+    plt.figure(figsize=(20, 11))
+    sns.lineplot(n, test_labels, label='Real', ci=None)
+    sns.lineplot(n, predictions, label='Predict', ci=None)
+    sns.lineplot(n, np.mean(test_labels), label='Mean', ci=None)
+    plt.xticks(rotation='60')
+    plt.legend()  # Graph labels
+    plt.xlabel('Week')
+    plt.ylabel('n')
+    plt.minorticks_on()
+    plt.grid(axis='both')
+    plt.title('plot/' + file[5:] + '_predictions')
+    # plt.savefig('plot/' + file + '_predictions.png', dpi=240)
     plt.show()
 
 
@@ -365,9 +493,7 @@ def plot_mixed(file, labels, predictions, shift):
 
     plt.figure(figsize=(20, 11))
     sns.lineplot(n[:-shift], labels[:-shift], label='Real', ci=None)
-    # sns.lineplot(n, labels, label='Real', ci=None)
     sns.lineplot(n[:-shift], predictions[shift:], label='Predict', ci=None)
-    # sns.lineplot(n, predictions, label='Predict', ci=None)
     plt.axvline(int(len(predictions) * (1 - test_size)), linestyle='--', label='Split', c='red')
     plt.xticks(rotation='60')
     plt.legend()  # Graph labels
@@ -388,6 +514,25 @@ def plot_mixed2(name, labels, predictions, shift):
     plt.figure(figsize=(20, 11))
     sns.lineplot(n[:-shift], labels[:-shift], label='Real', ci=None)
     sns.lineplot(n[:-shift], predictions[shift:], label='Predict', ci=None)
+    plt.xticks(rotation='60')
+    plt.legend()  # Graph labels
+    plt.xlabel('Week')
+    plt.ylabel('n')
+    plt.minorticks_on()
+    plt.grid(axis='both')
+    plt.title(name)
+    # plt.savefig('plot/' + file + '_all_predictions.png', dpi=240)
+    plt.show()
+
+
+def plot_mixed3(name, labels, predictions, shift):
+    n = []
+    for i in range(0, len(predictions)):
+        n.append(i)
+
+    plt.figure(figsize=(20, 11))
+    sns.lineplot(n, labels, label='Real', ci=None)
+    sns.lineplot(n, predictions, label='Predict', ci=None)
     plt.xticks(rotation='60')
     plt.legend()  # Graph labels
     plt.xlabel('Week')
