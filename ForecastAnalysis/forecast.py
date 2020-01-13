@@ -7,7 +7,7 @@ import numpy as np
 from numpy.random import seed
 
 # LUDWIG
-from ludwig.api import LudwigModel
+# from ludwig.api import LudwigModel
 
 # SKLEARN
 from sklearn import preprocessing
@@ -43,7 +43,7 @@ warnings.filterwarnings("ignore")
 test_size = 0.30
 
 predictor = 600
-epochs_nn = 250
+epochs_nn = 300
 epochs_lstm = 350
 batch_size = 8
 
@@ -324,6 +324,7 @@ def model_cross_version(v1, v2):
 
     # plot_predict(file + '_NN', test_labels, predictions, shift)
     plot_mixed2('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
+    plot_mixed3('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
     # weights(estimator, feature_list)
     errors(l2, all_predictions, mean)
 
@@ -492,9 +493,7 @@ def plot_mixed(file, labels, predictions, shift):
 
     plt.figure(figsize=(20, 11))
     sns.lineplot(n[:-shift], labels[:-shift], label='Real', ci=None)
-    # sns.lineplot(n, labels, label='Real', ci=None)
     sns.lineplot(n[:-shift], predictions[shift:], label='Predict', ci=None)
-    # sns.lineplot(n, predictions, label='Predict', ci=None)
     plt.axvline(int(len(predictions) * (1 - test_size)), linestyle='--', label='Split', c='red')
     plt.xticks(rotation='60')
     plt.legend()  # Graph labels
@@ -526,24 +525,21 @@ def plot_mixed2(name, labels, predictions, shift):
     plt.show()
 
 
-def plot_mixed3(file, labels, predictions):
-    n=[]
+def plot_mixed3(name, labels, predictions, shift):
+    n = []
     for i in range(0, len(predictions)):
         n.append(i)
 
     plt.figure(figsize=(20, 11))
     sns.lineplot(n, labels, label='Real', ci=None)
-    # sns.lineplot(n, labels, label='Real', ci=None)
     sns.lineplot(n, predictions, label='Predict', ci=None)
-    # sns.lineplot(n, predictions, label='Predict', ci=None)
-    plt.axvline(int(len(predictions) * (1 - test_size)), linestyle='--', label='Split', c='red')
     plt.xticks(rotation='60')
     plt.legend()  # Graph labels
     plt.xlabel('Week')
     plt.ylabel('n')
     plt.minorticks_on()
     plt.grid(axis='both')
-    plt.title('plot/' + file[5:] + '_all_predictions')
+    plt.title(name)
     # plt.savefig('plot/' + file + '_all_predictions.png', dpi=240)
     plt.show()
 
