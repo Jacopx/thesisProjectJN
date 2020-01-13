@@ -24,7 +24,9 @@ ForecastAnalysis/data/*
 ForecastAnalysis/*.txt
 ForecastAnalysis/*.png
 ForecastAnalysis/log.log
+ForecastAnalysis/errors.csv
 ForecastAnalysis/results/*
+ForecastAnalysis/plot/gif
 
 DataAnalysis_Issue/data/SQLITE3/*.sqlite3
 DataAnalysis_Issue/data/CSV/*.csv
