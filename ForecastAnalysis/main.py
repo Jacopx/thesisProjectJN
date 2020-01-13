@@ -33,8 +33,8 @@ def main(dataset):
         forecast.count_model('data/satur')
     elif dataset in 'ISSUE':
         # FORECAST
-        forecast.model_cross_version('data/hadoop-version_2_prior-1.csv', 'data/hadoop-version_3_prior-1.csv')
-        # forecast.model_cross_version('data/hadoop-version_2_prior-2.csv', 'data/hadoop-version_3_prior-2.csv')
+        # forecast.model_cross_version('data/hadoop-version_2_prior-1.csv', 'data/hadoop-version_3_prior-1.csv')
+        forecast.model_cross_version('data/hadoop-version_2_prior-2.csv', 'data/hadoop-version_3_prior-2.csv')
         # forecast.model_cross_version('data/hadoop-version_2_prior-4.csv', 'data/hadoop-version_3_prior-4.csv')
         # forecast.model_cross_version('data/hadoop-version_2_prior-8.csv', 'data/hadoop-version_3_prior-8.csv')
         # forecast.model_cross_version('data/hadoop-version_2_prior-10.csv', 'data/hadoop-version_3_prior-10.csv')

@@ -47,7 +47,7 @@ warnings.filterwarnings("ignore")
 test_size = 0.30
 
 predictor = 600
-epochs_nn = 500
+epochs_nn = 1000
 epochs_lstm = 350
 batch_size = 8
 
@@ -325,7 +325,7 @@ def model_cross_version(v1, v2):
 
     # plot_predict(file + '_NN', test_labels, predictions, shift)
     gif_plot('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
-    plot_mixed2('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
+    # plot_mixed2('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
     # plot_mixed3('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
     # weights(estimator, feature_list)
     errors2(l2, all_predictions, mean, shift)
@@ -533,9 +533,9 @@ def gif_plot(name, labels, predictions, shift):
         n.append(i)
 
     t0 = time.time()
-    for i in range(2, len(predictions), shift):
+    for i in range(3, len(predictions)):
         print('{}/{} [{} %]'.format(i, len(predictions), round(100*i/len(predictions), 1)))
-        plt.figure(figsize=(10, 5))
+        plt.figure(figsize=(10, 7))
         sns.lineplot(n[:-(len(predictions)-i)-shift], labels[:-(len(predictions)-i)-shift], label='Real', ci=None)
         sns.lineplot(n[:-(len(predictions)-i)-shift], predictions[shift:-(len(predictions)-i)], label='Predict', ci=None)
         plt.xticks(rotation='60')
@@ -557,7 +557,7 @@ def gif_plot(name, labels, predictions, shift):
 
     # https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html#gif
     img, *imgs = [Image.open(f) for f in natsorted(glob.glob(fp_in))]
-    img.save(fp=fp_out, format='GIF', append_images=imgs, save_all=True, duration=35, loop=0, optimize=False)
+    img.save(fp=fp_out, format='GIF', append_images=imgs, save_all=True, duration=35, loop=0, optimize=True)
 
 
 def plot_mixed3(name, labels, predictions, shift):
