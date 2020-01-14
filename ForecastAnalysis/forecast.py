@@ -47,7 +47,7 @@ warnings.filterwarnings("ignore")
 test_size = 0.30
 
 predictor = 600
-epochs_nn = 1000
+epochs_nn = 200
 epochs_lstm = 350
 batch_size = 8
 
@@ -324,7 +324,7 @@ def model_cross_version(v1, v2):
     shift = int((v2.split('.')[0]).split('-')[2])
 
     # plot_predict(file + '_NN', test_labels, predictions, shift)
-    gif_plot('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
+    gif_plot2('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
     # plot_mixed2('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
     # plot_mixed3('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
     # weights(estimator, feature_list)
@@ -558,6 +558,41 @@ def gif_plot(name, labels, predictions, shift):
     # https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html#gif
     img, *imgs = [Image.open(f) for f in natsorted(glob.glob(fp_in))]
     img.save(fp=fp_out, format='GIF', append_images=imgs, save_all=True, duration=35, loop=0, optimize=True)
+
+
+def gif_plot2(name, labels, predictions, shift):
+    n=[]
+    for i in range(0, len(predictions)):
+        n.append(i)
+
+    t0 = time.time()
+    for i in range(0, len(predictions), shift):
+        print('{}/{} [{} %]'.format(i, len(predictions), round(100*i/len(predictions), 1)))
+        plt.figure(figsize=(10, 7))
+
+        sns.lineplot(n[:-(len(predictions)-i)+shift], labels[:-(len(predictions)-i)+shift], label='Real', ci=None)
+        sns.lineplot(n[i:-(len(predictions)-i-shift)], predictions[i:-(len(predictions)-i-shift)], label='Predict', ci=None)
+        sns.lineplot(n[i:-(len(predictions)-i-shift)], labels[i:-(len(predictions)-i-shift)], label='Real*', ci=None)
+        plt.xticks(rotation='60')
+        plt.legend()  # Graph labels
+        plt.xlabel('Week')
+        plt.ylabel('n')
+        plt.minorticks_on()
+        plt.grid(axis='both')
+        plt.title(name + ' w#' + str(i))
+        plt.savefig('plot/gif/cv_' + str(i) + '.png')
+        # plt.show()
+    print('Time elapsed: {} s'.format(round(time.time()-t0, 2)))
+
+    print('Creating GIF...')
+
+    # filepaths
+    fp_in = 'plot/gif/cv_*.png'
+    fp_out = 'plot/gif/cv.gif'
+
+    # https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html#gif
+    img, *imgs = [Image.open(f) for f in natsorted(glob.glob(fp_in))]
+    img.save(fp=fp_out, format='GIF', append_images=imgs, save_all=True, duration=200, loop=0, optimize=True)
 
 
 def plot_mixed3(name, labels, predictions, shift):
