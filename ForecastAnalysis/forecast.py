@@ -47,7 +47,7 @@ warnings.filterwarnings("ignore")
 test_size = 0.30
 
 predictor = 600
-epochs_nn = 200
+epochs_nn = 500
 epochs_lstm = 350
 batch_size = 8
 
@@ -166,18 +166,26 @@ def model_keras_nn(file):
     shift = int((file.split('.')[0]).split('-')[2])
 
     # plot_predict(file + '_NN', test_labels, predictions, shift)
-    plot_mixed(file + '_NN', labels, all_predictions, shift)
+    # plot_mixed(file + '_NN', labels, all_predictions, shift)
+    gif_plot2('No cross version', labels, all_predictions, shift)
     # weights(estimator, feature_list)
     errors(test_labels, predictions, mean)
 
 
 def personal_model(shape):
     model = Sequential()
-    model.add(Dense(shape*2, input_dim=shape, kernel_initializer='normal', activation='relu'))
-    model.add(Dense(64, activation='relu'))
-    model.add(Dense(64, activation='relu'))
+    model.add(Dense(shape, input_dim=shape, kernel_initializer='normal', activation='relu'))
+    model.add(Dense(int(shape/2), activation='relu'))
+    model.add(Dense(int(shape/4), activation='relu'))
     model.add(Dense(1, activation='linear'))
     model.compile(loss='mae', optimizer='adam', metrics=['msle', 'mse'])
+
+    # model = Sequential()
+    # model.add(Dense(shape*2, input_dim=shape, kernel_initializer='normal', activation='relu'))
+    # model.add(Dense(shape, activation='relu'))
+    # model.add(Dense(int(shape/2), activation='relu'))
+    # model.add(Dense(1, activation='linear'))
+    # model.compile(loss='mae', optimizer='adam', metrics=['msle', 'mse'])
     # model.summary()
 
     return model
@@ -325,7 +333,7 @@ def model_cross_version(v1, v2):
 
     # plot_predict(file + '_NN', test_labels, predictions, shift)
     gif_plot2('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
-    # plot_mixed2('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
+    plot_mixed2('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
     # plot_mixed3('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
     # weights(estimator, feature_list)
     errors2(l2, all_predictions, mean, shift)
@@ -524,7 +532,7 @@ def plot_mixed2(name, labels, predictions, shift):
     plt.grid(axis='both')
     plt.title(name)
     plt.savefig('plot/cross_version_' + str(shift) + '.png', dpi=240)
-    plt.show()
+    # plt.show()
 
 
 def gif_plot(name, labels, predictions, shift):
@@ -565,14 +573,20 @@ def gif_plot2(name, labels, predictions, shift):
     for i in range(0, len(predictions)):
         n.append(i)
 
+    ymax = max(labels) + 70
+
     t0 = time.time()
     for i in range(0, len(predictions), shift):
         print('{}/{} [{} %]'.format(i, len(predictions), round(100*i/len(predictions), 1)))
         plt.figure(figsize=(10, 7))
+        plt.ylim(0, ymax)
 
-        sns.lineplot(n[:-(len(predictions)-i)+shift], labels[:-(len(predictions)-i)+shift], label='Real', ci=None)
-        sns.lineplot(n[i:-(len(predictions)-i-shift)], predictions[i:-(len(predictions)-i-shift)], label='Predict', ci=None)
-        sns.lineplot(n[i:-(len(predictions)-i-shift)], labels[i:-(len(predictions)-i-shift)], label='Real*', ci=None)
+        predictions[i] = labels[i]
+
+        sns.lineplot(n[:-(len(predictions)-i-shift)], labels[:-(len(predictions)-i-shift)], label='Real', ci=None)
+        # sns.lineplot(n[i:-(len(predictions)-i-shift)], labels[i:-(len(predictions)-i-shift)], label='Real*', ci=None, color='green')
+        sns.lineplot(n[:-(len(predictions)-i-shift)], predictions[:-(len(predictions)-i-shift)], label='Predict*', ci=None, color='gainsboro')
+        sns.lineplot(n[i:-(len(predictions)-i-shift)], predictions[i:-(len(predictions)-i-shift)], label='Predict', ci=None, color='orange')
         plt.xticks(rotation='60')
         plt.legend()  # Graph labels
         plt.xlabel('Week')
@@ -580,19 +594,19 @@ def gif_plot2(name, labels, predictions, shift):
         plt.minorticks_on()
         plt.grid(axis='both')
         plt.title(name + ' w#' + str(i))
-        plt.savefig('plot/gif/cv_' + str(i) + '.png')
+        plt.savefig('plot/gif/cv{}_{}.png'.format(shift, i))
         # plt.show()
+
     print('Time elapsed: {} s'.format(round(time.time()-t0, 2)))
 
     print('Creating GIF...')
 
     # filepaths
-    fp_in = 'plot/gif/cv_*.png'
-    fp_out = 'plot/gif/cv.gif'
+    fp_in = 'plot/gif/cv{}_*.png'.format(shift)
+    fp_out = 'plot/gif/cv{}.gif'.format(shift)
 
-    # https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html#gif
     img, *imgs = [Image.open(f) for f in natsorted(glob.glob(fp_in))]
-    img.save(fp=fp_out, format='GIF', append_images=imgs, save_all=True, duration=200, loop=0, optimize=True)
+    img.save(fp=fp_out, format='GIF', append_images=imgs, save_all=True, duration=shift*40, loop=0, optimize=True)
 
 
 def plot_mixed3(name, labels, predictions, shift):
