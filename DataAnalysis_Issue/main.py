@@ -804,6 +804,8 @@ def version_forecast_file(dataset):
                 issue_finalC = issue_finalC.head(-shift)
                 issue_finalC = issue_finalC.drop('cumsum_issue', axis=1)
                 issue_finalC = issue_finalC.rename(columns={str(shift) + "future": "n"})
+                issue_finalC['y'] = issue_finalC['w'].str.split('-', n=0, expand=True)[0]
+                issue_finalC['w'] = issue_finalC['w'].str.split('-', n=0, expand=True)[1]
                 issue_finalC = issue_finalC.drop('w', axis=1)
                 issue_finalC['n'] = np.round(issue_finalC['n'], 1)
 
@@ -816,6 +818,8 @@ def version_forecast_file(dataset):
                 issue_finalP = issue_finalP.head(-shift)
                 issue_finalP = issue_finalP.drop('cumsum_severity', axis=1)
                 issue_finalP = issue_finalP.rename(columns={str(shift) + "future": "n"})
+                issue_finalP['y'] = issue_finalP['w'].str.split('-', n=0, expand=True)[0]
+                issue_finalP['w'] = issue_finalP['w'].str.split('-', n=0, expand=True)[1]
                 issue_finalP = issue_finalP.drop('w', axis=1)
                 issue_finalP['n'] = np.round(issue_finalP['n'], 1)
 

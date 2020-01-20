@@ -1,10 +1,14 @@
 import pandas as pd
 import datetime
+import time
 import matplotlib
 #matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.random import seed
+import glob
+from PIL import Image
+from natsort import natsorted, ns
 
 # LUDWIG
 # from ludwig.api import LudwigModel
@@ -62,8 +66,8 @@ def duration_model(file):
 
     labels = np.array(features['n'])
     mean = np.mean(labels)
-    features = features.drop('n', axis=1)  # Saving feature names for later use
-    feature_list = list(features.columns)  # Convert to numpy array
+    features = features.drop('n', axis=1)
+    feature_list = list(features.columns)
     features = np.array(features)
 
     train_features, test_features, train_labels, test_labels = \
@@ -118,7 +122,6 @@ def model_randomforest(file):
 
     shift = int(file.split('-')[1])
 
-    # plot_predict(file + '_RF', test_labels, predictions, shift)
     plot_mixed(file + '_RF', labels, all_predictions, shift)
     importances(model, feature_list)
     errors(test_labels, predictions, mean)
@@ -163,18 +166,26 @@ def model_keras_nn(file):
     shift = int((file.split('.')[0]).split('-')[2])
 
     # plot_predict(file + '_NN', test_labels, predictions, shift)
-    plot_mixed(file + '_NN', labels, all_predictions, shift)
+    # plot_mixed(file + '_NN', labels, all_predictions, shift)
+    gif_plot2('No cross version', labels, all_predictions, shift)
     # weights(estimator, feature_list)
     errors(test_labels, predictions, mean)
 
 
 def personal_model(shape):
     model = Sequential()
-    model.add(Dense(shape*2, input_dim=shape, kernel_initializer='normal', activation='relu'))
-    model.add(Dense(64, activation='relu'))
-    model.add(Dense(64, activation='relu'))
+    model.add(Dense(shape, input_dim=shape, kernel_initializer='normal', activation='relu'))
+    model.add(Dense(int(shape/2), activation='linear'))
+    model.add(Dense(int(shape/4), activation='linear'))
     model.add(Dense(1, activation='linear'))
-    model.compile(loss='mae', optimizer='adam', metrics=['msle', 'mse'])
+    model.compile(loss='mae', optimizer='adam', metrics=['msle'])
+
+    # model = Sequential()
+    # model.add(Dense(shape*2, input_dim=shape, kernel_initializer='normal', activation='relu'))
+    # model.add(Dense(shape, activation='relu'))
+    # model.add(Dense(int(shape/2), activation='relu'))
+    # model.add(Dense(1, activation='linear'))
+    # model.compile(loss='mae', optimizer='adam', metrics=['msle', 'mse'])
     # model.summary()
 
     return model
@@ -182,7 +193,6 @@ def personal_model(shape):
 
 def model_keras_lstm(file):
     features_basic = pd.read_csv(file)
-    # plot_all(features_basic)
 
     infos_nn(file, features_basic)
 
@@ -226,7 +236,6 @@ def model_keras_lstm(file):
 
 def lstm_model(shape):
     model = Sequential()
-    # model.add(LSTM(shape, input_shape=(1, shape)))
     model.add(LSTM(256, input_shape=(shape, 1), activation='tanh', recurrent_activation='sigmoid'))
     model.add(Dense(256, activation='relu'))
     model.add(Dense(128, activation='relu'))
@@ -277,23 +286,34 @@ def model_ludwig(v1, v2):
     errors(l2, all_predictions.values.reshape(all_predictions.shape[0]), mean)
 
 
-def model_cross_version(v1, v2):
-    fb1 = pd.read_csv(v1)
-    ver1 = v1.split('_')[1]
+def model_cross_version(vlist, v2):
+    i = 0
+    for v1 in vlist:
+        fb1 = pd.read_csv(v1)
+        ver1 = v1.split('_')[1]
+
+        infos_nn(v1, fb1)
+
+        f1 = fb1.copy()
+        f1 = f1.dropna()
+
+        fl1 = list(f1.columns)
+
+        l1 = np.array(f1['n'])
+        mean = np.mean(l1)
+        f1 = f1.drop('n', axis=1)
+        f1 = np.array(f1)
+
+        ######################### MODEL DEFINITIONS ############################
+        if i == 0:
+            estimator = KerasRegressor(build_fn=personal_model, shape=f1.shape[1], epochs=epochs_nn, batch_size=batch_size, verbose=verbose)
+        history = estimator.fit(f1, l1)
+
+        ######################### MODEL DEFINITIONS ############################
+        i += 1
 
     fb2 = pd.read_csv(v2)
     ver2 = v2.split('_')[1]
-
-    infos_nn(v1, fb1)
-
-    f1 = fb1.copy()
-    f1 = f1.dropna()
-
-    l1 = np.array(f1['n'])
-    mean = np.mean(l1)
-    f1 = f1.drop('n', axis=1)
-    fl1 = list(f1.columns)
-    f1 = np.array(f1)
 
     infos_nn(v2, fb2)
 
@@ -306,13 +326,6 @@ def model_cross_version(v1, v2):
     fl2 = list(f2.columns)
     f2 = np.array(f2)
 
-    ######################### MODEL DEFINITIONS ############################
-
-    estimator = KerasRegressor(build_fn=personal_model, shape=f1.shape[1], epochs=epochs_nn, batch_size=batch_size, verbose=verbose)
-    history = estimator.fit(f1, l1)
-
-    ######################### MODEL DEFINITIONS ############################
-
     # plot_history(file + '_NN_', history, 'loss', 'MAE')
     # plot_history(file + '_NN_', history, 'msle', 'MSLE')
     # plot_history(file + '_NN_', history, 'mse', 'MSE')
@@ -323,10 +336,11 @@ def model_cross_version(v1, v2):
     shift = int((v2.split('.')[0]).split('-')[2])
 
     # plot_predict(file + '_NN', test_labels, predictions, shift)
+    gif_plot2('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), estimator, f2, l2, shift)
     plot_mixed2('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
-    plot_mixed3('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
+    # plot_mixed3('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
     # weights(estimator, feature_list)
-    errors(l2, all_predictions, mean)
+    errors2(l2, all_predictions, mean, shift)
 
 
 def model_recurrent(vlist, v2):
@@ -521,8 +535,91 @@ def plot_mixed2(name, labels, predictions, shift):
     plt.minorticks_on()
     plt.grid(axis='both')
     plt.title(name)
-    # plt.savefig('plot/' + file + '_all_predictions.png', dpi=240)
+    plt.savefig('plot/cross_version_' + str(shift) + '.png', dpi=240)
     plt.show()
+
+
+def gif_plot(name, labels, predictions, shift):
+    n=[]
+    for i in range(0, len(predictions)):
+        n.append(i)
+
+    t0 = time.time()
+    for i in range(3, len(predictions)):
+        print('{}/{} [{} %]'.format(i, len(predictions), round(100*i/len(predictions), 1)))
+        plt.figure(figsize=(10, 7))
+        sns.lineplot(n[:-(len(predictions)-i)-shift], labels[:-(len(predictions)-i)-shift], label='Real', ci=None)
+        sns.lineplot(n[:-(len(predictions)-i)-shift], predictions[shift:-(len(predictions)-i)], label='Predict', ci=None)
+        plt.xticks(rotation='60')
+        plt.legend()  # Graph labels
+        plt.xlabel('Week')
+        plt.ylabel('n')
+        plt.minorticks_on()
+        plt.grid(axis='both')
+        plt.title(name + ' w#' + str(i))
+        plt.savefig('plot/gif/cv_' + str(i) + '.png')
+        # plt.show()
+    print('Time elapsed: {} s'.format(round(time.time()-t0, 2)))
+
+    print('Creating GIF...')
+
+    # filepaths
+    fp_in = 'plot/gif/cv_*.png'
+    fp_out = 'plot/gif/cv.gif'
+
+    # https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html#gif
+    img, *imgs = [Image.open(f) for f in natsorted(glob.glob(fp_in))]
+    img.save(fp=fp_out, format='GIF', append_images=imgs, save_all=True, duration=35, loop=0, optimize=True)
+
+
+def gif_plot2(name, estimator, test, labels, shift):
+    n=[]
+    for i in range(0, len(labels)):
+        n.append(i)
+
+    ymax = max(labels) + 70
+    predictions = np.array([])
+
+    try:
+        t0 = time.time()
+        for i in range(shift, len(labels)+shift, shift):
+            if len(labels)-i<shift:
+                diff = len(labels)-i
+                i = i - diff
+
+            print('{}/{} [{} %]'.format(i, len(labels), round(100*i/len(labels), 1)))
+            plt.figure(figsize=(10, 7))
+            plt.ylim(0, ymax)
+
+            pred = estimator.predict(test[i:i+shift])
+
+            predictions = np.append(predictions, pred)
+
+            sns.lineplot(n[:i], labels[:i], label='Real', ci=None)
+            # sns.lineplot(n[i:-(len(predictions)-i-shift)], labels[i:-(len(predictions)-i-shift)], label='Real*', ci=None, color='green')
+            sns.lineplot(n[:i], predictions[:i], label='Predict*', ci=None, color='gainsboro')
+            sns.lineplot(n[i-shift:i], pred, label='Predict', ci=None, color='orange')
+            plt.xticks(rotation='60')
+            plt.legend()  # Graph labels
+            plt.xlabel('Week')
+            plt.ylabel('n')
+            plt.minorticks_on()
+            plt.grid(axis='both')
+            plt.title(name + ' w#' + str(i))
+            plt.savefig('plot/gif/cv{}_{}.png'.format(shift, i))
+            # plt.show()
+    except:
+        print('image error')
+
+    print('Time elapsed: {} s'.format(round(time.time()-t0, 2)))
+    print('Creating GIF...')
+
+    # filepaths
+    fp_in = 'plot/gif/cv{}_*.png'.format(shift)
+    fp_out = 'plot/gif/cv{}.gif'.format(shift)
+
+    img, *imgs = [Image.open(f) for f in natsorted(glob.glob(fp_in))]
+    img.save(fp=fp_out, format='GIF', append_images=imgs, save_all=True, duration=shift*40, loop=0, optimize=True)
 
 
 def plot_mixed3(name, labels, predictions, shift):
@@ -619,6 +716,44 @@ def errors(test_labels, predictions, mean):
     # print('RSE:', round(RSE, 3))
     print('Relative:', np.round(np.mean(REL), 2), '%.')
     print('\nAccuracy:', np.round(100-np.mean(REL), 2), '%.')
+
+    with open('errors.csv', 'a') as f:
+        print(round(MAE, 2), round(R2, 3), np.round(np.mean(REL), 2), np.round(100-np.mean(REL), 2), sep=',', file=f)
+
+
+def errors2(test_labels, predictions, mean, shift):
+    print('#######################################')
+    # The baseline predictions are the historical averages
+    baseline_errors = abs(mean - test_labels)
+    # print('Average baseline error: ', round(np.mean(baseline_errors), 2))
+
+    index = []
+    for i in range(0, len(test_labels)):
+        if test_labels[i] == 0:
+            index.append(i)
+
+    test_labels = np.delete(test_labels, index)
+    predictions = np.delete(predictions, index)
+
+
+    errors = abs(predictions - test_labels)
+    test_labels = test_labels[0:len(predictions)]
+
+    MAE = mean_absolute_error(test_labels, predictions)
+    EVS = explained_variance_score(test_labels, predictions)
+    R2 = r2_score(test_labels, predictions)
+    RSE = mean_squared_error(test_labels, predictions)
+    REL = abs(100 * (abs(test_labels - predictions) / test_labels))
+    MAX = max_error(test_labels, predictions)
+    # MSLE = mean_squared_log_error(test_labels, predictions)
+
+    print('Relative:', np.round(np.mean(REL), 2), '%.')
+    print('Accuracy:', np.round(100-np.mean(REL), 2), '%.')
+    print('Mean Absolute Error:', round(MAE, 2))
+    print('\nR2 Scoring:', round(R2, 3))
+
+    with open('errors.csv', 'a') as f:
+        print(shift, round(MAE, 2), round(R2, 3), np.round(np.mean(REL), 2), np.round(100-np.mean(REL), 2), sep=',', file=f)
 
 
 def weights(estimator, list):
