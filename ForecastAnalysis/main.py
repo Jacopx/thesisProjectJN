@@ -35,7 +35,9 @@ def main(dataset):
         # FORECAST
         # forecast.model_cross_version('data/hadoop-version_2_prior-1.csv', 'data/hadoop-version_3_prior-1.csv')
         # forecast.model_cross_version(['data/hadoop-version_2_prior-2.csv', 'data/hadoop-version_1_prior-2.csv', 'data/hadoop-version_0_prior-2.csv'], 'data/hadoop-version_3_prior-2.csv')
-        forecast.model_cross_version(['data/hadoop-version_2_prior-4.csv', 'data/hbase-version_0_prior-4.csv', 'data/hive-version_2_prior-4.csv', 'data/hadoop-version_1_prior-4.csv'], 'data/hadoop-version_3_prior-4.csv')
+        # forecast.model_cross_version(['data/hadoop-version_2_prior-4.csv', 'data/hbase-version_0_prior-4.csv', 'data/hive-version_2_prior-4.csv', 'data/hadoop-version_1_prior-4.csv'], 'data/hadoop-version_3_prior-4.csv')
+        forecast.model_cross_version(['data/hadoop-version_2_dev-4.csv', 'data/hadoop-version_0_dev-4.csv', 'data/hadoop-version_1_dev-4.csv'], 'data/hadoop-version_3_dev-4.csv')
+        # forecast.model_cross_version(['data/hadoop-version_2_dev-4.csv'], 'data/hadoop-version_3_dev-4.csv')
         # forecast.model_cross_version(['data/hadoop-version_2_prior-8.csv', 'data/hadoop-version_1_prior-8.csv', 'data/hadoop-version_0_prior-8.csv'], 'data/hadoop-version_3_prior-8.csv')
         # forecast.model_cross_version(['data/hadoop-version_2_prior-10.csv', 'data/hadoop-version_1_prior-10.csv', 'data/hadoop-version_0_prior-10.csv'], 'data/hadoop-version_3_prior-10.csv')
         # forecast.model_cross_version(['data/hadoop-version_2_prior-20.csv', 'data/hadoop-version_1_prior-20.csv', 'data/hadoop-version_0_prior-20.csv'], 'data/hadoop-version_3_prior-20.csv')
