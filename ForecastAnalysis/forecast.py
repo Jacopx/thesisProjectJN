@@ -47,7 +47,7 @@ warnings.filterwarnings("ignore")
 test_size = 0.30
 
 predictor = 600
-epochs_nn = 500
+epochs_nn = 300
 epochs_lstm = 350
 batch_size = 8
 
@@ -175,10 +175,10 @@ def model_keras_nn(file):
 def personal_model(shape):
     model = Sequential()
     model.add(Dense(shape, input_dim=shape, kernel_initializer='normal', activation='relu'))
-    model.add(Dense(int(shape/2), activation='relu'))
-    model.add(Dense(int(shape/4), activation='relu'))
+    model.add(Dense(int(shape/2), activation='linear'))
+    model.add(Dense(int(shape/4), activation='linear'))
     model.add(Dense(1, activation='linear'))
-    model.compile(loss='mae', optimizer='adam', metrics=['msle', 'mse'])
+    model.compile(loss='mae', optimizer='adam', metrics=['msle'])
 
     # model = Sequential()
     # model.add(Dense(shape*2, input_dim=shape, kernel_initializer='normal', activation='relu'))
@@ -286,23 +286,34 @@ def model_ludwig(v1, v2):
     errors(l2, all_predictions.values.reshape(all_predictions.shape[0]), mean)
 
 
-def model_cross_version(v1, v2):
-    fb1 = pd.read_csv(v1)
-    ver1 = v1.split('_')[1]
+def model_cross_version(vlist, v2):
+    i = 0
+    for v1 in vlist:
+        fb1 = pd.read_csv(v1)
+        ver1 = v1.split('_')[1]
+
+        infos_nn(v1, fb1)
+
+        f1 = fb1.copy()
+        f1 = f1.dropna()
+
+        fl1 = list(f1.columns)
+
+        l1 = np.array(f1['n'])
+        mean = np.mean(l1)
+        f1 = f1.drop('n', axis=1)
+        f1 = np.array(f1)
+
+        ######################### MODEL DEFINITIONS ############################
+        if i == 0:
+            estimator = KerasRegressor(build_fn=personal_model, shape=f1.shape[1], epochs=epochs_nn, batch_size=batch_size, verbose=verbose)
+        history = estimator.fit(f1, l1)
+
+        ######################### MODEL DEFINITIONS ############################
+        i += 1
 
     fb2 = pd.read_csv(v2)
     ver2 = v2.split('_')[1]
-
-    infos_nn(v1, fb1)
-
-    f1 = fb1.copy()
-    f1 = f1.dropna()
-
-    l1 = np.array(f1['n'])
-    mean = np.mean(l1)
-    f1 = f1.drop('n', axis=1)
-    fl1 = list(f1.columns)
-    f1 = np.array(f1)
 
     infos_nn(v2, fb2)
 
@@ -315,13 +326,6 @@ def model_cross_version(v1, v2):
     fl2 = list(f2.columns)
     f2 = np.array(f2)
 
-    ######################### MODEL DEFINITIONS ############################
-
-    estimator = KerasRegressor(build_fn=personal_model, shape=f1.shape[1], epochs=epochs_nn, batch_size=batch_size, verbose=verbose)
-    history = estimator.fit(f1, l1)
-
-    ######################### MODEL DEFINITIONS ############################
-
     # plot_history(file + '_NN_', history, 'loss', 'MAE')
     # plot_history(file + '_NN_', history, 'msle', 'MSLE')
     # plot_history(file + '_NN_', history, 'mse', 'MSE')
@@ -332,7 +336,7 @@ def model_cross_version(v1, v2):
     shift = int((v2.split('.')[0]).split('-')[2])
 
     # plot_predict(file + '_NN', test_labels, predictions, shift)
-    gif_plot2('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
+    gif_plot2('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), estimator, f2, l2, shift)
     plot_mixed2('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
     # plot_mixed3('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
     # weights(estimator, feature_list)
@@ -532,7 +536,7 @@ def plot_mixed2(name, labels, predictions, shift):
     plt.grid(axis='both')
     plt.title(name)
     plt.savefig('plot/cross_version_' + str(shift) + '.png', dpi=240)
-    # plt.show()
+    plt.show()
 
 
 def gif_plot(name, labels, predictions, shift):
@@ -568,37 +572,46 @@ def gif_plot(name, labels, predictions, shift):
     img.save(fp=fp_out, format='GIF', append_images=imgs, save_all=True, duration=35, loop=0, optimize=True)
 
 
-def gif_plot2(name, labels, predictions, shift):
+def gif_plot2(name, estimator, test, labels, shift):
     n=[]
-    for i in range(0, len(predictions)):
+    for i in range(0, len(labels)):
         n.append(i)
 
     ymax = max(labels) + 70
+    predictions = np.array([])
 
-    t0 = time.time()
-    for i in range(0, len(predictions), shift):
-        print('{}/{} [{} %]'.format(i, len(predictions), round(100*i/len(predictions), 1)))
-        plt.figure(figsize=(10, 7))
-        plt.ylim(0, ymax)
+    try:
+        t0 = time.time()
+        for i in range(shift, len(labels)+shift, shift):
+            if len(labels)-i<shift:
+                diff = len(labels)-i
+                i = i - diff
 
-        predictions[i] = labels[i]
+            print('{}/{} [{} %]'.format(i, len(labels), round(100*i/len(labels), 1)))
+            plt.figure(figsize=(10, 7))
+            plt.ylim(0, ymax)
 
-        sns.lineplot(n[:-(len(predictions)-i-shift)], labels[:-(len(predictions)-i-shift)], label='Real', ci=None)
-        # sns.lineplot(n[i:-(len(predictions)-i-shift)], labels[i:-(len(predictions)-i-shift)], label='Real*', ci=None, color='green')
-        sns.lineplot(n[:-(len(predictions)-i-shift)], predictions[:-(len(predictions)-i-shift)], label='Predict*', ci=None, color='gainsboro')
-        sns.lineplot(n[i:-(len(predictions)-i-shift)], predictions[i:-(len(predictions)-i-shift)], label='Predict', ci=None, color='orange')
-        plt.xticks(rotation='60')
-        plt.legend()  # Graph labels
-        plt.xlabel('Week')
-        plt.ylabel('n')
-        plt.minorticks_on()
-        plt.grid(axis='both')
-        plt.title(name + ' w#' + str(i))
-        plt.savefig('plot/gif/cv{}_{}.png'.format(shift, i))
-        # plt.show()
+            pred = estimator.predict(test[i:i+shift])
+
+            predictions = np.append(predictions, pred)
+
+            sns.lineplot(n[:i], labels[:i], label='Real', ci=None)
+            # sns.lineplot(n[i:-(len(predictions)-i-shift)], labels[i:-(len(predictions)-i-shift)], label='Real*', ci=None, color='green')
+            sns.lineplot(n[:i], predictions[:i], label='Predict*', ci=None, color='gainsboro')
+            sns.lineplot(n[i-shift:i], pred, label='Predict', ci=None, color='orange')
+            plt.xticks(rotation='60')
+            plt.legend()  # Graph labels
+            plt.xlabel('Week')
+            plt.ylabel('n')
+            plt.minorticks_on()
+            plt.grid(axis='both')
+            plt.title(name + ' w#' + str(i))
+            plt.savefig('plot/gif/cv{}_{}.png'.format(shift, i))
+            # plt.show()
+    except:
+        print('image error')
 
     print('Time elapsed: {} s'.format(round(time.time()-t0, 2)))
-
     print('Creating GIF...')
 
     # filepaths
@@ -734,10 +747,10 @@ def errors2(test_labels, predictions, mean, shift):
     MAX = max_error(test_labels, predictions)
     # MSLE = mean_squared_log_error(test_labels, predictions)
 
-    print('Mean Absolute Error:', round(MAE, 2))
-    print('R2 Scoring:', round(R2, 3))
     print('Relative:', np.round(np.mean(REL), 2), '%.')
-    print('\nAccuracy:', np.round(100-np.mean(REL), 2), '%.')
+    print('Accuracy:', np.round(100-np.mean(REL), 2), '%.')
+    print('Mean Absolute Error:', round(MAE, 2))
+    print('\nR2 Scoring:', round(R2, 3))
 
     with open('errors.csv', 'a') as f:
         print(shift, round(MAE, 2), round(R2, 3), np.round(np.mean(REL), 2), np.round(100-np.mean(REL), 2), sep=',', file=f)
