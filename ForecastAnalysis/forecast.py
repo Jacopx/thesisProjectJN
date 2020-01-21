@@ -36,6 +36,7 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import Dropout
 from keras.layers import LSTM
+from keras import optimizers
 from keras.wrappers.scikit_learn import KerasRegressor
 
 import warnings
@@ -175,18 +176,11 @@ def model_keras_nn(file):
 def personal_model(shape):
     model = Sequential()
     model.add(Dense(shape, input_dim=shape, kernel_initializer='normal', activation='relu'))
+    # model.add(Dense(int(shape), activation='relu'))
     model.add(Dense(int(shape/2), activation='linear'))
     model.add(Dense(int(shape/4), activation='linear'))
     model.add(Dense(1, activation='linear'))
     model.compile(loss='mae', optimizer='adam', metrics=['msle'])
-
-    # model = Sequential()
-    # model.add(Dense(shape*2, input_dim=shape, kernel_initializer='normal', activation='relu'))
-    # model.add(Dense(shape, activation='relu'))
-    # model.add(Dense(int(shape/2), activation='relu'))
-    # model.add(Dense(1, activation='linear'))
-    # model.compile(loss='mae', optimizer='adam', metrics=['msle', 'mse'])
-    # model.summary()
 
     return model
 
@@ -336,8 +330,8 @@ def model_cross_version(vlist, v2):
     shift = int((v2.split('.')[0]).split('-')[2])
 
     # plot_predict(file + '_NN', test_labels, predictions, shift)
-    gif_plot2('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), estimator, f2, l2, shift)
     plot_mixed2('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
+    gif_plot2('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), estimator, f2, l2, shift)
     # plot_mixed3('NORMAL train: v{} - predict: v{} ==> {}'.format(ver1, ver2, shift), l2, all_predictions, shift)
     # weights(estimator, feature_list)
     errors2(l2, all_predictions, mean, shift)
@@ -580,36 +574,42 @@ def gif_plot2(name, estimator, test, labels, shift):
     ymax = max(labels) + 70
     predictions = np.array([])
 
-    try:
-        t0 = time.time()
-        for i in range(shift, len(labels)+shift, shift):
-            if len(labels)-i<shift:
-                diff = len(labels)-i
-                i = i - diff
+    t0 = time.time()
+    last = False
+    for i in range(shift, len(labels) + shift, shift):
+        print('{}/{} [{} %]'.format(i, len(labels), round(100*i/len(labels), 1)))
 
-            print('{}/{} [{} %]'.format(i, len(labels), round(100*i/len(labels), 1)))
-            plt.figure(figsize=(10, 7))
-            plt.ylim(0, ymax)
+        if len(labels) - i < shift:
+            diff = shift - (len(labels) - i)
+            last = True
+            pred = estimator.predict(test[i:i + (len(labels) - i)])
+        else:
+            pred = estimator.predict(test[i:i + shift])
 
-            pred = estimator.predict(test[i:i+shift])
+        plt.figure(figsize=(10, 7))
+        plt.ylim(0, ymax)
 
-            predictions = np.append(predictions, pred)
+        predictions = np.append(predictions, pred)
 
-            sns.lineplot(n[:i], labels[:i], label='Real', ci=None)
-            # sns.lineplot(n[i:-(len(predictions)-i-shift)], labels[i:-(len(predictions)-i-shift)], label='Real*', ci=None, color='green')
+        sns.lineplot(n[:i], labels[:i], label='Real', ci=None)
+        # sns.lineplot(n[i:-(len(predictions)-i-shift)], labels[i:-(len(predictions)-i-shift)], label='Real*', ci=None, color='green')
+
+        if last:
+            sns.lineplot(n[:i-diff], predictions[:i], label='Predict*', ci=None, color='gainsboro')
+            sns.lineplot(n[i-shift:i-diff], pred, label='Predict', ci=None, color='orange')
+        else:
             sns.lineplot(n[:i], predictions[:i], label='Predict*', ci=None, color='gainsboro')
             sns.lineplot(n[i-shift:i], pred, label='Predict', ci=None, color='orange')
-            plt.xticks(rotation='60')
-            plt.legend()  # Graph labels
-            plt.xlabel('Week')
-            plt.ylabel('n')
-            plt.minorticks_on()
-            plt.grid(axis='both')
-            plt.title(name + ' w#' + str(i))
-            plt.savefig('plot/gif/cv{}_{}.png'.format(shift, i))
-            # plt.show()
-    except:
-        print('image error')
+
+        plt.xticks(rotation='60')
+        plt.legend()  # Graph labels
+        plt.xlabel('Week')
+        plt.ylabel('n')
+        plt.minorticks_on()
+        plt.grid(axis='both')
+        plt.title(name + ' w#' + str(i))
+        plt.savefig('plot/gif/cv{}_{}.png'.format(shift, i))
+        # plt.show()
 
     print('Time elapsed: {} s'.format(round(time.time()-t0, 2)))
     print('Creating GIF...')

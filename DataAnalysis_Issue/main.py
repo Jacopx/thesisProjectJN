@@ -318,7 +318,8 @@ def make_component_change_clean(dataset):
 
     query = \
         """
-            SELECT date, component, COUNT(DISTINCT author) as 'authors', COUNT(DISTINCT commit_hash) as 'commit_count', SUM(line_change) as 'line_change', resolution, status
+        SELECT date, component, authors, commit_count, line_change, resolution, status, (authors*0.8) + (commit_count * 0.15) + (ABS(line_change) * 0.05) as 'effort'
+        FROM (SELECT date, component, COUNT(DISTINCT author) as 'authors', COUNT(DISTINCT commit_hash) as 'commit_count', SUM(line_change) as 'line_change', resolution, status
             FROM
              (  SELECT changes.commit_hash, component, date, author, line_change, resolution, status
                 FROM issue_component,
@@ -334,7 +335,7 @@ def make_component_change_clean(dataset):
                     ) as changes
                 WHERE issue_component.issue_id=changes.issue_id
             )
-            GROUP BY date, component;
+            GROUP BY date, component ORDER BY authors DESC) as 'tot';
         """
 
     return pd.read_sql_query(query, conn)
@@ -828,10 +829,10 @@ def version_forecast_file(dataset):
 
                 # DEVELOPERS
                 issue_finalDx = issue_final.copy()
-                issue_finalD = extracted_calculation2(issue_finalDx, 'authors')
-                issue_finalD[str(shift) + 'future'] = issue_finalD['authors'].shift(-shift, fill_value=-1)
+                issue_finalD = extracted_calculation2(issue_finalDx, 'effort')
+                issue_finalD[str(shift) + 'future'] = issue_finalD['effort'].shift(-shift, fill_value=-1)
                 issue_finalD = issue_finalD.head(-shift)
-                issue_finalD = issue_finalD.drop('authors', axis=1)
+                issue_finalD = issue_finalD.drop('effort', axis=1)
                 issue_finalD = issue_finalD.rename(columns={str(shift) + "future": "n"})
                 issue_finalD['y'] = issue_finalD['w'].str.split('-', n=0, expand=True)[0]
                 issue_finalD['w'] = issue_finalD['w'].str.split('-', n=0, expand=True)[1]
@@ -847,7 +848,7 @@ def version_forecast_file(dataset):
                 issue_finalD = issue_finalD.drop('index', axis=1)
                 issue_finalC.to_csv('data/version/' + dataset + '-version_' + version + '_count-' + str(shift) + '.csv', index=None)
                 issue_finalP.to_csv('data/version/' + dataset + '-version_' + version + '_prior-' + str(shift) + '.csv', index=None)
-                issue_finalD.to_csv('data/version/' + dataset + '-version_' + version + '_dev-' + str(shift) + '.csv', index=None)
+                issue_finalD.to_csv('data/version/' + dataset + '-version_' + version + '_eff-' + str(shift) + '.csv', index=None)
                 print(' OK')
         except:
             e = sys.exc_info()[0]
