@@ -160,9 +160,9 @@ def issue_forecast_file(dataset):
     week_commit = date_component_change.groupby(by=['w', 'y']).sum()
 
     # SENIORITY
-    # seniority = aggregate_sen(dataset)
-    # week_commit_seniority = pd.merge(week_commit, seniority, on=['w', 'y'])
-    week_commit_seniority = week_commit
+    seniority = aggregate_sen(dataset)
+    week_commit_seniority = pd.merge(week_commit, seniority, on=['w', 'y'])
+    # week_commit_seniority = week_commit
 
     issue = open_sqlite(dataset, 'issue')
     print('Starting shape:\t{}'.format(issue.shape))
@@ -318,13 +318,14 @@ def make_component_change_clean(dataset):
 
     query = \
         """
-            SELECT date, component, COUNT(DISTINCT commit_hash) as 'commit_count', SUM(line_change) as 'line_change', resolution, status
+        SELECT date, component, authors, commit_count, line_change, resolution, status, (authors*0.8) + (commit_count * 0.15) + (ABS(line_change) * 0.05) as 'effort'
+        FROM (SELECT date, component, COUNT(DISTINCT author) as 'authors', COUNT(DISTINCT commit_hash) as 'commit_count', SUM(line_change) as 'line_change', resolution, status
             FROM
-             (  SELECT changes.commit_hash, component, date, line_change, resolution, status
+             (  SELECT changes.commit_hash, component, date, author, line_change, resolution, status
                 FROM issue_component,
-                    (   SELECT change_set_link.issue_id, change.commit_hash, date, line_change, resolution, status
+                    (   SELECT change_set_link.issue_id, change.commit_hash, date, author, line_change, resolution, status
                         FROM issue, change_set_link,
-                         (  SELECT change_set.commit_hash, DATE(committed_date) as 'date', SUM(sum_added_lines)-SUM(sum_removed_lines) AS 'line_change'
+                         (  SELECT change_set.commit_hash, DATE(committed_date) as 'date', author, SUM(sum_added_lines)-SUM(sum_removed_lines) AS 'line_change'
                             FROM code_change, change_set
                             WHERE change_set.commit_hash=code_change.commit_hash
                             GROUP BY change_set.commit_hash
@@ -334,7 +335,7 @@ def make_component_change_clean(dataset):
                     ) as changes
                 WHERE issue_component.issue_id=changes.issue_id
             )
-            GROUP BY date, component;
+            GROUP BY date, component ORDER BY authors DESC) as 'tot';
         """
 
     return pd.read_sql_query(query, conn)
@@ -790,6 +791,7 @@ def version_forecast_file(dataset):
 
             issue_finalC = issue_final.copy()
             issue_finalP = issue_final.copy()
+            issue_finalD = issue_final.copy()
 
             horizons = [1, 2, 4, 6, 8, 10, 12, 16, 20, 30, 40, 52]
 
@@ -825,13 +827,28 @@ def version_forecast_file(dataset):
 
                 print('.', end='')
 
+                # DEVELOPERS
+                issue_finalDx = issue_final.copy()
+                issue_finalD = extracted_calculation2(issue_finalDx, 'effort')
+                issue_finalD[str(shift) + 'future'] = issue_finalD['effort'].shift(-shift, fill_value=-1)
+                issue_finalD = issue_finalD.head(-shift)
+                issue_finalD = issue_finalD.drop('effort', axis=1)
+                issue_finalD = issue_finalD.rename(columns={str(shift) + "future": "n"})
+                issue_finalD['y'] = issue_finalD['w'].str.split('-', n=0, expand=True)[0]
+                issue_finalD['w'] = issue_finalD['w'].str.split('-', n=0, expand=True)[1]
+                issue_finalD = issue_finalD.drop('w', axis=1)
+                issue_finalD['n'] = np.round(issue_finalD['n'], 1)
+
                 # EXPORT
                 issue_finalC = issue_finalC.reset_index()
                 issue_finalC = issue_finalC.drop('index', axis=1)
                 issue_finalP = issue_finalP.reset_index()
                 issue_finalP = issue_finalP.drop('index', axis=1)
+                issue_finalD = issue_finalD.reset_index()
+                issue_finalD = issue_finalD.drop('index', axis=1)
                 issue_finalC.to_csv('data/version/' + dataset + '-version_' + version + '_count-' + str(shift) + '.csv', index=None)
                 issue_finalP.to_csv('data/version/' + dataset + '-version_' + version + '_prior-' + str(shift) + '.csv', index=None)
+                issue_finalD.to_csv('data/version/' + dataset + '-version_' + version + '_eff-' + str(shift) + '.csv', index=None)
                 print(' OK')
         except:
             e = sys.exc_info()[0]
@@ -1426,7 +1443,9 @@ def main(dataset, repos):
     # issue_forecast_file(dataset)
     # data_distribution(dataset)
     # ludwig_export(dataset)
+
     version_forecast_file(dataset)
+
     # reduced_version_export(dataset)
     # export_visualization(dataset)
     # version_visualization(dataset)
